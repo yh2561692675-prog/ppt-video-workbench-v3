@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "id": "8d7b1d3f-c19e-4b84-8ae0-2e7a98ce2d01",
+  "name": "星港数据安全入门演示",
+  "project_dir": "examples/demo-project",
+  "created_at": "2026-08-04T00:00:00Z",
+  "updated_at": "2026-08-04T00:00:00Z",
+  "current_step": 1,
+  "status": "not_started",
+  "pages": [
+    {
+      "id": "c2e17d0b-5f6a-4dc3-86c0-100000000001",
+      "order": 1,
+      "title": "为什么数据安全从流程开始",
+      "narration": {
+        "id": "d2e17d0b-5f6a-4dc3-86c0-100000000001",
+        "revision_id": "e2e17d0b-5f6a-4dc3-86c0-100000000001",
+        "text": "数据安全不是最后一道检查，而是每个流程节点都要留下可追踪的选择。",
+        "status": "completed",
+        "source_refs": ["synthetic:demo"]
+      }
+    },
+    {
+      "id": "c2e17d0b-5f6a-4dc3-86c0-100000000002",
+      "order": 2,
+      "title": "资产盘点",
+      "narration": {
+        "id": "d2e17d0b-5f6a-4dc3-86c0-100000000002",
+        "revision_id": "e2e17d0b-5f6a-4dc3-86c0-100000000002",
+        "text": "先知道数据在哪里、由谁使用，以及哪些内容需要更高等级的保护。",
+        "status": "completed",
+        "source_refs": ["synthetic:demo"]
+      }
+    },
+    {
+      "id": "c2e17d0b-5f6a-4dc3-86c0-100000000003",
+      "order": 3,
+      "title": "最小权限",
+      "narration": {
+        "id": "d2e17d0b-5f6a-4dc3-86c0-100000000003",
+        "revision_id": "e2e17d0b-5f6a-4dc3-86c0-100000000003",
+        "text": "访问权限应当只覆盖完成工作所需的范围，并且定期复核是否仍然必要。",
+        "status": "completed",
+        "source_refs": ["synthetic:demo"]
+      }
+    },
+    {
+      "id": "c2e17d0b-5f6a-4dc3-86c0-100000000004",
+      "order": 4,
+      "title": "加密与密钥",
+      "narration": {
+        "id": "d2e17d0b-5f6a-4dc3-86c0-100000000004",
+        "revision_id": "e2e17d0b-5f6a-4dc3-86c0-100000000004",
+        "text": "传输和存储都要有清晰的加密边界，密钥则应交给专门的安全存储管理。",
+        "status": "completed",
+        "source_refs": ["synthetic:demo"]
+      }
+    },
+    {
+      "id": "c2e17d0b-5f6a-4dc3-86c0-100000000005",
+      "order": 5,
+      "title": "审计与告警",
+      "narration": {
+        "id": "d2e17d0b-5f6a-4dc3-86c0-100000000005",
+        "revision_id": "e2e17d0b-5f6a-4dc3-86c0-100000000005",
+        "text": "审计记录让团队知道发生过什么，告警则帮助团队在问题扩大前采取行动。",
+        "status": "completed",
+        "source_refs": ["synthetic:demo"]
+      }
+    },
+    {
+      "id": "c2e17d0b-5f6a-4dc3-86c0-100000000006",
+      "order": 6,
+      "title": "备份与恢复",
+      "narration": {
+        "id": "d2e17d0b-5f6a-4dc3-86c0-100000000006",
+        "revision_id": "e2e17d0b-5f6a-4dc3-86c0-100000000006",
+        "text": "备份不只是保存副本，更要定期演练恢复，确认关键工作真的能继续。",
+        "status": "completed",
+        "source_refs": ["synthetic:demo"]
+      }
+    },
+    {
+      "id": "c2e17d0b-5f6a-4dc3-86c0-100000000007",
+      "order": 7,
+      "title": "团队协作",
+      "narration": {
+        "id": "d2e17d0b-5f6a-4dc3-86c0-100000000007",
+        "revision_id": "e2e17d0b-5f6a-4dc3-86c0-100000000007",
+        "text": "安全规则只有被团队理解并在日常工作中执行，才会成为稳定的协作习惯。",
+        "status": "completed",
+        "source_refs": ["synthetic:demo"]
+      }
+    },
+    {
+      "id": "c2e17d0b-5f6a-4dc3-86c0-100000000008",
+      "order": 8,
+      "title": "从今天开始",
+      "narration": {
+        "id": "d2e17d0b-5f6a-4dc3-86c0-100000000008",
+        "revision_id": "e2e17d0b-5f6a-4dc3-86c0-100000000008",
+        "text": "从一次资产盘点和一次恢复演练开始，把安全行动变成可重复的流程。",
+        "status": "completed",
+        "source_refs": ["synthetic:demo"]
+      }
+    }
+  ]
+}

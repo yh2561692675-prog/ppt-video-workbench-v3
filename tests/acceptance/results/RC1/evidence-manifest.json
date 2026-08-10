@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "release_candidate": "RC1",
+  "status": "pending_manual_windows",
+  "environment": {
+    "platform": "Windows 10/11 clean VM or target user machine",
+    "installer": "pending",
+    "workbench_version": "pending",
+    "real_materials": "pending",
+    "real_voice": "pending",
+    "audiovisual_review": "pending"
+  },
+  "artifacts": [
+    { "name": "MP4", "path": "RC-LOCAL/output/video.mp4", "result": "pending_manual_windows" },
+    { "name": "SRT", "path": "RC-LOCAL/output/subtitles.srt", "result": "pending_manual_windows" },
+    {
+      "name": "旁白 DOCX",
+      "path": "RC-LOCAL/output/narration.docx",
+      "result": "pending_manual_windows"
+    },
+    {
+      "name": "分页音频",
+      "path": "RC-LOCAL/output/page-audio/",
+      "result": "pending_manual_windows"
+    },
+    {
+      "name": "Remotion 工程",
+      "path": "RC-LOCAL/output/remotion/",
+      "result": "pending_manual_windows"
+    },
+    { "name": "配置", "path": "RC-LOCAL/output/config/", "result": "pending_manual_windows" },
+    {
+      "name": "预检报告",
+      "path": "RC-LOCAL/output/preflight/",
+      "result": "pending_manual_windows"
+    },
+    { "name": "日志", "path": "RC-LOCAL/output/logs/", "result": "pending_manual_windows" },
+    {
+      "name": "SHA-256 清单",
+      "path": "RC-LOCAL/output/manifest.sha256",
+      "result": "pending_manual_windows"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "RC-LOCAL",
+      "description": "真实 Word+PPTX 与本地录音完整闭环",
+      "result": "pending_manual_windows",
+      "evidence": []
+    },
+    {
+      "id": "RC-SCAN",
+      "description": "Word+扫描 PDF，OCR 低置信度定位和人工修正",
+      "result": "pending_manual_windows",
+      "evidence": []
+    },
+    {
+      "id": "RC-IMAGES",
+      "description": "Word+多图片，自然排序和人工排序",
+      "result": "pending_manual_windows",
+      "evidence": []
+    },
+    {
+      "id": "RC-HEYGEN",
+      "description": "2 页真实声音、请求、缓存和费用记录",
+      "result": "pending_manual_windows",
+      "evidence": []
+    },
+    {
+      "id": "RC-RECOVERY",
+      "description": "OCR、转写、声音和渲染阶段暂停/关闭/恢复",
+      "result": "pending_manual_windows",
+      "evidence": []
+    },
+    {
+      "id": "RC-AUDIOVISUAL",
+      "description": "音画、字幕、裁切、爆音、静音、错页和核心内容",
+      "result": "pending_manual_windows",
+      "evidence": []
+    }
+  ],
+  "defects": {
+    "P0": "not_assessed",
+    "P1": "not_assessed",
+    "P2": "not_assessed",
+    "P3": "not_assessed",
+    "items": []
+  },
+  "signoff": {
+    "signed": false,
+    "signed_by": null,
+    "signed_at": null,
+    "notes": "等待 Windows RC1 实机证据"
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/effect-plan-v2.schema.json",
+  "title": "EffectPlanV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "page_id", "page_type", "duration_ms"],
+  "properties": {
+    "schema_version": { "const": "2.0" },
+    "page_id": { "type": "string", "minLength": 1 },
+    "page_type": { "type": "string", "minLength": 1 },
+    "duration_ms": { "type": "integer", "exclusiveMinimum": 0 },
+    "aspect_ratio": { "enum": ["16:9", "9:16"] },
+    "rhythm_profile": { "enum": ["steady", "standard", "compact", "enhanced"] },
+    "background_preset": {
+      "enum": ["tech_blue", "risk_red", "warm_gold", "paper_grid", "regional_teal"]
+    },
+    "cues": { "type": "array", "items": { "$ref": "#/$defs/cue" } },
+    "effects": { "type": "array", "items": { "$ref": "#/$defs/effect" } },
+    "camera": { "$ref": "#/$defs/camera" },
+    "transition": { "$ref": "#/$defs/transition" },
+    "presenter_cues": { "type": "array", "items": { "$ref": "#/$defs/presenterCue" } },
+    "manual_lock": { "type": "boolean" },
+    "fallback": { "$ref": "#/$defs/fallback" },
+    "source_hashes": { "type": "object", "additionalProperties": { "type": "string" } },
+    "migration_version": { "type": ["string", "null"] },
+    "legacy_payload_hash": { "type": ["string", "null", "null"] }
+  },
+  "$defs": {
+    "cue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "start_ms", "end_ms"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "start_ms": { "type": "integer", "minimum": 0 },
+        "end_ms": { "type": "integer", "exclusiveMinimum": 0 },
+        "kind": { "type": "string" },
+        "text": { "type": "string" }
+      }
+    },
+    "effect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "start_ms", "end_ms"],
+      "properties": {
+        "type": { "type": "string", "minLength": 1 },
+        "start_ms": { "type": "integer", "minimum": 0 },
+        "end_ms": { "type": "integer", "exclusiveMinimum": 0 },
+        "target": { "type": ["string", "null"] },
+        "intensity": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "camera": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "enum": ["static", "push", "pan", "spotlight"] },
+        "scale_start": { "type": "number", "minimum": 1, "maximum": 1.08 },
+        "scale_end": { "type": "number", "minimum": 1, "maximum": 1.08 },
+        "focus_x": { "type": "number", "minimum": 0, "maximum": 1 },
+        "focus_y": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "transition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "enum": ["cut", "crossfade", "mask"] },
+        "duration_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "presenterCue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_ms", "end_ms"],
+      "properties": {
+        "start_ms": { "type": "integer", "minimum": 0 },
+        "end_ms": { "type": "integer", "exclusiveMinimum": 0 },
+        "position": { "enum": ["top-left", "top-right", "bottom-left", "bottom-right"] },
+        "reason": { "type": "string" }
+      }
+    },
+    "fallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "template": { "enum": ["SafeSlide", "FocusSpotlight"] },
+        "reason": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

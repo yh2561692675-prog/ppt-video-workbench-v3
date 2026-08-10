@@ -1,0 +1,285 @@
+{
+  "schema_version": "1.0",
+  "pages": [
+    {
+      "page_id": "p01",
+      "category": "chapter",
+      "template": "ChapterCurtain",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p02",
+      "category": "chapter",
+      "template": "ChapterCurtain",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p03",
+      "category": "chapter",
+      "template": "ChapterCurtain",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p04",
+      "category": "chapter",
+      "template": "ChapterCurtain",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p05",
+      "category": "progressive",
+      "template": "ProgressiveReveal",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p06",
+      "category": "progressive",
+      "template": "ProgressiveReveal",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p07",
+      "category": "progressive",
+      "template": "ProgressiveReveal",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p08",
+      "category": "progressive",
+      "template": "ProgressiveReveal",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p09",
+      "category": "data",
+      "template": "StatCounter",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p10",
+      "category": "data",
+      "template": "StatCounter",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p11",
+      "category": "data",
+      "template": "StatCounter",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p12",
+      "category": "data",
+      "template": "StatCounter",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p13",
+      "category": "chart",
+      "template": "ChartNarration",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p14",
+      "category": "chart",
+      "template": "ChartNarration",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p15",
+      "category": "chart",
+      "template": "ChartNarration",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p16",
+      "category": "chart",
+      "template": "ChartNarration",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p17",
+      "category": "compare",
+      "template": "CompareMode",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p18",
+      "category": "compare",
+      "template": "CompareMode",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p19",
+      "category": "compare",
+      "template": "CompareMode",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p20",
+      "category": "compare",
+      "template": "CompareMode",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p21",
+      "category": "focus",
+      "template": "FocusSpotlight",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p22",
+      "category": "focus",
+      "template": "FocusSpotlight",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p23",
+      "category": "focus",
+      "template": "FocusSpotlight",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p24",
+      "category": "focus",
+      "template": "FocusSpotlight",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p25",
+      "category": "cards",
+      "template": "CardStack",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p26",
+      "category": "cards",
+      "template": "CardStack",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p27",
+      "category": "cards",
+      "template": "CardStack",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p28",
+      "category": "cards",
+      "template": "CardStack",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p29",
+      "category": "gauge",
+      "template": "GaugeAndRatio",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p30",
+      "category": "gauge",
+      "template": "GaugeAndRatio",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p31",
+      "category": "gauge",
+      "template": "GaugeAndRatio",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p32",
+      "category": "gauge",
+      "template": "GaugeAndRatio",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p33",
+      "category": "path",
+      "template": "PathBuilder",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p34",
+      "category": "path",
+      "template": "PathBuilder",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p35",
+      "category": "path",
+      "template": "PathBuilder",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p36",
+      "category": "path",
+      "template": "PathBuilder",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p37",
+      "category": "regional",
+      "template": "TagMatrix",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p38",
+      "category": "regional",
+      "template": "TagMatrix",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p39",
+      "category": "regional",
+      "template": "MapHighlight",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    },
+    {
+      "page_id": "p40",
+      "category": "regional",
+      "template": "MapHighlight",
+      "aspect_ratios": ["16:9", "9:16"],
+      "checkpoints": [0, 0.5, 1]
+    }
+  ]
+}

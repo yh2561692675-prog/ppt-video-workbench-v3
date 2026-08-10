@@ -1,0 +1,105 @@
+from __future__ import annotations
+
+import argparse
+import html
+import json
+import re
+from collections.abc import Mapping
+from pathlib import Path
+from typing import Any
+
+REQUIRED_PHASES = (
+    "install",
+    "first_launch",
+    "restart",
+    "uninstall",
+    "workspace_retention",
+)
+SENSITIVE_KEY_NAMES = {"token", "authorization", "api_key", "secret", "cookie"}
+BEARER_PATTERN = re.compile(r"\bBearer\s+[^\s\"']+", re.IGNORECASE)
+USER_PROFILE_PATTERN = re.compile(r"[A-Za-z]:\\Users\\[^\\/\"']+", re.IGNORECASE)
+
+
+def redact(value: object, *, key: str | None = None) -> object:
+    """Return a structure that can safely be written into an acceptance report."""
+    if key is not None and key.casefold() in SENSITIVE_KEY_NAMES:
+        return "***"
+    if isinstance(value, Mapping):
+        return {
+            str(item_key): redact(item_value, key=str(item_key))
+            for item_key, item_value in value.items()
+        }
+    if isinstance(value, list):
+        return [redact(item) for item in value]
+    if isinstance(value, tuple):
+        return [redact(item) for item in value]
+    if isinstance(value, str):
+        return USER_PROFILE_PATTERN.sub("%USERPROFILE%", BEARER_PATTERN.sub("Bearer ***", value))
+    return value
+
+
+def _phase_result(phases: object, phase_name: str) -> str | None:
+    if not isinstance(phases, Mapping):
+        return None
+    phase = phases.get(phase_name)
+    if not isinstance(phase, Mapping):
+        return None
+    result = phase.get("result")
+    return result if isinstance(result, str) else None
+
+
+def build_report(evidence: dict[str, object]) -> dict[str, object]:
+    """Build the fixed P01 report schema and fail closed on missing evidence."""
+    redacted = redact(evidence)
+    if not isinstance(redacted, dict):
+        raise TypeError("Redacted acceptance evidence must remain an object.")
+    phases = redacted.get("phases")
+    failures = [name for name in REQUIRED_PHASES if _phase_result(phases, name) != "passed"]
+    return {
+        "schema_version": "1.0",
+        "decision": "pass" if not failures else "block",
+        "blocking_failures": failures,
+        "evidence": redacted,
+    }
+
+
+def _render_html(report: Mapping[str, object]) -> str:
+    decision = html.escape(str(report["decision"]))
+    blockers = report["blocking_failures"]
+    encoded = html.escape(
+        json.dumps(report["evidence"], ensure_ascii=False, indent=2, sort_keys=True)
+    )
+    return (
+        "<!doctype html><html><head><meta charset=\"utf-8\">"
+        "<title>P01 Windows Acceptance</title></head><body>"
+        f"<h1>P01 Windows Acceptance: {decision}</h1>"
+        f"<p>Blocking failures: {html.escape(', '.join(map(str, blockers)) or 'none')}</p>"
+        f"<pre>{encoded}</pre></body></html>"
+    )
+
+
+def write_report(evidence_path: Path, output_dir: Path) -> int:
+    """Write JSON and HTML reports; return a process exit code for the verdict."""
+    loaded: Any = json.loads(evidence_path.read_text(encoding="utf-8"))
+    if not isinstance(loaded, dict):
+        raise ValueError("Acceptance evidence must be a JSON object.")
+    report = build_report(loaded)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "acceptance-report.json").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    (output_dir / "acceptance-report.html").write_text(_render_html(report), encoding="utf-8")
+    return 0 if report["decision"] == "pass" else 1
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Write a P01 Windows acceptance report.")
+    parser.add_argument("--evidence", type=Path, required=True)
+    parser.add_argument("--output-dir", type=Path, required=True)
+    args = parser.parse_args()
+    return write_report(args.evidence, args.output_dir)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

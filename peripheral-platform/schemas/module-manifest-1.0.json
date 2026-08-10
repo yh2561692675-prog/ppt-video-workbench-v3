@@ -1,0 +1,43 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "job_types": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Job Types",
+      "type": "array"
+    },
+    "max_runtime_seconds": {
+      "maximum": 86400,
+      "minimum": 1,
+      "title": "Max Runtime Seconds",
+      "type": "integer"
+    },
+    "module_name": {
+      "pattern": "^[a-z][a-z0-9_.-]{1,63}$",
+      "title": "Module Name",
+      "type": "string"
+    },
+    "module_version": {
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "title": "Module Version",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "module_name",
+    "module_version",
+    "job_types",
+    "max_runtime_seconds"
+  ],
+  "title": "ModuleManifest",
+  "type": "object"
+}

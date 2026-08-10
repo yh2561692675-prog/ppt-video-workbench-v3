@@ -1,0 +1,15 @@
+[
+  { "name": "single-stat-with-ratios", "page": { "metrics": [68, 32], "semantic": "fact" } },
+  {
+    "name": "timeline-line-chart",
+    "page": {
+      "series": [
+        { "year": 2024, "value": 10 },
+        { "year": 2025, "value": 16 }
+      ]
+    }
+  },
+  { "name": "advantages-risks", "page": { "modules": ["advantages", "risks"] } },
+  { "name": "cities-and-map", "page": { "cities": ["南京", "苏州"], "map": true } },
+  { "name": "dense-text", "page": { "text_density": 0.9, "text": "密集正文" } }
+]

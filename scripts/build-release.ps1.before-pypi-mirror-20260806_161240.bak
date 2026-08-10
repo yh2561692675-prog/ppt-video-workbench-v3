@@ -1,0 +1,113 @@
+param(
+    [string]$Output = "dist/release",
+    [switch]$Verify
+)
+
+$ErrorActionPreference = "Stop"
+$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$stageRoot = Join-Path $repoRoot $Output
+$installerRoot = Join-Path $repoRoot "release"
+$apiRoot = Join-Path $stageRoot "api"
+$webRoot = Join-Path $stageRoot "web"
+$licenseRoot = Join-Path $stageRoot "licenses"
+$sbomRoot = Join-Path $stageRoot "sbom"
+
+function Assert-RequiredReleaseFile {
+    param(
+        [string]$StageRoot,
+        [string]$RelativePath,
+        [string]$Description
+    )
+
+    $requiredPath = Join-Path $StageRoot $RelativePath
+    if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
+        throw "Required release payload was not found ($Description): $requiredPath"
+    }
+}
+
+$iscc = Get-Command "ISCC.exe" -ErrorAction SilentlyContinue
+if ($null -eq $iscc) {
+    $userIsccPath = Join-Path $env:LOCALAPPDATA "Programs\Inno Setup 6\ISCC.exe"
+    if (Test-Path -LiteralPath $userIsccPath -PathType Leaf) {
+        $isccPath = $userIsccPath
+    }
+    else {
+        throw "Inno Setup 6 compiler (ISCC.exe) was not found."
+    }
+}
+else {
+    $isccPath = [string]$iscc.Source
+    if ([string]::IsNullOrWhiteSpace($isccPath)) {
+        $isccPath = [string]$iscc.Path
+    }
+}
+
+Push-Location $repoRoot
+try {
+    if ($Verify) {
+        Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "api\workbench.exe" -Description "API runtime"
+        Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "web\index.html" -Description "Web entry"
+        Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "runtime-manifest.json" -Description "runtime manifest"
+        Write-Output "Release staging payload verification passed: $stageRoot"
+        exit 0
+    }
+
+    if (Test-Path -LiteralPath $stageRoot) {
+        Remove-Item -LiteralPath $stageRoot -Recurse -Force
+    }
+    if (Test-Path -LiteralPath $installerRoot) {
+        Remove-Item -LiteralPath $installerRoot -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $apiRoot, $webRoot, $licenseRoot, $sbomRoot -Force | Out-Null
+
+    uv sync --frozen
+    pnpm install --frozen-lockfile
+    pnpm check
+    if ($LASTEXITCODE -ne 0) {
+        throw "Frontend checks failed with exit code $LASTEXITCODE. The installer was not created."
+    }
+    pnpm --filter remotion build
+
+    uv run --with "pyinstaller==6.16.0" pyinstaller `
+        --noconfirm `
+        --clean `
+        --distpath $apiRoot `
+        --workpath (Join-Path $repoRoot "dist/pyinstaller-work") `
+        (Join-Path $repoRoot "apps/api/workbench.spec")
+
+    if (-not (Test-Path -LiteralPath (Join-Path $apiRoot "workbench.exe") -PathType Leaf)) {
+        throw "PyInstaller did not produce the API runtime: $(Join-Path $apiRoot 'workbench.exe')"
+    }
+
+    Copy-Item -Path (Join-Path $repoRoot "apps/web/dist/*") -Destination $webRoot -Recurse -Force
+    uv pip list --format json | Set-Content -LiteralPath (Join-Path $sbomRoot "python-dependencies.json") -Encoding UTF8
+    pnpm list --prod --depth -1 --json | Set-Content -LiteralPath (Join-Path $sbomRoot "node-dependencies.json") -Encoding UTF8
+    @(
+        "PPT Video Workbench third-party dependency inventory",
+        "",
+        "Python dependency inventory: sbom/python-dependencies.json",
+        "Node dependency inventory: sbom/node-dependencies.json"
+    ) | Set-Content -LiteralPath (Join-Path $licenseRoot "THIRD-PARTY-NOTICES.txt") -Encoding UTF8
+
+    uv run python scripts/build_runtime_manifest.py `
+        --release-root $stageRoot `
+        --version "0.1.0" `
+        --api-executable (Join-Path $apiRoot "workbench.exe") `
+        --web-index (Join-Path $webRoot "index.html") `
+        --license-notice (Join-Path $licenseRoot "THIRD-PARTY-NOTICES.txt") `
+        --sbom (Join-Path $sbomRoot "python-dependencies.json")
+
+    Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "api\workbench.exe" -Description "API runtime"
+    Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "web\index.html" -Description "Web entry"
+    Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "runtime-manifest.json" -Description "runtime manifest"
+
+    & $isccPath (Join-Path $repoRoot "installer/workbench.iss")
+    $installerPath = Join-Path $installerRoot "ppt-video-workbench-setup.exe"
+    if (-not (Test-Path -LiteralPath $installerPath -PathType Leaf)) {
+        throw "Inno Setup did not create the installer: $installerPath"
+    }
+    Write-Output "Windows installer created: $installerPath"
+}
+finally {
+    Pop-Location
+}

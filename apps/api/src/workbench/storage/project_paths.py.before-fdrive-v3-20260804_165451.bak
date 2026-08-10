@@ -1,0 +1,119 @@
+from __future__ import annotations
+
+import os
+import shutil
+import subprocess
+from dataclasses import dataclass
+from pathlib import Path
+from uuid import uuid4
+
+
+VIDEO_ENGINE_FOLDER = "07_视频工程"
+OUTPUT_FOLDER = "08_输出"
+MAPPED_PROJECT_FOLDERS = (VIDEO_ENGINE_FOLDER, OUTPUT_FOLDER)
+
+
+class ProjectStorageError(RuntimeError):
+    pass
+
+
+@dataclass(frozen=True)
+class ProjectStorageRoots:
+    cache_root: Path | None = None
+    output_root: Path | None = None
+
+    def __post_init__(self) -> None:
+        if (self.cache_root is None) != (self.output_root is None):
+            raise ProjectStorageError("视频缓存与成品目录必须同时配置")
+
+    @property
+    def enabled(self) -> bool:
+        return self.cache_root is not None
+
+    def validate(self) -> None:
+        if not self.enabled:
+            return
+        assert self.cache_root is not None
+        assert self.output_root is not None
+        _prepare_root(self.cache_root, "缓存目录")
+        _prepare_root(self.output_root, "成品目录")
+
+    def cache_project_root(self, project_name: str) -> Path | None:
+        if self.cache_root is None:
+            return None
+        return self.cache_root.resolve() / project_name
+
+
+def create_project_storage_links(
+    project_dir: Path, project_name: str, roots: ProjectStorageRoots
+) -> None:
+    if not roots.enabled:
+        return
+    assert roots.cache_root is not None
+    assert roots.output_root is not None
+
+    cache_target = roots.cache_root.resolve() / project_name
+    output_target = roots.output_root.resolve() / project_name
+    created_targets: list[Path] = []
+    created_links: list[Path] = []
+    try:
+        for target, label in ((cache_target, "缓存目录"), (output_target, "成品目录")):
+            if target.exists() or target.is_symlink():
+                raise ProjectStorageError(f"{label}已存在同名项目目录：{target}")
+            target.mkdir(parents=True)
+            created_targets.append(target)
+
+        for folder, target in ((VIDEO_ENGINE_FOLDER, cache_target), (OUTPUT_FOLDER, output_target)):
+            link = project_dir / folder
+            _link_directory(link, target)
+            created_links.append(link)
+    except Exception:
+        for link in reversed(created_links):
+            _remove_directory_link(link)
+        for target in reversed(created_targets):
+            shutil.rmtree(target, ignore_errors=True)
+        raise
+
+
+def _prepare_root(root: Path, label: str) -> None:
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+        if not root.is_dir():
+            raise OSError("not a directory")
+        probe = root / f".ppt-video-workbench-write-probe-{uuid4().hex}.tmp"
+        probe.write_bytes(b"probe")
+        probe.unlink()
+    except OSError as error:
+        raise ProjectStorageError(f"{label}不可用或不可写：{root}") from error
+
+
+def _link_directory(link: Path, target: Path) -> None:
+    if link.exists() or link.is_symlink():
+        raise ProjectStorageError(f"项目目录映射已存在：{link}")
+    if os.name == "nt":
+        command = f'mklink /J "{link}" "{target}"'
+        completed = subprocess.run(
+            ["cmd.exe", "/d", "/c", command],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if completed.returncode != 0:
+            diagnostic_output = "\n".join(
+                output.strip() for output in (completed.stdout, completed.stderr) if output.strip()
+            )
+            if not diagnostic_output:
+                diagnostic_output = "cmd.exe 未返回错误说明"
+            raise ProjectStorageError(
+                f"无法创建项目目录映射（退出码 {completed.returncode}）：{link}\n"
+                f"Windows 原始错误：{diagnostic_output}"
+            )
+        return
+    link.symlink_to(target, target_is_directory=True)
+
+
+def _remove_directory_link(link: Path) -> None:
+    if link.is_symlink():
+        link.unlink(missing_ok=True)
+    elif link.exists():
+        os.rmdir(link)

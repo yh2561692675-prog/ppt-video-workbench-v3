@@ -1,0 +1,18 @@
+{
+  "component_version": "0.1.0",
+  "distribution": "onedir",
+  "hash_algorithm": "sha256",
+  "manifest_version": 1,
+  "python_runtime": "3.12",
+  "required_files": [
+    "peripheral/peripheral-host.exe",
+    "peripheral/migrations/0001_s0_core.sql",
+    "peripheral/runtime-manifest.json",
+    "peripheral/schemas/artifact-manifest-1.0.json",
+    "peripheral/schemas/event-envelope-1.0.json",
+    "peripheral/schemas/job-envelope-1.0.json",
+    "peripheral/schemas/job-result-1.0.json",
+    "peripheral/schemas/module-manifest-1.0.json",
+    "peripheral/scripts/initialize-s0.ps1"
+  ]
+}

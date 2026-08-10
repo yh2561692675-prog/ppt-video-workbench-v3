@@ -1,0 +1,352 @@
+{
+  "schema_version": 1,
+  "standard_project": {
+    "id": "ACCEPTANCE-8-PAGE-SYNTHETIC",
+    "page_count": 8,
+    "source": "examples/demo-project/project.json",
+    "expected_outputs": [
+      "MP4",
+      "SRT",
+      "旁白 DOCX",
+      "分页音频",
+      "Remotion 工程",
+      "配置",
+      "预检报告",
+      "日志",
+      "SHA-256 清单"
+    ],
+    "content_policy": "synthetic_only_until_windows_manual_signoff"
+  },
+  "fixtures": [
+    {
+      "id": "FX-001",
+      "kind": "pptx",
+      "name": "8页标准课件",
+      "recipe": "synthetic_8_page_pptx",
+      "execution": "linux_automated",
+      "status": "ready",
+      "notes": "覆盖页序、标题、文字提取和整页预览"
+    },
+    {
+      "id": "FX-002",
+      "kind": "pdf-searchable",
+      "name": "可搜索 PDF",
+      "recipe": "synthetic_searchable_pdf",
+      "execution": "linux_automated",
+      "status": "ready",
+      "notes": "覆盖文本层提取"
+    },
+    {
+      "id": "FX-003",
+      "kind": "pdf-scanned",
+      "name": "扫描 PDF",
+      "recipe": "synthetic_scanned_pdf_with_low_confidence_region",
+      "execution": "windows_manual",
+      "status": "recipe_only",
+      "notes": "需要目标 Windows OCR 运行时确认定位"
+    },
+    {
+      "id": "FX-004",
+      "kind": "jpg",
+      "name": "JPG 单页",
+      "recipe": "synthetic_jpg",
+      "execution": "linux_automated",
+      "status": "ready",
+      "notes": "图片输入"
+    },
+    {
+      "id": "FX-005",
+      "kind": "png",
+      "name": "PNG 单页",
+      "recipe": "synthetic_png",
+      "execution": "linux_automated",
+      "status": "ready",
+      "notes": "图片输入"
+    },
+    {
+      "id": "FX-006",
+      "kind": "webp",
+      "name": "WebP 单页",
+      "recipe": "synthetic_webp",
+      "execution": "linux_automated",
+      "status": "ready",
+      "notes": "图片输入"
+    },
+    {
+      "id": "FX-007",
+      "kind": "bmp",
+      "name": "BMP 单页",
+      "recipe": "synthetic_bmp",
+      "execution": "linux_automated",
+      "status": "ready",
+      "notes": "图片输入"
+    },
+    {
+      "id": "FX-008",
+      "kind": "tiff-multipage",
+      "name": "多页 TIFF",
+      "recipe": "synthetic_multipage_tiff",
+      "execution": "windows_manual",
+      "status": "recipe_only",
+      "notes": "需要目标 Windows 图片导入与页序检查"
+    },
+    {
+      "id": "FX-009",
+      "kind": "audio-wav",
+      "name": "本地普通话录音",
+      "recipe": "synthetic_10_minute_wav",
+      "execution": "linux_automated",
+      "status": "ready",
+      "notes": "覆盖转写、差异、分页和字幕"
+    },
+    {
+      "id": "FX-010",
+      "kind": "heygen-fake",
+      "name": "Fake HeyGen 服务",
+      "recipe": "local_http_fake_heygen",
+      "execution": "linux_automated",
+      "status": "ready",
+      "notes": "禁止真实计费，覆盖幂等、限流和失败重试"
+    },
+    {
+      "id": "FX-011",
+      "kind": "corrupt-file",
+      "name": "损坏文件和伪扩展名",
+      "recipe": "invalid_magic_bytes_and_path_traversal_names",
+      "execution": "linux_automated",
+      "status": "ready",
+      "notes": "覆盖导入阻断和敏感路径"
+    },
+    {
+      "id": "FX-012",
+      "kind": "interrupted-job",
+      "name": "中断与恢复注入",
+      "recipe": "terminate_at_30_70_percent_and_resume",
+      "execution": "linux_automated",
+      "status": "ready",
+      "notes": "覆盖 OCR、转写、配音、渲染阶段的检查点"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "FR-001",
+      "domain": "项目管理",
+      "description": "创建独立项目目录并维护 project.json",
+      "priority": "P0",
+      "test_ids": ["AC-001"],
+      "evidence": ["tests/integration/test_m1_gate.py", "tests/e2e/project-lifecycle.spec.ts"]
+    },
+    {
+      "id": "FR-002",
+      "domain": "材料导入",
+      "description": "支持 Word、PPTX、可搜索 PDF、扫描 PDF 和 MP3/WAV",
+      "priority": "P0",
+      "test_ids": ["AC-002", "AC-003"],
+      "evidence": [
+        "tests/integration/test_material_import.py",
+        "tests/acceptance/fixtures-manifest.json"
+      ]
+    },
+    {
+      "id": "FR-003",
+      "domain": "页面解析",
+      "description": "按原页序生成预览并定位 OCR 低置信度",
+      "priority": "P0",
+      "test_ids": ["AC-003"],
+      "evidence": [
+        "tests/unit/parsers/test_docx_parser.py",
+        "tests/integration/test_image_pipeline.py"
+      ]
+    },
+    {
+      "id": "FR-004",
+      "domain": "内容匹配",
+      "description": "自动匹配大纲与课件并允许人工修正",
+      "priority": "P0",
+      "test_ids": ["AC-004"],
+      "evidence": ["tests/integration/test_matching_api.py"]
+    },
+    {
+      "id": "FR-005",
+      "domain": "旁白生成",
+      "description": "调用 OpenAI 兼容接口生成逐页旁白",
+      "priority": "P0",
+      "test_ids": ["AC-005"],
+      "evidence": ["tests/integration/test_narration_generation_api.py"]
+    },
+    {
+      "id": "FR-006",
+      "domain": "旁白确认",
+      "description": "逐页编辑、重生成、版本恢复和人工确认",
+      "priority": "P0",
+      "test_ids": ["AC-006"],
+      "evidence": [
+        "tests/integration/test_narration_versions.py",
+        "tests/unit/workflow/test_narration_gate.py"
+      ]
+    },
+    {
+      "id": "FR-007",
+      "domain": "HeyGen 配音",
+      "description": "逐页生成本人声音并记录任务和额度",
+      "priority": "P0",
+      "test_ids": ["AC-007"],
+      "evidence": [
+        "tests/integration/test_heygen_retry.py",
+        "tests/integration/test_m4_tasks_16_20_gate.py"
+      ]
+    },
+    {
+      "id": "FR-008",
+      "domain": "本地录音",
+      "description": "整段音频转写、差异检查、自动分页和人工调整",
+      "priority": "P0",
+      "test_ids": ["AC-008"],
+      "evidence": [
+        "tests/integration/test_transcription.py",
+        "tests/integration/test_m4_tasks_16_20_gate.py"
+      ]
+    },
+    {
+      "id": "FR-009",
+      "domain": "字幕",
+      "description": "生成同步字幕并输出独立 SRT",
+      "priority": "P0",
+      "test_ids": ["AC-009"],
+      "evidence": [
+        "tests/integration/test_subtitle_routes.py",
+        "tests/unit/subtitles/test_subtitle_service.py"
+      ]
+    },
+    {
+      "id": "FR-010",
+      "domain": "Remotion 渲染",
+      "description": "套用统一科技风模板并按音频匹配页面时长",
+      "priority": "P0",
+      "test_ids": ["AC-010"],
+      "evidence": [
+        "tests/integration/test_video_render_routes.py",
+        "remotion/src/video/TechBoardTemplate.test.tsx"
+      ]
+    },
+    {
+      "id": "FR-011",
+      "domain": "完整预检",
+      "description": "按异常等级检查材料、接口、组件和资源",
+      "priority": "P0",
+      "test_ids": ["AC-011"],
+      "evidence": ["tests/integration/test_preflight_routes.py", "tests/unit/preflight"]
+    },
+    {
+      "id": "FR-012",
+      "domain": "断点续作",
+      "description": "节点落盘、异常恢复、单页重试和局部重做",
+      "priority": "P0",
+      "test_ids": ["AC-012"],
+      "evidence": [
+        "tests/integration/test_job_recovery.py",
+        "tests/unit/cache/test_invalidation_matrix.py"
+      ]
+    },
+    {
+      "id": "FR-013",
+      "domain": "完整导出",
+      "description": "生成完整制作包和 SHA-256 清单",
+      "priority": "P0",
+      "test_ids": ["AC-013"],
+      "evidence": ["tests/integration/test_m5_gate.py", "M7-GATE.md"]
+    },
+    {
+      "id": "FR-014",
+      "domain": "安装启动",
+      "description": "Windows 一键安装、快捷方式、环境检测和浏览器打开",
+      "priority": "P0",
+      "test_ids": ["AC-014"],
+      "evidence": ["tests/release/test_launcher_contract.py", "M7-GATE.md"]
+    },
+    {
+      "id": "FR-015",
+      "domain": "稳定版更新",
+      "description": "检查更新、用户确认、备份和失败回滚",
+      "priority": "P0",
+      "test_ids": ["AC-015"],
+      "evidence": [
+        "tests/unit/updates/test_update_service.py",
+        "tests/integration/test_update_routes.py"
+      ]
+    },
+    {
+      "id": "FR-016",
+      "domain": "图片输入",
+      "description": "多张图片自然排序并允许人工调整",
+      "priority": "P0",
+      "test_ids": ["AC-016"],
+      "evidence": [
+        "tests/integration/test_material_import.py",
+        "tests/acceptance/fixtures-manifest.json"
+      ]
+    },
+    {
+      "id": "NFR-001",
+      "domain": "易用性",
+      "description": "标准项目从安装到导出无需手工运行命令",
+      "priority": "P0",
+      "test_ids": ["AC-017"],
+      "evidence": ["tests/e2e/project-lifecycle.spec.ts", "tests/release/install-smoke.ps1"]
+    },
+    {
+      "id": "NFR-002",
+      "domain": "可靠性",
+      "description": "异常关闭后能够恢复且成功页面不重复生成",
+      "priority": "P0",
+      "test_ids": ["AC-018"],
+      "evidence": [
+        "tests/integration/test_job_recovery.py",
+        "tests/unit/updates/test_update_service.py"
+      ]
+    },
+    {
+      "id": "NFR-003",
+      "domain": "可维护性",
+      "description": "项目、模板、接口、缓存和任务边界清晰",
+      "priority": "P1",
+      "test_ids": ["AC-019"],
+      "evidence": ["packages/contracts/openapi.json", "M7-GATE.md"]
+    },
+    {
+      "id": "NFR-004",
+      "domain": "安全性",
+      "description": "密钥、认证头和敏感参数不进入日志或项目包",
+      "priority": "P0",
+      "test_ids": ["AC-020"],
+      "evidence": [
+        "tests/security/test_secret_redaction.py",
+        "tests/release/test_runtime_manifest.py"
+      ]
+    },
+    {
+      "id": "NFR-005",
+      "domain": "可追溯性",
+      "description": "源文件哈希、模型/声音/模板版本、确认和错误可追溯",
+      "priority": "P0",
+      "test_ids": ["AC-021"],
+      "evidence": ["tests/acceptance/test_traceability.py", "M7-GATE.md"]
+    },
+    {
+      "id": "NFR-006",
+      "domain": "兼容性",
+      "description": "支持 Windows 中文路径和稳定依赖组合",
+      "priority": "P0",
+      "test_ids": ["AC-022"],
+      "evidence": ["tests/unit/environment/test_detector.py", "tests/release/install-smoke.ps1"]
+    },
+    {
+      "id": "NFR-007",
+      "domain": "输出质量",
+      "description": "1920×1080、16:9、音画完整、字幕同步、核心内容不裁切",
+      "priority": "P0",
+      "test_ids": ["AC-023"],
+      "evidence": ["tests/unit/video/test_props_service.py", "tests/integration/test_m5_gate.py"]
+    }
+  ]
+}

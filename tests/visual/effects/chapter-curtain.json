@@ -1,0 +1,33 @@
+{
+  "reference_video": {
+    "path": "D:/xwechat_files/wxid_vwiv5x4loccs22_022f/msg/video/2026-08/383a9d3f7e55836a06ae49292ddaf54b.mp4",
+    "duration_ms": 373690,
+    "width": 720,
+    "height": 1280,
+    "fps": 30
+  },
+  "cases": [
+    {
+      "aspect_ratio": "16:9",
+      "frame": "start",
+      "assertions": ["no_crop", "number_before_title", "no_watermark"]
+    },
+    { "aspect_ratio": "16:9", "frame": "middle", "assertions": ["title_readable", "no_flash"] },
+    {
+      "aspect_ratio": "16:9",
+      "frame": "end",
+      "assertions": ["title_readable", "stable_final_state"]
+    },
+    {
+      "aspect_ratio": "9:16",
+      "frame": "start",
+      "assertions": ["no_crop", "number_before_title", "no_watermark"]
+    },
+    { "aspect_ratio": "9:16", "frame": "middle", "assertions": ["title_readable", "no_flash"] },
+    {
+      "aspect_ratio": "9:16",
+      "frame": "end",
+      "assertions": ["title_readable", "stable_final_state"]
+    }
+  ]
+}

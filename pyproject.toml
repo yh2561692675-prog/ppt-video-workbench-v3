@@ -1,0 +1,52 @@
+[project]
+name = "ppt-video-workbench"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi>=0.116,<1",
+  "ppt-video-workbench-api",
+  "pydantic>=2.11,<3",
+  "sqlalchemy>=2.0,<3",
+  "uvicorn>=0.35,<1",
+]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28,<1",
+  "mypy>=1.17,<2",
+  "pytest>=8.4,<9",
+  "pytest-asyncio>=1.1,<2",
+  "ruff>=0.12,<1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "apps/api/src", "peripheral-platform/src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["workbench"]
+mypy_path = ["apps/api/src", "peripheral-platform/src"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["apps/api", "peripheral-platform"]
+
+[tool.uv.sources]
+ppt-video-workbench-api = { workspace = true }
+ppt-video-workbench-peripheral-platform = { workspace = true }
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true

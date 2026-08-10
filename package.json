@@ -1,0 +1,28 @@
+{
+  "name": "ppt-video-workbench",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.7.0",
+  "scripts": {
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "lint": "eslint . --max-warnings=0 && prettier --check apps packages remotion scripts tests docs installer peripheral-platform schemas .github package.json tsconfig.json eslint.config.mjs playwright.config.ts",
+    "format": "prettier --write .",
+    "typecheck": "pnpm --recursive typecheck",
+    "test": "pnpm --recursive test",
+    "build": "pnpm --recursive build",
+    "e2e": "playwright test",
+    "licenses": "pnpm licenses list --prod"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.32.0",
+    "@playwright/test": "1.54.1",
+    "@types/node": "24.1.0",
+    "eslint": "9.32.0",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "eslint-plugin-react-refresh": "0.4.20",
+    "globals": "16.3.0",
+    "prettier": "3.6.2",
+    "typescript": "5.8.3",
+    "typescript-eslint": "8.38.0"
+  }
+}

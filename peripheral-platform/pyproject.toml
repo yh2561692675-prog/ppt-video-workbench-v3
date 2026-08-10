@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=75,<76", "wheel>=0.44,<1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ppt-video-workbench-peripheral-platform"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi>=0.116,<0.117",
+  "pydantic>=2.11,<3",
+  "uvicorn>=0.35,<0.36",
+]
+
+[project.optional-dependencies]
+test = ["httpx>=0.28,<0.29", "pytest>=8.4,<9"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"

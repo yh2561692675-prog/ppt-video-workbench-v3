@@ -1,0 +1,129 @@
+{
+  "$defs": {
+    "ErrorCategory": {
+      "enum": [
+        "ENVIRONMENT",
+        "CONFIGURATION",
+        "AUTHENTICATION",
+        "NETWORK",
+        "PROVIDER",
+        "INPUT",
+        "PROCESSING",
+        "STORAGE",
+        "QA",
+        "INTERNAL"
+      ],
+      "title": "ErrorCategory",
+      "type": "string"
+    },
+    "ErrorDetail": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/ErrorCategory"
+        },
+        "code": {
+          "pattern": "^[A-Z][A-Z0-9_]{2,63}$",
+          "title": "Code",
+          "type": "string"
+        },
+        "details": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Details",
+          "type": "object"
+        },
+        "message": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "title": "Retryable",
+          "type": "boolean"
+        }
+      },
+      "required": ["category", "code", "message", "retryable"],
+      "title": "ErrorDetail",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "OutputArtifact": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "logical_name": {
+          "pattern": "^[a-z][a-z0-9_.-]{1,63}$",
+          "title": "Logical Name",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "staged_path": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Staged Path",
+          "type": "string"
+        }
+      },
+      "required": ["logical_name", "kind", "staged_path", "size_bytes", "sha256"],
+      "title": "OutputArtifact",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ErrorDetail"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "job_id": {
+      "format": "uuid",
+      "title": "Job Id",
+      "type": "string"
+    },
+    "outcome": {
+      "enum": ["succeeded", "failed"],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "outputs": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/OutputArtifact"
+      },
+      "title": "Outputs",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": ["schema_version", "job_id", "outcome"],
+  "title": "JobResult",
+  "type": "object"
+}

@@ -1,0 +1,18 @@
+# PyInstaller entry-point contract for the Windows release build.
+# The build script supplies the pinned runtime, Web assets, Remotion bundle,
+# FFmpeg/FFprobe, LibreOffice and OCR resources into the release directory.
+
+from pathlib import Path
+
+project_root = Path(SPECPATH).parents[1]
+api_entry = project_root / "apps" / "api" / "src" / "workbench" / "desktop.py"
+
+analysis = Analysis(
+    [str(api_entry)],
+    pathex=[str(project_root / "apps" / "api" / "src")],
+    datas=[],
+    hiddenimports=["workbench"],
+    name="workbench",
+)
+pyz = PYZ(analysis.pure)
+exe = EXE(pyz, analysis.scripts, name="workbench", console=True)

@@ -1,0 +1,162 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+from dataclasses import dataclass
+
+import httpx
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+
+
+class HeyGenIntegrationError(RuntimeError):
+    def __init__(self, code: str, message: str, action: str) -> None:
+        super().__init__(message)
+        self.code = code
+        self.action = action
+
+
+class HeyGenVoice(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    voice_id: str
+    name: str
+    language: str = ""
+    gender: str = ""
+    support_pause: bool = False
+    support_locale: bool = False
+    preview_audio_url: HttpUrl | None = None
+
+
+class SpeechResult(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    audio_url: HttpUrl
+    duration: float = Field(ge=0)
+    request_id: str
+
+
+@dataclass(frozen=True)
+class DownloadedAudio:
+    content: bytes
+    content_type: str
+
+
+class HeyGenClient:
+    def __init__(
+        self,
+        *,
+        transport: httpx.BaseTransport | None = None,
+        timeout_seconds: float = 30,
+    ) -> None:
+        self.transport = transport
+        self.timeout_seconds = timeout_seconds
+
+    def list_voices(
+        self, api_key: str, base_url: str = "https://api.heygen.com"
+    ) -> list[HeyGenVoice]:
+        response = self._request(
+            "GET",
+            f"{base_url.rstrip('/')}/v3/voices",
+            api_key,
+            params={"type": "private", "engine": "starfish", "limit": "100"},
+        )
+        payload = response.json()
+        return [HeyGenVoice.model_validate(item) for item in payload.get("data", [])]
+
+    def generate_speech(
+        self,
+        api_key: str,
+        *,
+        text: str,
+        voice_id: str,
+        speed: float = 1,
+        language: str = "zh",
+        base_url: str = "https://api.heygen.com",
+    ) -> SpeechResult:
+        response = self._request(
+            "POST",
+            f"{base_url.rstrip('/')}/v3/voices/speech",
+            api_key,
+            json={
+                "text": text,
+                "voice_id": voice_id,
+                "input_type": "text",
+                "speed": speed,
+                "language": language,
+            },
+        )
+        return SpeechResult.model_validate(response.json().get("data"))
+
+    def download(self, url: str) -> DownloadedAudio:
+        response = self._request("GET", url, None)
+        if not response.content:
+            raise HeyGenIntegrationError(
+                "heygen_empty_audio", "HeyGen 返回了空音频", "请重试当前页面"
+            )
+        return DownloadedAudio(
+            content=response.content,
+            content_type=response.headers.get("Content-Type", "application/octet-stream"),
+        )
+
+    def _request(
+        self,
+        method: str,
+        url: str,
+        api_key: str | None,
+        *,
+        params: Mapping[str, str] | None = None,
+        json: dict[str, object] | None = None,
+    ) -> httpx.Response:
+        try:
+            with httpx.Client(
+                transport=self.transport,
+                timeout=self.timeout_seconds,
+                follow_redirects=True,
+            ) as client:
+                response = client.request(
+                    method,
+                    url,
+                    headers={"x-api-key": api_key} if api_key else None,
+                    params=params,
+                    json=json,
+                )
+        except httpx.TimeoutException as error:
+            raise HeyGenIntegrationError(
+                "heygen_timeout", "HeyGen 请求超时", "请稍后仅重试当前页面"
+            ) from error
+        except httpx.HTTPError as error:
+            raise HeyGenIntegrationError(
+                "heygen_network_error", "无法连接 HeyGen", "请检查网络后重试"
+            ) from error
+        if response.is_success:
+            return response
+        try:
+            remote_code = str(response.json().get("error", {}).get("code", ""))
+        except ValueError:
+            remote_code = ""
+        if response.status_code == 401 or remote_code == "authentication_failed":
+            code, message, action = (
+                "heygen_authentication_failed",
+                "HeyGen API Key 无效或已过期",
+                "请更新 HeyGen 凭证",
+            )
+        elif response.status_code == 429 or remote_code == "rate_limit_exceeded":
+            code, message, action = (
+                "heygen_rate_limited",
+                "HeyGen 请求频率受限",
+                "请按提示稍后仅重试当前页面",
+            )
+        elif response.status_code == 402 or any(
+            value in remote_code for value in ("credit", "quota", "insufficient")
+        ):
+            code, message, action = (
+                "heygen_quota_exhausted",
+                "HeyGen 额度不足",
+                "请补充额度后继续，已成功页面不会重做",
+            )
+        else:
+            code, message, action = (
+                "heygen_service_error",
+                "HeyGen 服务暂时失败",
+                "请稍后仅重试当前页面",
+            )
+        raise HeyGenIntegrationError(code, message, action)
