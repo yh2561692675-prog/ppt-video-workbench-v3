@@ -81,7 +81,40 @@ def build_default_probes(
         "secret_references": lambda: _secret_reference_check(heygen_snapshot()),
         "temporary_directory": _temporary_directory_check,
         "video_encoder": _video_encoder_check,
+        "render_worker": lambda: _render_worker_check(root),
     }
+
+
+def _render_worker_check(root: Path) -> DiagnosticCheck:
+    database = root / "workspace.db"
+    if not database.is_file():
+        return _check(
+            "render_worker", "渲染任务工作器", DiagnosticStatus.YELLOW,
+            DiagnosticCategory.PROCESSING, "RENDER_WORKER_NO_DATABASE",
+            "工作区尚未创建任务数据库", "无法统计异步渲染队列状态", "先创建或打开一个工作区",
+            {"worker_alive": False, "queue_length": 0},
+        )
+    try:
+        with sqlite3.connect(database) as connection:
+            row = connection.execute(
+                "SELECT COUNT(*) FROM jobs "
+                "WHERE status IN "
+                "('queued','running','pause_requested','paused','cancel_requested')"
+            ).fetchone()
+        queue_length = int(row[0] if row else 0)
+        return _check(
+            "render_worker", "渲染任务工作器", DiagnosticStatus.GREEN,
+            DiagnosticCategory.PROCESSING, "RENDER_WORKER_QUEUE_OK",
+            "异步渲染任务队列可读", "无", "无需处理",
+            {"worker_alive": True, "queue_length": queue_length},
+        )
+    except sqlite3.Error:
+        return _check(
+            "render_worker", "渲染任务工作器", DiagnosticStatus.RED,
+            DiagnosticCategory.PROCESSING, "RENDER_WORKER_DATABASE_ERROR",
+            "无法读取渲染任务队列", "异步渲染任务可能无法继续", "检查 workspace.db 完整性",
+            {"worker_alive": False},
+        )
 
 
 def create_heygen_health_probe(store: object, client: object) -> HeyGenProbe:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import subprocess
 import sys
 from collections.abc import Callable, Iterable
@@ -9,8 +10,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from peripheral_contracts import EventEnvelope, JobEnvelope, JobResult, ModuleManifest
+from peripheral_contracts import ArtifactRef, EventEnvelope, JobEnvelope, JobResult, ModuleManifest
 from pydantic import JsonValue, ValidationError
+
+from peripheral_host.artifacts import sha256_file, verify_artifact
 
 _INHERITED_ENVIRONMENT = (
     "PATH",
@@ -101,9 +104,18 @@ class ModuleExecutionResult:
 
 
 class ModuleRunner:
-    def __init__(self, registry: ModuleRegistry, attempts_root: Path) -> None:
+    def __init__(
+        self,
+        registry: ModuleRegistry,
+        attempts_root: Path,
+        *,
+        workspace_root: Path | None = None,
+    ) -> None:
         self.registry = registry
         self.attempts_root = attempts_root.resolve()
+        self.workspace_root = (
+            workspace_root.resolve() if workspace_root is not None else self.attempts_root
+        )
 
     def run(
         self,
@@ -125,7 +137,8 @@ class ModuleRunner:
         if attempt.job_id != job.job_id:
             raise ValueError("attempt job_id does not match request job_id")
         attempt.root.mkdir(parents=True, exist_ok=False)
-        _write_text_atomic(attempt.request_path, job.model_dump_json(indent=2) + "\n")
+        module_job = _stage_job_inputs(job, attempt.root, self.workspace_root)
+        _write_text_atomic(attempt.request_path, module_job.model_dump_json(indent=2) + "\n")
 
         command = [
             *registered.command,
@@ -148,7 +161,7 @@ class ModuleRunner:
             bufsize=1,
         )
         return RunningModule(
-            job=job,
+            job=module_job,
             attempt=attempt,
             registered_module=registered,
             process=process,
@@ -290,3 +303,26 @@ def _write_text_atomic(path: Path, content: str) -> None:
         handle.flush()
         os.fsync(handle.fileno())
     os.replace(temporary, path)
+
+
+def _stage_job_inputs(job: JobEnvelope, attempt_root: Path, workspace_root: Path) -> JobEnvelope:
+    if not job.inputs:
+        return job
+    input_root = attempt_root / "inputs"
+    input_root.mkdir(parents=True, exist_ok=False)
+    staged: list[ArtifactRef] = []
+    for index, reference in enumerate(job.inputs, start=1):
+        verified = verify_artifact(reference, workspace_root)
+        suffix = Path(reference.path).suffix[:16]
+        target = input_root / f"input-{index:04d}{suffix}"
+        with verified.path.open("rb") as source, target.open("xb") as destination:
+            shutil.copyfileobj(source, destination, length=1024 * 1024)
+            destination.flush()
+            os.fsync(destination.fileno())
+        digest = sha256_file(target)
+        if target.stat().st_size != reference.size_bytes or digest != reference.sha256:
+            raise ValueError("staged input failed length or digest verification")
+        staged.append(
+            reference.model_copy(update={"path": target.relative_to(attempt_root).as_posix()})
+        )
+    return job.model_copy(update={"inputs": tuple(staged)})

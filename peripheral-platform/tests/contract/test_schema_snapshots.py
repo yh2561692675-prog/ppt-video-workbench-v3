@@ -14,6 +14,7 @@ def test_schema_snapshots_match_contract_models(tmp_path):
 
     assert generated_names == {
         "artifact-manifest-1.0.json",
+        "business-result-1.0.json",
         "event-envelope-1.0.json",
         "job-envelope-1.0.json",
         "job-result-1.0.json",

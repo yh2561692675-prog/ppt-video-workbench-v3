@@ -233,10 +233,12 @@ class EffectPlanV2(EffectModel):
     def validate_timeline_and_payload(self) -> EffectPlanV2:
         expected_kind = _TEMPLATE_KINDS[self.template]
         if self.template_payload.kind != expected_kind:
-            raise ValueError(
-                f"template {self.template} requires payload kind {expected_kind}"
-            )
-        ranges = [*self.cues, *self.effects, *self.presenter_cues]
+            raise ValueError(f"template {self.template} requires payload kind {expected_kind}")
+        ranges: list[EffectCue | EffectEvent | PresenterCue] = [
+            *self.cues,
+            *self.effects,
+            *self.presenter_cues,
+        ]
         if any(item.end_ms > self.duration_ms for item in ranges):
             raise ValueError("特效时间轴不得超出页面时长")
         if self.transition.duration_ms > self.duration_ms:

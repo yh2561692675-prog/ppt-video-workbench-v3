@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from workbench.domain.models import PageRecord, ProjectManifest, validate_manifest
+from workbench.domain.models import validate_manifest
 
 
 def test_legacy_manifest_without_effect_fields_loads_with_defaults() -> None:

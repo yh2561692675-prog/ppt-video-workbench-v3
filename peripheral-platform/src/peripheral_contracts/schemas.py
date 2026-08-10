@@ -12,6 +12,7 @@ from peripheral_contracts.models import (
     JobResult,
     ModuleManifest,
 )
+from peripheral_contracts.business_results import BusinessResultManifest
 
 SCHEMA_MODELS: dict[str, type[BaseModel]] = {
     "job-envelope-1.0.json": JobEnvelope,
@@ -19,6 +20,7 @@ SCHEMA_MODELS: dict[str, type[BaseModel]] = {
     "artifact-manifest-1.0.json": ArtifactManifest,
     "job-result-1.0.json": JobResult,
     "module-manifest-1.0.json": ModuleManifest,
+    "business-result-1.0.json": BusinessResultManifest,
 }
 
 
@@ -31,4 +33,4 @@ def write_schema_snapshots(destination: Path) -> None:
             indent=2,
             sort_keys=True,
         )
-        (destination / filename).write_text(payload + "\n", encoding="utf-8")
+        (destination / filename).write_text(payload + "\n", encoding="utf-8", newline="\n")

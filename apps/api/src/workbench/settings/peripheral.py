@@ -18,6 +18,8 @@ class WorkbenchPeripheralSettings:
     enabled: bool = False
     base_url: str = "http://127.0.0.1:8765"
     timeout_seconds: float = 3.0
+    local_fallback: bool = True
+    enabled_modules: tuple[str, ...] = ()
 
     @classmethod
     def from_env(cls) -> WorkbenchPeripheralSettings:
@@ -34,4 +36,11 @@ class WorkbenchPeripheralSettings:
             enabled=_read_enabled(),
             base_url=f"http://{host}:{port}",
             timeout_seconds=timeout_seconds,
+            local_fallback=os.environ.get("PERIPHERAL_LOCAL_FALLBACK", "true").strip().lower()
+            not in {"0", "false", "no"},
+            enabled_modules=tuple(
+                item.strip().upper()
+                for item in os.environ.get("PERIPHERAL_S1_MODULES", "").split(",")
+                if item.strip()
+            ),
         )

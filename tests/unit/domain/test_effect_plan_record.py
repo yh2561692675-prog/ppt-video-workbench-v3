@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
-
 from workbench.domain.effects import EffectPlanRecord, EffectProjectPolicy, validate_record_hash
 from workbench.effects.schema import EffectPlanV2
 

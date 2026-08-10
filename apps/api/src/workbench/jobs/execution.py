@@ -20,8 +20,14 @@ class RenderCancelled(RuntimeError):
 
 
 class RenderExecutionContext(Protocol):
-    job_id: UUID | None
-    input_fingerprint: str | None
+    @property
+    def job_id(self) -> UUID | None: ...
+
+    @property
+    def input_fingerprint(self) -> str | None: ...
+
+    @property
+    def cancel_requested(self) -> bool: ...
 
     def checkpoint(
         self,
@@ -38,6 +44,8 @@ class RenderExecutionContext(Protocol):
     def pause_if_requested(self) -> None: ...
 
     def heartbeat(self) -> None: ...
+
+    def register_temporary_paths(self, paths: Iterable[Path]) -> None: ...
 
 
 class InlineRenderExecutionContext:
@@ -62,6 +70,9 @@ class InlineRenderExecutionContext:
         return None
 
     def heartbeat(self) -> None:
+        return None
+
+    def register_temporary_paths(self, paths: Iterable[Path]) -> None:
         return None
 
     @property
@@ -90,6 +101,8 @@ class PersistentRenderExecutionContext:
             JobType.EXPORT_PACKAGE,
             checkpoint_store=self.store,
         )
+        restored = self.store.latest(job_id)
+        self._temporary_paths = set(restored.temporary_paths if restored is not None else [])
 
     @property
     def cancel_requested(self) -> bool:
@@ -107,7 +120,11 @@ class PersistentRenderExecutionContext:
         artifacts: Iterable[Path] = (),
         payload: Mapping[str, object] | None = None,
     ) -> None:
-        data = {"stage": stage, "message": message}
+        data: dict[str, object] = {
+            "stage": stage,
+            "message": message,
+            "temporary_paths": sorted(self._temporary_paths),
+        }
         if payload:
             data.update(payload)
         self._job_context.checkpoint(progress, data, artifacts)
@@ -131,6 +148,19 @@ class PersistentRenderExecutionContext:
 
     def heartbeat(self) -> None:
         self.repository.heartbeat(self.job_id)
+
+    def register_temporary_paths(self, paths: Iterable[Path]) -> None:
+        for path in paths:
+            target = path.resolve()
+            if self.project_dir not in target.parents:
+                raise ValueError("temporary render path escapes project directory")
+            self._temporary_paths.add(target.relative_to(self.project_dir).as_posix())
+        record = self.repository.get(self.job_id)
+        self.checkpoint(
+            stage=record.stage,
+            progress=record.progress,
+            message=record.message,
+        )
 
     def restore(self, verify: bool = True) -> Checkpoint | None:
         return self.store.restore(self.job_id, verify=verify)

@@ -31,7 +31,13 @@
           "type": "integer"
         }
       },
-      "required": ["artifact_id", "kind", "path", "size_bytes", "sha256"],
+      "required": [
+        "artifact_id",
+        "kind",
+        "path",
+        "size_bytes",
+        "sha256"
+      ],
       "title": "ArtifactRef",
       "type": "object"
     }
@@ -61,7 +67,12 @@
       "type": "string"
     }
   },
-  "required": ["schema_version", "job_id", "artifacts", "created_at"],
+  "required": [
+    "schema_version",
+    "job_id",
+    "artifacts",
+    "created_at"
+  ],
   "title": "ArtifactManifest",
   "type": "object"
 }

@@ -190,6 +190,44 @@ export interface VideoExportResult {
   cached_pages: number;
 }
 
+export type RenderJobStatus =
+  | 'queued'
+  | 'running'
+  | 'pause_requested'
+  | 'paused'
+  | 'cancel_requested'
+  | 'succeeded'
+  | 'failed'
+  | 'cancelled';
+
+export type RenderJobAction = 'pause' | 'resume' | 'cancel' | 'retry';
+
+export interface RenderJob {
+  id: string;
+  project_id: string;
+  job_type: string;
+  status: RenderJobStatus;
+  progress: number;
+  attempts: number;
+  max_attempts: number;
+  stage: string;
+  message: string;
+  error: string | null;
+  error_code: string | null;
+  revision: number;
+  created_at: string;
+  updated_at: string;
+  heartbeat_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  result: VideoExportResult | null;
+}
+
+export interface RenderJobSubmission {
+  job: RenderJob;
+  created: boolean;
+}
+
 export interface HeyGenProfile {
   id: string;
   name: string;
@@ -582,6 +620,17 @@ export const api = {
   videoPreview: (id: string) => request<VideoPreflight>(`/api/projects/${id}/video/preview`),
   videoRender: (id: string) =>
     request<VideoExportResult>(`/api/projects/${id}/video/render`, { method: 'POST' }),
+  createRenderJob: (id: string) =>
+    request<RenderJobSubmission>(`/api/projects/${id}/video/render-jobs`, { method: 'POST' }),
+  getCurrentRenderJob: (id: string) =>
+    request<{ job: RenderJob } | null>(`/api/projects/${id}/video/render-jobs/current`),
+  getRenderJob: (projectId: string, jobId: string) =>
+    request<{ job: RenderJob }>(`/api/projects/${projectId}/video/render-jobs/${jobId}`),
+  actOnRenderJob: (projectId: string, jobId: string, action: RenderJobAction) =>
+    request<RenderJobSubmission>(`/api/projects/${projectId}/video/render-jobs/${jobId}/actions`, {
+      method: 'POST',
+      body: JSON.stringify({ action }),
+    }),
   effectWorkspace: (id: string) =>
     request<EffectWorkspace>(`/api/projects/${id}/effects`),
   effectCatalog: (id: string) =>

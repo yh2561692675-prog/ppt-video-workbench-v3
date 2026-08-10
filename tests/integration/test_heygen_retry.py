@@ -16,7 +16,7 @@ from workbench.domain.models import NarrationRecord, PageRecord
 from workbench.integrations.heygen.client import HeyGenClient, HeyGenIntegrationError
 from workbench.main import create_app
 from workbench.settings.heygen_store import HeyGenProfileStore
-from workbench.settings.secret_store import SecretProtector
+from workbench.settings.secret_store import SecretProtector, SecretStoreUnavailable
 
 
 class TestProtector(SecretProtector):
@@ -25,6 +25,14 @@ class TestProtector(SecretProtector):
 
     def unprotect(self, ciphertext: bytes) -> bytes:
         return base64.b64decode(ciphertext)[::-1]
+
+
+class UnavailableProtector(SecretProtector):
+    def protect(self, plaintext: bytes) -> bytes:
+        return plaintext
+
+    def unprotect(self, ciphertext: bytes) -> bytes:
+        raise SecretStoreUnavailable("DPAPI unavailable")
 
 
 def test_profile_store_replaces_an_expired_key_without_creating_a_duplicate(tmp_path: Path) -> None:
@@ -43,6 +51,26 @@ def test_profile_store_replaces_an_expired_key_without_creating_a_duplicate(tmp_
     assert len(store.list_profiles()) == 1
     assert store.credentials(created.id).api_key == "replacement-key"
     assert "replacement-key" not in store.path.read_text(encoding="utf-8")
+
+
+def test_voice_list_reports_secret_store_failure_as_actionable_error(tmp_path: Path) -> None:
+    with TestClient(create_app(tmp_path, secret_protector=TestProtector())) as seed_api:
+        profile = seed_api.post(
+            "/api/settings/heygen-profiles",
+            json={
+                "name": "HeyGen",
+                "base_url": "https://api.heygen.test",
+                "api_key": "secret",
+            },
+        ).json()["data"]
+
+    with TestClient(create_app(tmp_path, secret_protector=UnavailableProtector())) as api:
+        response = api.get(f"/api/settings/heygen-profiles/{profile['id']}/voices")
+
+    assert response.status_code == 422
+    payload = response.json()
+    assert payload["error"]["code"] == "heygen_secret_store_unavailable"
+    assert payload["error"]["action"] == "请在当前 Windows 用户下重新保存 HeyGen API Key"
 
 
 def _wav_bytes() -> bytes:

@@ -10,7 +10,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from workbench.effects.schema import EffectPlanV2
 
 
-
 class EffectContractModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

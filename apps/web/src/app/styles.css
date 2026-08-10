@@ -926,3 +926,8 @@ input:focus {
 .diagnostic-package-panel .error {
   flex-basis: 100%;
 }
+
+.render-job-progress { width: 100%; height: 10px; accent-color: #2f7df6; }
+.render-job-meta, .render-job-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.render-job-actions { margin-top: 16px; }
+.render-job-confirmation { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; }

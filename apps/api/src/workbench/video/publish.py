@@ -42,15 +42,17 @@ def publish_render_outputs(
     package_target = output_root / f"{package_name}-{run_id}"
     latest_path = output_root / "latest.json"
 
-    temp_mp4 = output_root / f".{final_name}.{run_id}.tmp"
-    shutil.copy2(staged_mp4, temp_mp4)
-    os.replace(temp_mp4, stable_mp4)
-
     temp_package = output_root / f".{package_target.name}.tmp"
     if temp_package.exists():
         shutil.rmtree(temp_package)
     shutil.copytree(staged_package, temp_package)
     os.replace(temp_package, package_target)
+
+    # Prepare and publish the versioned package before touching the stable MP4.
+    # A package-copy failure must leave the previous successful video intact.
+    temp_mp4 = output_root / f".{final_name}.{run_id}.tmp"
+    shutil.copy2(staged_mp4, temp_mp4)
+    os.replace(temp_mp4, stable_mp4)
 
     latest_payload = {
         "mp4_relative_path": stable_mp4.relative_to(output_root).as_posix(),

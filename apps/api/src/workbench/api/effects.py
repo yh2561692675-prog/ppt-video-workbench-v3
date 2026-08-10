@@ -6,8 +6,13 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict
 
 from workbench.api.projects import Envelope, envelope
-from workbench.effects.service import EffectService
+from workbench.domain.effects import EffectPlanRecord
 from workbench.effects.schema import EffectPlanV2
+from workbench.effects.service import (
+    EffectMutationResult,
+    EffectService,
+    EffectWorkspaceResponse,
+)
 
 
 class GenerateEffectsRequest(BaseModel):
@@ -40,14 +45,16 @@ def create_effects_router(service: EffectService) -> APIRouter:
         return envelope(service.catalog())
 
     @router.get("")
-    def workspace(project_id: UUID):
+    def workspace(project_id: UUID) -> Envelope[EffectWorkspaceResponse]:
         try:
             return envelope(service.get_workspace(project_id))
         except KeyError as error:
             raise HTTPException(status_code=404, detail="project not found") from error
 
     @router.post("/generate")
-    def generate(project_id: UUID, request: GenerateEffectsRequest | None = None):
+    def generate(
+        project_id: UUID, request: GenerateEffectsRequest | None = None
+    ) -> Envelope[EffectMutationResult]:
         try:
             request = request or GenerateEffectsRequest()
             return envelope(
@@ -57,7 +64,9 @@ def create_effects_router(service: EffectService) -> APIRouter:
             raise HTTPException(status_code=404, detail="project not found") from error
 
     @router.put("/pages/{page_id}")
-    def update_page(project_id: UUID, page_id: UUID, request: UpdateEffectRequest):
+    def update_page(
+        project_id: UUID, page_id: UUID, request: UpdateEffectRequest
+    ) -> Envelope[EffectPlanRecord]:
         try:
             return envelope(
                 service.update_page(
@@ -76,10 +85,14 @@ def create_effects_router(service: EffectService) -> APIRouter:
             raise HTTPException(status_code=422, detail=str(error)) from error
 
     @router.post("/pages/{page_id}/unlock")
-    def unlock_page(project_id: UUID, page_id: UUID, request: UnlockEffectRequest):
+    def unlock_page(
+        project_id: UUID, page_id: UUID, request: UnlockEffectRequest
+    ) -> Envelope[EffectPlanRecord]:
         try:
             return envelope(
-                service.unlock_page(project_id, page_id, expected_revision=request.expected_revision)
+                service.unlock_page(
+                    project_id, page_id, expected_revision=request.expected_revision
+                )
             )
         except KeyError as error:
             raise HTTPException(status_code=404, detail="page not found") from error

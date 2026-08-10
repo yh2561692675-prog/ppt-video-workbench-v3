@@ -7,12 +7,13 @@ from uuid import UUID, uuid4
 
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from peripheral_contracts import ActionRequest, JobEnvelope
 from peripheral_contracts.versioning import UnsupportedSchemaVersion
 from pydantic import ValidationError
 
 from peripheral_host.database import DatabaseIntegrityError, DatabaseMigrationError
+from peripheral_host.artifact_stream import get_streamable_artifact, stream_verified_file
 from peripheral_host.errors import (
     ArtifactIntegrityError,
     ArtifactPublishError,
@@ -162,6 +163,19 @@ def create_internal_app(*, service: JobService, scheduler: Scheduler) -> FastAPI
     @app.get("/internal/v1/jobs/{job_id}/artifacts")
     async def list_artifacts(job_id: UUID) -> list[dict[str, object]]:
         return [_artifact_json(item) for item in service.list_artifacts(job_id)]
+
+    @app.get("/internal/v1/jobs/{job_id}/artifacts/{artifact_id}/content")
+    async def stream_artifact(job_id: UUID, artifact_id: UUID) -> StreamingResponse:
+        record, path = get_streamable_artifact(service, job_id, artifact_id)
+        return StreamingResponse(
+            stream_verified_file(path, record),
+            media_type="application/octet-stream",
+            headers={
+                "Content-Length": str(record.size_bytes),
+                "Digest": f"sha-256={record.sha256}",
+                "X-Artifact-Kind": record.kind,
+            },
+        )
 
     @app.post("/internal/v1/jobs/{job_id}/actions")
     async def request_action(job_id: UUID, action: ActionRequest) -> dict[str, Any]:

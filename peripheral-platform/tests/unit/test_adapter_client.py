@@ -131,3 +131,27 @@ def test_artifact_dto_does_not_expose_internal_relative_path() -> None:
     assert result[0].artifact_id == artifact_id
     assert "path" not in result[0].model_dump()
     assert "relative_path" not in result[0].model_dump()
+
+
+def test_artifact_stream_yields_content_without_exposing_path() -> None:
+    job_id = uuid4()
+    artifact_id = uuid4()
+    payload = b"streamed payload"
+
+    def content(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            request=request,
+            headers={
+                "Content-Length": str(len(payload)),
+                "Digest": f"sha-256={'a' * 64}",
+            },
+            content=payload,
+        )
+
+    client = HttpPeripheralClient(
+        "http://127.0.0.1:8765",
+        transport=httpx.MockTransport(content),
+    )
+
+    assert b"".join(client.stream_artifact(job_id, artifact_id)) == payload

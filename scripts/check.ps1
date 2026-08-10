@@ -5,6 +5,7 @@ $env:UV_LINK_MODE = "copy"
 uv sync --frozen
 uv run ruff check apps tests
 uv run mypy apps/api/src
+uv run pytest tests/regression/test_ai_mode_unchanged.py
 uv run pytest
 pnpm install --frozen-lockfile
 pnpm check

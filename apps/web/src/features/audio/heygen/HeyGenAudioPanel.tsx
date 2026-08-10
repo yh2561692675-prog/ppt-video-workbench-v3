@@ -49,6 +49,9 @@ export function HeyGenAudioPanel({
   );
   const [profiles, setProfiles] = useState<HeyGenProfile[]>([]);
   const [voices, setVoices] = useState<HeyGenVoice[]>([]);
+  const [profilesLoading, setProfilesLoading] = useState(true);
+  const [voicesLoading, setVoicesLoading] = useState(false);
+  const [profileLoadError, setProfileLoadError] = useState('');
   const [profileId, setProfileId] = useState('');
   const [voiceId, setVoiceId] = useState('');
   const [speed, setSpeed] = useState(1);
@@ -60,22 +63,31 @@ export function HeyGenAudioPanel({
   const [error, setError] = useState('');
   const [complete, setComplete] = useState(false);
   const [batchPass, setBatchPass] = useState(1);
+  const [profilesReloadKey, setProfilesReloadKey] = useState(0);
   const voiceRequestSequence = useRef(0);
 
   useEffect(() => {
     let active = true;
+    setProfilesLoading(true);
+    setProfileLoadError('');
     void api
       .listHeyGenProfiles()
       .then((available) => {
         if (active) setProfiles(available);
       })
       .catch((cause: unknown) => {
-        if (active) setError(cause instanceof Error ? cause.message : 'HeyGen 配置加载失败');
+        if (active) {
+          setProfiles([]);
+          setProfileLoadError(cause instanceof Error ? cause.message : 'HeyGen 配置加载失败');
+        }
+      })
+      .finally(() => {
+        if (active) setProfilesLoading(false);
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [profilesReloadKey]);
 
   async function chooseProfile(nextProfileId: string) {
     const requestSequence = ++voiceRequestSequence.current;
@@ -84,14 +96,20 @@ export function HeyGenAudioPanel({
     setVoices([]);
     setPreviewAudioUrl('');
     setError('');
-    if (!nextProfileId) return;
+    if (!nextProfileId) {
+      setVoicesLoading(false);
+      return;
+    }
+    setVoicesLoading(true);
     try {
       const available = await api.listHeyGenVoices(nextProfileId);
       if (requestSequence === voiceRequestSequence.current) setVoices(available);
     } catch (cause) {
       if (requestSequence === voiceRequestSequence.current) {
-        setError(cause instanceof Error ? cause.message : '声音列表加载失败');
+        setError(formatRequestFailure(cause, '声音列表加载失败'));
       }
+    } finally {
+      if (requestSequence === voiceRequestSequence.current) setVoicesLoading(false);
     }
   }
 
@@ -104,7 +122,7 @@ export function HeyGenAudioPanel({
       const result = await api.previewHeyGenVoice(profileId, voiceId, PREVIEW_TEXT);
       setPreviewAudioUrl(result.audio_url);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '声音试听失败');
+      setError(formatRequestFailure(cause, '声音试听失败'));
     } finally {
       setPreviewBusy(false);
     }
@@ -185,21 +203,47 @@ export function HeyGenAudioPanel({
   const blocked =
     !profileId ||
     !voiceId ||
+    profilesLoading ||
+    voicesLoading ||
     localAudioActive ||
     isLocalAudioActive() ||
     unconfirmed.length > 0 ||
     busy ||
     previewBusy ||
     orderedPages.length === 0;
-  const previewBlocked = !profileId || !voiceId || busy || previewBusy;
+  const previewBlocked =
+    !profileId || !voiceId || profilesLoading || voicesLoading || busy || previewBusy;
   return (
-    <section className="heygen-audio-panel" aria-label="HeyGen 页面配音">
+    <section
+      className="heygen-audio-panel"
+      aria-label="HeyGen 页面配音"
+      aria-busy={profilesLoading || voicesLoading}
+    >
       <div>
         <h3>HeyGen 页面配音</h3>
         <p className="muted">按页面顺序生成已确认旁白；不会覆盖已有页面配音。</p>
       </div>
-      {profiles.length === 0 && !error && (
+      {profilesLoading && (
+        <p className="muted" role="status">
+          正在加载 HeyGen 配置...
+        </p>
+      )}
+      {!profilesLoading && profiles.length === 0 && !profileLoadError && (
         <p className="muted">尚未保存 HeyGen 配置。请先在设置中安全保存 API Key。</p>
+      )}
+      {!profilesLoading && profileLoadError && (
+        <div>
+          <p className="error" role="alert">
+            {profileLoadError}
+          </p>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => setProfilesReloadKey((current) => current + 1)}
+          >
+            重试加载 HeyGen 配置
+          </button>
+        </div>
       )}
       {localAudioActive && <p className="error">已导入本地录音，不能同时使用 HeyGen 页面配音。</p>}
       {unconfirmed.length > 0 && <p className="error">仍有 {unconfirmed.length} 页旁白未确认</p>}
@@ -209,7 +253,7 @@ export function HeyGenAudioPanel({
           <select
             value={profileId}
             onChange={(event) => void chooseProfile(event.target.value)}
-            disabled={busy || previewBusy || profiles.length === 0}
+            disabled={busy || previewBusy || profilesLoading || profiles.length === 0}
           >
             <option value="">请选择配置</option>
             {profiles.map((profile) => (
@@ -227,7 +271,7 @@ export function HeyGenAudioPanel({
               setVoiceId(event.target.value);
               setPreviewAudioUrl('');
             }}
-            disabled={busy || previewBusy || !profileId}
+            disabled={busy || previewBusy || profilesLoading || voicesLoading || !profileId}
           >
             <option value="">请选择声音</option>
             {voices.map((voice) => (
@@ -237,6 +281,11 @@ export function HeyGenAudioPanel({
             ))}
           </select>
         </label>
+        {voicesLoading && (
+          <p className="muted" role="status">
+            正在加载可用声音...
+          </p>
+        )}
         <button
           type="button"
           className="secondary"
@@ -297,6 +346,13 @@ function formatFatalFailure(page: NarrationPage, cause: unknown): string {
   const message = cause instanceof Error ? cause.message : '请求失败';
   const action = cause instanceof ApiRequestError ? `；${cause.action}` : '';
   return `第 ${page.order} 页“${page.title ?? '未命名页'}”无法继续：${message}${action}`;
+}
+
+function formatRequestFailure(cause: unknown, fallback: string): string {
+  if (cause instanceof ApiRequestError) {
+    return cause.action ? `${cause.message}；${cause.action}` : cause.message;
+  }
+  return cause instanceof Error ? cause.message : fallback;
 }
 
 function formatExhaustedFailures(failures: PageFailure[]): string {

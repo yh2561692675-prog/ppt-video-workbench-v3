@@ -12,7 +12,9 @@ def test_effect_service_generates_missing_page_without_changing_page_identity(tm
     try:
         project = projects.create("effects")
         page_id = uuid4()
-        projects.save(project.model_copy(update={"pages": [PageRecord(id=page_id, order=1, title="阶段")]}))
+        projects.save(
+            project.model_copy(update={"pages": [PageRecord(id=page_id, order=1, title="阶段")]})
+        )
         service = EffectService(projects)
 
         result = service.generate(project.id, page_ids=[page_id])

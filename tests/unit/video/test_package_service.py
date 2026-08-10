@@ -1,12 +1,16 @@
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
+from workbench.video.errors import RenderInputStale
 from workbench.video.package_service import (
     PackageError,
     VideoExportError,
+    VideoExportService,
     build_package_manifest,
     validate_media_probe,
 )
+from workbench.video.process_runner import ProcessCancelled, ProcessExecutionError
 
 
 def test_package_manifest_contains_sha256_and_size_for_required_artifacts(tmp_path: Path) -> None:
@@ -60,3 +64,64 @@ def test_media_probe_accepts_vertical_props_dimensions() -> None:
         expected_width=1080,
         expected_height=1920,
     )
+
+
+def test_async_export_rejects_stale_input_before_rendering(tmp_path: Path) -> None:
+    project_id = uuid4()
+
+    class Props:
+        def model_dump(self, mode=None):
+            return {"pages": []}
+
+    class Preview:
+        def preflight(self, requested_id):
+            assert requested_id == project_id
+            return type(
+                "Preflight",
+                (),
+                {"allowed": True, "props": Props(), "input_fingerprint": "current"},
+            )()
+
+    class Projects:
+        workspace_root = tmp_path
+
+        def get(self, requested_id):
+            return type("Project", (), {"project_dir": "project"})()
+
+    context = type(
+        "Context",
+        (),
+        {"job_id": uuid4(), "input_fingerprint": "stale"},
+    )()
+    service = VideoExportService(Projects(), Preview())
+
+    with pytest.raises(RenderInputStale):
+        service.export(project_id, context=context)
+
+
+def test_ffmpeg_probe_fallback_uses_the_cancellable_runner(tmp_path: Path) -> None:
+    control = type(
+        "Control",
+        (),
+        {"cancel_requested": True, "heartbeat": lambda self: None},
+    )()
+
+    class Runner:
+        calls = 0
+
+        def run(self, command, cwd, received_control):
+            self.calls += 1
+            assert received_control is control
+            if self.calls == 1:
+                raise ProcessExecutionError("ffprobe unavailable")
+            assert "-hide_banner" in command
+            raise ProcessCancelled("cancelled")
+
+    runner = Runner()
+    service = VideoExportService(object(), object(), process_runner=runner)
+    media = tmp_path / "video.mp4"
+    media.write_bytes(b"video")
+
+    with pytest.raises(ProcessCancelled):
+        service._probe(media, control)
+    assert runner.calls == 2

@@ -154,3 +154,92 @@ it('reports all pages once after the bounded replay passes are exhausted', async
   expect(alerts[0]).toHaveTextContent('第 3 页“页面3”');
   expect(calls).toEqual(['page-1', 'page-2', 'page-3', 'page-2', 'page-3', 'page-2', 'page-3']);
 });
+
+it('shows a loading state instead of claiming that HeyGen is unconfigured', async () => {
+  let resolveProfiles!: (response: Response) => void;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input) === '/api/settings/heygen-profiles') {
+        return new Promise<Response>((resolve) => {
+          resolveProfiles = resolve;
+        });
+      }
+      throw new Error(`unexpected request ${String(input)}`);
+    }),
+  );
+
+  render(
+    <HeyGenAudioPanel
+      projectId="project-1"
+      pages={pages}
+      localAudioActive={false}
+      isLocalAudioActive={() => false}
+      onStarted={() => true}
+      onChanged={() => undefined}
+    />,
+  );
+
+  expect(await screen.findByText('正在加载 HeyGen 配置...')).toBeInTheDocument();
+  expect(screen.queryByText(/尚未保存 HeyGen 配置/)).not.toBeInTheDocument();
+
+  resolveProfiles(envelope([]));
+  await waitFor(() => expect(screen.getByText(/尚未保存 HeyGen 配置/)).toBeInTheDocument());
+});
+
+it('shows the recovery action when the HeyGen secret store is unavailable', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/settings/heygen-profiles') {
+        return envelope([
+          {
+            id: 'profile-1',
+            name: 'Video',
+            base_url: 'https://api.heygen.com',
+            base_url_digest: 'digest',
+            has_api_key: true,
+            created_at: '2026-08-09T00:00:00Z',
+            updated_at: '2026-08-09T00:00:00Z',
+            last_used_at: null,
+          },
+        ]);
+      }
+      if (url === '/api/settings/heygen-profiles/profile-1/voices') {
+        return new Response(
+          JSON.stringify({
+            data: null,
+            error: {
+              code: 'heygen_secret_store_unavailable',
+              message: '无法解密 HeyGen 配置',
+              action: '请在当前 Windows 用户下重新保存 HeyGen API Key',
+            },
+            request_id: 'request-secret-store',
+          }),
+          { status: 422, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      throw new Error(`unexpected request ${url}`);
+    }),
+  );
+
+  render(
+    <HeyGenAudioPanel
+      projectId="project-1"
+      pages={pages}
+      localAudioActive={false}
+      isLocalAudioActive={() => false}
+      onStarted={() => true}
+      onChanged={() => undefined}
+    />,
+  );
+
+  fireEvent.change(await screen.findByLabelText('HeyGen 配置'), {
+    target: { value: 'profile-1' },
+  });
+
+  const alert = await screen.findByRole('alert');
+  expect(alert).toHaveTextContent('无法解密 HeyGen 配置');
+  expect(alert).toHaveTextContent('请在当前 Windows 用户下重新保存 HeyGen API Key');
+});

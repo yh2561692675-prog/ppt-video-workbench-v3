@@ -2502,6 +2502,44 @@
         "title": "Envelope[Union[UpdateCandidate, NoneType]]",
         "type": "object"
       },
+      "Envelope_Union_dict_str__object___NoneType__": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[Union[dict[str, object], NoneType]]",
+        "type": "object"
+      },
       "Envelope_UpdateState_": {
         "additionalProperties": false,
         "properties": {
@@ -2587,6 +2625,37 @@
           "request_id"
         ],
         "title": "Envelope[VideoPreflight]",
+        "type": "object"
+      },
+      "Envelope_dict_str__object__": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[dict[str, object]]",
         "type": "object"
       },
       "Envelope_list_AudioDifference__": {
@@ -3141,6 +3210,33 @@
         "title": "GaugeAndRatioPayload",
         "type": "object"
       },
+      "GenerateEffectsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "force": {
+            "default": false,
+            "title": "Force",
+            "type": "boolean"
+          },
+          "page_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Ids"
+          }
+        },
+        "title": "GenerateEffectsRequest",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3544,10 +3640,67 @@
             ],
             "title": "Error"
           },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "heartbeat_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heartbeat At"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "input_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Fingerprint"
           },
           "job_type": {
             "$ref": "#/components/schemas/JobType"
@@ -3557,6 +3710,11 @@
             "minimum": 1.0,
             "title": "Max Attempts",
             "type": "integer"
+          },
+          "message": {
+            "default": "",
+            "title": "Message",
+            "type": "string"
           },
           "page_id": {
             "anyOf": [
@@ -3575,6 +3733,23 @@
             "title": "Paid",
             "type": "boolean"
           },
+          "parent_job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Job Id"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
           "progress": {
             "default": 0.0,
             "maximum": 1.0,
@@ -3587,9 +3762,44 @@
             "title": "Project Id",
             "type": "string"
           },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "revision": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "stage": {
+            "default": "queued",
+            "title": "Stage",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
           "status": {
-            "$ref": "#/components/schemas/NodeStatus",
-            "default": "not_started"
+            "$ref": "#/components/schemas/JobStatus",
+            "default": "queued"
           },
           "updated_at": {
             "format": "date-time",
@@ -3607,6 +3817,20 @@
         ],
         "title": "JobRecord",
         "type": "object"
+      },
+      "JobStatus": {
+        "enum": [
+          "queued",
+          "running",
+          "pause_requested",
+          "paused",
+          "cancel_requested",
+          "succeeded",
+          "failed",
+          "cancelled"
+        ],
+        "title": "JobStatus",
+        "type": "string"
       },
       "JobType": {
         "enum": [
@@ -5168,6 +5392,17 @@
       "ProjectVideoProps": {
         "additionalProperties": false,
         "properties": {
+          "catalog_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Version"
+          },
           "duration_ms": {
             "minimum": 0.0,
             "title": "Duration Ms",
@@ -5180,8 +5415,11 @@
             "type": "integer"
           },
           "height": {
-            "const": 1080,
             "default": 1080,
+            "enum": [
+              1080,
+              1920
+            ],
             "title": "Height",
             "type": "integer"
           },
@@ -5204,8 +5442,11 @@
             "type": "boolean"
           },
           "schema_version": {
-            "const": 1,
             "default": 1,
+            "enum": [
+              1,
+              2
+            ],
             "title": "Schema Version",
             "type": "integer"
           },
@@ -5229,8 +5470,11 @@
             "type": "string"
           },
           "width": {
-            "const": 1920,
             "default": 1920,
+            "enum": [
+              1920,
+              1080
+            ],
             "title": "Width",
             "type": "integer"
           }
@@ -5242,6 +5486,19 @@
           "pages"
         ],
         "title": "ProjectVideoProps",
+        "type": "object"
+      },
+      "RenderJobActionRequest": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "RenderJobActionRequest",
         "type": "object"
       },
       "RenderRecord": {
@@ -6116,6 +6373,20 @@
         "title": "TransitionPlan",
         "type": "object"
       },
+      "UnlockEffectRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "title": "Expected Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expected_revision"
+        ],
+        "title": "UnlockEffectRequest",
+        "type": "object"
+      },
       "UpdateCandidate": {
         "additionalProperties": false,
         "properties": {
@@ -6160,6 +6431,29 @@
           "package_relative_path"
         ],
         "title": "UpdateCandidate",
+        "type": "object"
+      },
+      "UpdateEffectRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "locked": {
+            "default": false,
+            "title": "Locked",
+            "type": "boolean"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/EffectPlanV2"
+          }
+        },
+        "required": [
+          "expected_revision",
+          "plan"
+        ],
+        "title": "UpdateEffectRequest",
         "type": "object"
       },
       "UpdateStageRequest": {
@@ -6402,6 +6696,39 @@
           "audio_path": {
             "title": "Audio Path",
             "type": "string"
+          },
+          "effect_plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EffectPlanV2"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "effect_plan_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effect Plan Hash"
+          },
+          "effect_plan_revision": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effect Plan Revision"
           },
           "end_ms": {
             "minimum": 0.0,
@@ -7798,6 +8125,255 @@
         "summary": "Confirm Page"
       }
     },
+    "/api/projects/{project_id}/effects": {
+      "get": {
+        "operationId": "workspace_api_projects__project_id__effects_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Workspace"
+      }
+    },
+    "/api/projects/{project_id}/effects/catalog": {
+      "get": {
+        "operationId": "catalog_api_projects__project_id__effects_catalog_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_dict_str__object__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Catalog"
+      }
+    },
+    "/api/projects/{project_id}/effects/generate": {
+      "post": {
+        "operationId": "generate_api_projects__project_id__effects_generate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/GenerateEffectsRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate"
+      }
+    },
+    "/api/projects/{project_id}/effects/pages/{page_id}": {
+      "put": {
+        "operationId": "update_page_api_projects__project_id__effects_pages__page_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "page_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Page Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEffectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Page"
+      }
+    },
+    "/api/projects/{project_id}/effects/pages/{page_id}/unlock": {
+      "post": {
+        "operationId": "unlock_page_api_projects__project_id__effects_pages__page_id__unlock_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "page_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Page Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnlockEffectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unlock Page"
+      }
+    },
     "/api/projects/{project_id}/issues/{issue_id}/confirm": {
       "post": {
         "operationId": "confirm_issue_api_projects__project_id__issues__issue_id__confirm_post",
@@ -9089,6 +9665,210 @@
           }
         },
         "summary": "Render Video"
+      }
+    },
+    "/api/projects/{project_id}/video/render-jobs": {
+      "post": {
+        "operationId": "create_render_job_api_projects__project_id__video_render_jobs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_dict_str__object__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Render Job"
+      }
+    },
+    "/api/projects/{project_id}/video/render-jobs/current": {
+      "get": {
+        "operationId": "current_render_job_api_projects__project_id__video_render_jobs_current_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_Union_dict_str__object___NoneType__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Current Render Job"
+      }
+    },
+    "/api/projects/{project_id}/video/render-jobs/{job_id}": {
+      "get": {
+        "operationId": "get_render_job_api_projects__project_id__video_render_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-none-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-None-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Render Job"
+      }
+    },
+    "/api/projects/{project_id}/video/render-jobs/{job_id}/actions": {
+      "post": {
+        "operationId": "act_render_job_api_projects__project_id__video_render_jobs__job_id__actions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenderJobActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_dict_str__object__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Act Render Job"
       }
     },
     "/api/projects/{project_id}/workflow/audio-gate": {

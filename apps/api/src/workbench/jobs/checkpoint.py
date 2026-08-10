@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+import shutil
 from collections.abc import Callable, Iterable, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
@@ -75,6 +76,19 @@ class CheckpointStore:
         if verify and not self._artifacts_valid(checkpoint):
             return None
         return checkpoint
+
+    def cleanup_temporary_paths(self, job_id: UUID) -> None:
+        checkpoint = self.latest(job_id)
+        if checkpoint is None:
+            return
+        for relative_path in checkpoint.temporary_paths:
+            target = self._safe_path(relative_path)
+            if target is None or target == self.project_dir:
+                raise ValueError("checkpoint temporary path is outside the project")
+            if target.is_symlink() or target.is_file():
+                target.unlink(missing_ok=True)
+            elif target.is_dir():
+                shutil.rmtree(target)
 
     def _artifacts_valid(self, checkpoint: Checkpoint) -> bool:
         for artifact in checkpoint.artifacts:

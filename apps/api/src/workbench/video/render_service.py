@@ -11,14 +11,14 @@ from typing import Protocol
 
 from PIL import Image
 
-from workbench.runtime.layout import RendererRuntime, RuntimeLayout
-
 from workbench.jobs.execution import (
     InlineRenderExecutionContext,
     RenderCancelled,
     RenderExecutionContext,
     RenderPauseRequested,
 )
+from workbench.runtime.layout import RendererRuntime, RuntimeLayout
+
 from .models import ProjectVideoProps, VideoPageProps
 from .process_runner import (
     CancellableProcessRunner,
@@ -141,8 +141,6 @@ class RemotionPageRenderer:
             raise
         except ProcessExecutionError as error:
             raise RenderError("Remotion 页面渲染失败") from error
-        if False and completed.returncode != 0:
-            raise RenderError("Remotion 页面渲染失败")
 
 
 class VideoRenderService:
@@ -187,7 +185,10 @@ class VideoRenderService:
                     progress=0.05 + 0.60 * len(results) / total_pages,
                     message=f"第 {page.page_order} 页缓存命中",
                     artifacts=(output,),
-                    payload={"completed_pages": [item.page_order for item in results], "cached": True},
+                    payload={
+                        "completed_pages": [item.page_order for item in results],
+                        "cached": True,
+                    },
                 )
                 execution.pause_if_requested()
                 continue

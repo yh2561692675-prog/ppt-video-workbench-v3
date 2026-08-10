@@ -28,6 +28,7 @@ class FixtureVideoRenderer:
         page: VideoPageProps,
         source: Path,
         output: Path,
+        control=None,
     ) -> None:
         output.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(
@@ -61,6 +62,7 @@ class FailingVideoRenderer:
         __: VideoPageProps,
         ___: Path,
         ____: Path,
+        control=None,
     ) -> None:
         raise RuntimeError("renderer credential=value must not leak")
 
@@ -165,7 +167,10 @@ def _ready_project(tmp_path: Path, renderer: object | None = None):
     return app, project.id
 
 
-def test_two_page_video_export_creates_complete_production_package(tmp_path: Path) -> None:
+def test_two_page_video_export_creates_complete_production_package(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("WORKBENCH_ASYNC_RENDER_ENABLED", "false")
     app, project_id = _ready_project(tmp_path)
 
     with TestClient(app) as client:
@@ -199,7 +204,10 @@ def test_two_page_video_export_creates_complete_production_package(tmp_path: Pat
     assert app.state.project_service.get(project_id).video_export is not None
 
 
-def test_render_failure_returns_redacted_error_and_persists_audit_state(tmp_path: Path) -> None:
+def test_render_failure_returns_redacted_error_and_persists_audit_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("WORKBENCH_ASYNC_RENDER_ENABLED", "false")
     app, project_id = _ready_project(tmp_path, renderer=FailingVideoRenderer())
 
     with TestClient(app) as client:
@@ -232,7 +240,10 @@ def test_direct_export_failure_persists_the_same_audit_state(tmp_path: Path) -> 
     assert manifest.audit_log[-1].action == "video_export_failed"
 
 
-def test_preflight_block_does_not_create_a_failed_export_record(tmp_path: Path) -> None:
+def test_preflight_block_does_not_create_a_failed_export_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("WORKBENCH_ASYNC_RENDER_ENABLED", "false")
     app = create_app(tmp_path, video_renderer=FixtureVideoRenderer())
     project = app.state.project_service.create("未完成视频导出")
 

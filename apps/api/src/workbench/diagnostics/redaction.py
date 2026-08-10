@@ -10,7 +10,7 @@ _SENSITIVE_KEY = re.compile(
 _BEARER = re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/=-]+")
 _JWT = re.compile(r"\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b")
 _LABELLED_SECRET = re.compile(
-    r"(?i)\b(api[_-]?key|token|secret|authorization|cookie|password)"
+    r"(?i)\b(api[_-]?key|token|secret|authorization|cookie|password|credential)"
     r"(\s*[:=]\s*)(?!Bearer\s+\*{3}(?:\s|$))([^\s,;]+)"
 )
 _QUERY_SECRET = re.compile(r"(?i)([?&](?:api[_-]?key|token|key|secret|password)=)[^&\s]+")

@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 import time
 from collections.abc import Callable, Sequence
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -67,6 +68,8 @@ class CancellableProcessRunner:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 shell=False,
             )
         except OSError as error:
@@ -107,10 +110,8 @@ class CancellableProcessRunner:
             process.kill()
             process.wait(timeout=3.0)
         finally:
-            try:
+            with suppress(Exception):
                 process.communicate()
-            except Exception:
-                pass
 
 
 def _safe_output(value: object) -> str:

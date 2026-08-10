@@ -9,6 +9,7 @@
     "peripheral/migrations/0001_s0_core.sql",
     "peripheral/runtime-manifest.json",
     "peripheral/schemas/artifact-manifest-1.0.json",
+    "peripheral/schemas/business-result-1.0.json",
     "peripheral/schemas/event-envelope-1.0.json",
     "peripheral/schemas/job-envelope-1.0.json",
     "peripheral/schemas/job-result-1.0.json",

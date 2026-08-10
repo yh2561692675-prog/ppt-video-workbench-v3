@@ -27,6 +27,7 @@ from workbench.api.matching import create_matching_router
 from workbench.api.materials import create_materials_router
 from workbench.api.narrations import create_narrations_router
 from workbench.api.peripheral import create_peripheral_router
+from workbench.api.peripheral_s1 import create_peripheral_s1_router
 from workbench.api.preflight import create_preflight_router
 from workbench.api.projects import create_projects_router
 from workbench.api.settings import create_settings_router
@@ -51,12 +52,17 @@ from workbench.diagnostics.center import (
 )
 from workbench.diagnostics.package import DiagnosticPackager
 from workbench.diagnostics.probes import build_default_probes, create_heygen_health_probe
+from workbench.effects.service import EffectService
 from workbench.environment.detector import EnvironmentDetector
 from workbench.integrations.heygen.client import HeyGenClient
 from workbench.integrations.llm.client import LlmClient
+from workbench.jobs.worker import RenderJobWorker
 from workbench.narration.repository import NarrationRepository
 from workbench.ocr.paddle_adapter import OcrEngine
 from workbench.preflight.engine import PreflightEngine, RuntimeProbe
+from workbench.peripheral_s1.coordinator import S1Coordinator
+from workbench.peripheral_s1.inbox import ProjectionInbox
+from workbench.peripheral_s1.projector import ProjectorRegistry
 from workbench.runtime.layout import RuntimeComponentMissingError, RuntimeLayout
 from workbench.services.import_service import ImportService
 from workbench.services.matching_service import MatchingService
@@ -77,8 +83,8 @@ from workbench.updates.service import UpdateService
 from workbench.video.package_service import VideoExportService
 from workbench.video.preview_service import VideoPreviewService
 from workbench.video.props_service import VideoPropsService
+from workbench.video.render_job import RenderJobService
 from workbench.video.render_service import PageRenderer
-from workbench.effects.service import EffectService
 from workbench.workflow.audio_gate import AudioGateService
 from workbench.workflow.gates import NarrationGateService
 
@@ -135,7 +141,12 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        worker = getattr(app.state, "render_job_worker", None)
+        if worker is not None:
+            worker.start()
         yield
+        if worker is not None:
+            worker.stop(timeout=10.0)
         service.close()
 
     app = FastAPI(title="PPT Video Workbench", version="0.1.0", lifespan=lifespan)
@@ -192,6 +203,17 @@ def create_app(
         preflight_gate=preflight_service.render_gate,
     )
     app.state.video_export_service = video_export_service
+    render_job_service = RenderJobService(service, video_preview_service, video_export_service)
+    render_job_worker = RenderJobWorker(
+        service.jobs,
+        render_job_service.handle,
+        enabled=os.environ.get("WORKBENCH_ASYNC_RENDER_ENABLED", "true").lower()
+        not in {"0", "false", "no"},
+    )
+    render_job_service.worker = render_job_worker
+    app.state.async_render_enabled = render_job_worker.enabled
+    app.state.render_job_service = render_job_service
+    app.state.render_job_worker = render_job_worker
     app.state.effect_service = EffectService(service)
     app.state.preflight_service = preflight_service
     cleanup_service = CleanupService(service)
@@ -204,6 +226,15 @@ def create_app(
         WorkbenchPeripheralSettings.from_env()
     )
     app.state.peripheral_client = configured_peripheral_client
+    s1_coordinator = S1Coordinator(
+        workspace_root=configured_root,
+        adapter=configured_peripheral_client,
+        inbox=ProjectionInbox(service.database),
+        projector=ProjectorRegistry(),
+        database=service.database,
+        project_dir_resolver=lambda project_id: configured_root / service.get(project_id).project_dir,
+    )
+    app.state.s1_coordinator = s1_coordinator
     app.include_router(
         create_projects_router(
             service,
@@ -228,7 +259,9 @@ def create_app(
         )
     )
     app.include_router(create_subtitle_router(subtitle_service))
-    app.include_router(create_video_router(video_preview_service, video_export_service))
+    app.include_router(
+        create_video_router(video_preview_service, video_export_service, render_job_service)
+    )
     app.include_router(create_preflight_router(preflight_service, video_export_service))
     app.include_router(create_sources_router(ImportService(service)))
     app.include_router(create_matching_router(MatchingService(service)))
@@ -252,6 +285,7 @@ def create_app(
     app.include_router(create_diagnostics_router(configured_diagnostic_center, diagnostic_packager))
     app.include_router(create_updates_router(configured_update_service))
     app.include_router(create_peripheral_router(configured_peripheral_client))
+    app.include_router(create_peripheral_s1_router(configured_peripheral_client, s1_coordinator))
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(_: Request, __: RequestValidationError) -> JSONResponse:

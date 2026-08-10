@@ -9,7 +9,8 @@ from uuid import UUID, uuid4
 from sqlalchemy import delete, insert, select, update
 
 from workbench.domain.enums import NodeStatus
-from workbench.domain.models import ProjectManifest
+from workbench.domain.models import JobRecord, ProjectManifest
+from workbench.jobs.checkpoint import CheckpointStore
 from workbench.jobs.repository import JobRepository
 from workbench.storage.manifest_store import ManifestStore
 from workbench.storage.project_paths import (
@@ -56,8 +57,13 @@ class ProjectService:
         self.database.initialize()
         self.store = ManifestStore(self.workspace_root)
         self.jobs = JobRepository(self.database)
-        self.jobs.recover_interrupted_jobs()
         self.rebuild_index()
+        self.jobs.recover_interrupted_jobs(self._cleanup_cancelled_render_job)
+
+    def _cleanup_cancelled_render_job(self, job: JobRecord) -> None:
+        project = self.get(job.project_id)
+        project_root = (self.workspace_root / project.project_dir).resolve()
+        CheckpointStore(project_root).cleanup_temporary_paths(job.id)
 
     def create(self, name: str) -> ProjectManifest:
         safe_name = _safe_project_name(name)

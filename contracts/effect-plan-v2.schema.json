@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/contracts/effect-plan-v2.schema.json",
+  "title": "EffectPlanV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "page_id", "page_type", "duration_ms", "template", "template_payload"],
+  "properties": {
+    "schema_version": {"const": "2.0"},
+    "page_id": {"type": "string", "minLength": 1},
+    "page_type": {"type": "string", "minLength": 1},
+    "duration_ms": {"type": "integer", "exclusiveMinimum": 0},
+    "aspect_ratio": {"enum": ["16:9", "9:16"]},
+    "template": {
+      "enum": [
+        "ProgressiveReveal", "ChapterCurtain", "StatCounter", "ChartNarration",
+        "CompareMode", "FocusSpotlight", "CardStack", "GaugeAndRatio",
+        "PathBuilder", "TagMatrix", "RiskAlert", "MapHighlight", "SafeSlide"
+      ]
+    },
+    "template_payload": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {"kind": {"type": "string"}}
+    },
+    "cues": {"type": "array"},
+    "effects": {"type": "array"},
+    "camera": {"type": "object"},
+    "transition": {"type": "object"},
+    "presenter_cues": {"type": "array"},
+    "manual_lock": {"type": "boolean"},
+    "fallback": {"type": "object"},
+    "source_hashes": {"type": "object"},
+    "migration_version": {"type": ["string", "null"]},
+    "legacy_payload_hash": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"}
+  }
+}

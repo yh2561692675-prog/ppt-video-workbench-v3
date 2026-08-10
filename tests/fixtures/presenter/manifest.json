@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "fixtures": [
+    {
+      "id": "legacy-ai-project",
+      "kind": "project_manifest",
+      "committed": true,
+      "privacy": "synthetic",
+      "expected_mode": "ai_narration"
+    },
+    {
+      "id": "presenter-standard-5-8m",
+      "kind": "presenter_video",
+      "committed": false,
+      "privacy": "local_acceptance_only",
+      "duration_class": "5-8m",
+      "required_traits": ["audio", "word_timestamps", "chinese_path"]
+    },
+    {
+      "id": "presenter-long-15-20m",
+      "kind": "presenter_video",
+      "committed": false,
+      "privacy": "local_acceptance_only",
+      "duration_class": "15-20m",
+      "required_traits": ["audio", "long_silence", "restart_recovery"]
+    },
+    {
+      "id": "presenter-no-audio",
+      "kind": "probe_case",
+      "committed": false,
+      "expected_error": "PRESENTER_AUDIO_MISSING"
+    },
+    {
+      "id": "presenter-corrupt",
+      "kind": "probe_case",
+      "committed": false,
+      "expected_error": "PRESENTER_DECODE_FAILED"
+    },
+    {
+      "id": "presenter-variable-fps-720p",
+      "kind": "probe_case",
+      "committed": false,
+      "expected_warnings": ["PRESENTER_VARIABLE_FPS", "PRESENTER_LOW_RESOLUTION"]
+    }
+  ]
+}

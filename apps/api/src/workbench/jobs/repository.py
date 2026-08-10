@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from threading import Lock
@@ -14,7 +14,6 @@ from sqlalchemy.engine import RowMapping
 from workbench.domain.enums import JobStatus, JobType
 from workbench.domain.models import JobRecord
 from workbench.storage.workspace_db import WorkspaceDatabase, jobs
-
 
 ACTIVE_STATUSES = frozenset(
     {
@@ -74,7 +73,7 @@ class JobRepository:
         self.database = database
         self._claim_lock = Lock()
 
-    def enqueue_or_get(self, spec: JobSpec) -> EnqueueResult:
+    def enqueue_or_get(self, spec: JobSpec, *, reuse_succeeded: bool = True) -> EnqueueResult:
         with self.database.engine.begin() as connection:
             criteria = [
                 jobs.c.project_id == str(spec.project_id),
@@ -92,7 +91,9 @@ class JobRepository:
             existing_row = connection.execute(select(jobs).where(*criteria)).mappings().first()
             if existing_row is not None:
                 existing = _to_record(existing_row)
-                if existing.status in ACTIVE_STATUSES or existing.status is JobStatus.SUCCEEDED:
+                if existing.status in ACTIVE_STATUSES or (
+                    reuse_succeeded and existing.status is JobStatus.SUCCEEDED
+                ):
                     return EnqueueResult(existing, False)
                 cache_key = f"{spec.cache_key}:retry:{uuid4().hex}"
             else:
@@ -255,7 +256,12 @@ class JobRepository:
         record = self.get(job_id)
         if record.status is not JobStatus.PAUSED:
             return record
-        return self._transition(job_id, JobStatus.QUEUED, stage="queued", message="已恢复并重新排队")
+        return self._transition(
+            job_id,
+            JobStatus.QUEUED,
+            stage="queued",
+            message="已恢复并重新排队",
+        )
 
     def request_cancel(self, job_id: UUID) -> JobRecord:
         record = self.get(job_id)
@@ -279,6 +285,16 @@ class JobRepository:
             )
         raise JobTransitionConflict(f"cannot cancel job in status {record.status.value}")
 
+    def cancel(self, job_id: UUID) -> JobRecord:
+        return self._transition(
+            job_id,
+            JobStatus.CANCELLED,
+            stage="cancelled",
+            message="任务已取消",
+            error_code="render_cancelled",
+            finished_at=_utc_now(),
+        )
+
     def succeed(self, job_id: UUID, result: Mapping[str, object] | None = None) -> JobRecord:
         return self._transition(
             job_id,
@@ -295,7 +311,12 @@ class JobRepository:
     def complete(self, job_id: UUID) -> JobRecord:
         return self.succeed(job_id)
 
-    def fail(self, job_id: UUID, error: str, error_code: str = "video_export_rejected") -> JobRecord:
+    def fail(
+        self,
+        job_id: UUID,
+        error: str,
+        error_code: str = "video_export_rejected",
+    ) -> JobRecord:
         return self._transition(
             job_id,
             JobStatus.FAILED,
@@ -314,15 +335,35 @@ class JobRepository:
             return self.resume(job_id)
         return record
 
-    def recover_interrupted_jobs(self) -> list[JobRecord]:
-        with self.database.engine.begin() as connection:
+    def recover_interrupted_jobs(
+        self,
+        cancel_cleanup: Callable[[JobRecord], None] | None = None,
+    ) -> list[JobRecord]:
+        with self.database.connect() as connection:
             interrupted_ids = list(
                 connection.execute(
                     select(jobs.c.id).where(
-                        jobs.c.status.in_([JobStatus.RUNNING.value, JobStatus.PAUSE_REQUESTED.value])
+                        jobs.c.status.in_(
+                            [JobStatus.RUNNING.value, JobStatus.PAUSE_REQUESTED.value]
+                        )
                     )
                 ).scalars()
             )
+            cancelled_ids = list(
+                connection.execute(
+                    select(jobs.c.id).where(jobs.c.status == JobStatus.CANCEL_REQUESTED.value)
+                ).scalars()
+            )
+
+        cleanup_failed: set[str] = set()
+        if cancel_cleanup is not None:
+            for job_id in cancelled_ids:
+                try:
+                    cancel_cleanup(self.get(UUID(job_id)))
+                except Exception:
+                    cleanup_failed.add(str(job_id))
+
+        with self.database.engine.begin() as connection:
             if interrupted_ids:
                 connection.execute(
                     update(jobs)
@@ -331,12 +372,47 @@ class JobRepository:
                         status=JobStatus.PAUSED.value,
                         stage="paused",
                         message="应用上次运行期间中断，可继续或取消",
+                        error_code="render_worker_interrupted",
                         updated_at=_utc_now(),
                         heartbeat_at=None,
                         revision=jobs.c.revision + 1,
                     )
                 )
-        return [self.get(UUID(job_id)) for job_id in interrupted_ids]
+            successful_cancellations = [
+                job_id for job_id in cancelled_ids if str(job_id) not in cleanup_failed
+            ]
+            if successful_cancellations:
+                connection.execute(
+                    update(jobs)
+                    .where(jobs.c.id.in_(successful_cancellations))
+                    .values(
+                        status=JobStatus.CANCELLED.value,
+                        stage="cancelled",
+                        message="应用上次运行期间取消请求未完成，已恢复为已取消",
+                        error_code="render_cancelled",
+                        updated_at=_utc_now(),
+                        heartbeat_at=None,
+                        finished_at=_utc_now(),
+                        revision=jobs.c.revision + 1,
+                    )
+                )
+            if cleanup_failed:
+                connection.execute(
+                    update(jobs)
+                    .where(jobs.c.id.in_(sorted(cleanup_failed)))
+                    .values(
+                        status=JobStatus.FAILED.value,
+                        stage="failed",
+                        message="取消任务的临时文件清理失败",
+                        error="temporary render cleanup failed",
+                        error_code="render_cancel_cleanup_failed",
+                        updated_at=_utc_now(),
+                        heartbeat_at=None,
+                        finished_at=_utc_now(),
+                        revision=jobs.c.revision + 1,
+                    )
+                )
+        return [self.get(UUID(job_id)) for job_id in [*interrupted_ids, *cancelled_ids]]
 
     def _transition(self, job_id: UUID, target: JobStatus, **values: object) -> JobRecord:
         record = self.get(job_id)

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import sys
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
-from peripheral_contracts import JobEnvelope
+from peripheral_contracts import ArtifactRef, JobEnvelope
 from peripheral_host.module_runner import (
     ModuleNotRegistered,
     ModuleRegistry,
@@ -37,3 +39,35 @@ def test_frozen_echo_module_uses_owned_executable_dispatch(
 
     assert registered.command == (sys.executable, "--run-module", "echo")
     assert registered.environment == ()
+
+
+def test_runner_stages_verified_inputs_inside_attempt(tmp_path: Path, job: JobEnvelope) -> None:
+    source = tmp_path / "source.bin"
+    source.write_bytes(b"verified input")
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    input_job = job.model_copy(
+        update={
+            "inputs": (
+                ArtifactRef(
+                    artifact_id=uuid4(),
+                    kind="binary",
+                    path="source.bin",
+                    size_bytes=source.stat().st_size,
+                    sha256=digest,
+                ),
+            )
+        }
+    )
+    runner = ModuleRunner(
+        ModuleRegistry([echo_registered_module()]),
+        tmp_path / "attempts",
+        workspace_root=tmp_path,
+    )
+
+    execution = runner.run(input_job)
+    staged_job = JobEnvelope.model_validate_json(execution.attempt.request_path.read_text())
+    staged_path = execution.attempt.root / staged_job.inputs[0].path
+
+    assert execution.exit_code == 0
+    assert staged_path.read_bytes() == b"verified input"
+    assert staged_path.is_relative_to(execution.attempt.root)

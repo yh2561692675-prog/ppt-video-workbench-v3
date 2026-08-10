@@ -30,13 +30,25 @@ def build_runtime(settings: HostSettings) -> HostRuntime:
     database = Database(settings.database_path, _migrations_dir())
     database.initialize()
     repositories = Repositories(database)
-    registry = ModuleRegistry([echo_registered_module()])
+    modules = [echo_registered_module()]
+    if os.environ.get("PERIPHERAL_S1_MODULES", "").strip():
+        from workbench.business_modules.registry import (
+            business_registered_modules,
+            enabled_module_ids,
+        )
+
+        modules.extend(business_registered_modules(enabled_module_ids()))
+    registry = ModuleRegistry(modules)
     service = JobService(
         workspace_root=settings.workspace_root,
         repositories=repositories,
         registry=registry,
     )
-    runner = ModuleRunner(registry, settings.workspace_root / "workspace-data" / "attempts")
+    runner = ModuleRunner(
+        registry,
+        settings.workspace_root / "workspace-data" / "attempts",
+        workspace_root=settings.workspace_root,
+    )
     scheduler = Scheduler(
         service=service,
         runner=runner,
@@ -70,12 +82,17 @@ def main() -> None:
 def run_selected_module(arguments: list[str]) -> int | None:
     if not arguments or arguments[0] != "--run-module":
         return None
-    if len(arguments) < 2 or arguments[1] != "echo":
-        raise ValueError("unknown bundled peripheral module")
-    from peripheral_modules.echo.__main__ import main as echo_main
+    if len(arguments) < 2:
+        raise ValueError("missing bundled peripheral module")
+    if arguments[1] == "echo":
+        from peripheral_modules.echo.__main__ import main as module_main
+    else:
+        from workbench.business_modules.registry import module_main_for_id
+
+        module_main = module_main_for_id(arguments[1])
 
     sys.argv = [sys.argv[0], *arguments[2:]]
-    return echo_main()
+    return module_main()
 
 
 def _migrations_dir() -> Path:

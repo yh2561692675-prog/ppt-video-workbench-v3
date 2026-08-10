@@ -3,13 +3,21 @@ from __future__ import annotations
 import re
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from workbench.domain.effects import EffectPlanRecord, calculate_plan_hash
 
 from .fingerprint import calculate_input_fingerprint
-from .schema import EffectPlanV2
+from .schema import (
+    EffectPlanV2,
+    ProgressiveRevealPayload,
+    StatCounterPayload,
+)
+
+PlanStatus = Literal["ready", "fallback"]
+PlanSource = Literal["automatic", "fallback"]
 
 
 class EffectPlanningInput(BaseModel):
@@ -21,7 +29,7 @@ class EffectPlanningInput(BaseModel):
     title: str = ""
     text: str = ""
     cue_texts: list[str] = Field(default_factory=list, max_length=15)
-    aspect_ratio: str = "16:9"
+    aspect_ratio: Literal["16:9", "9:16"] = "16:9"
     default_strength: float = Field(default=0.65, ge=0, le=1)
     catalog_version: str = "effect-catalog-v2"
     source_path: Path | None = None
@@ -62,17 +70,19 @@ class EffectPlanner:
 
     def _build_plan(
         self, value: EffectPlanningInput
-    ) -> tuple[EffectPlanV2, str, str, list[str], float]:
-        content = "\n".join(part for part in [value.title, value.text, *value.cue_texts] if part).strip()
-        common = {
-            "page_id": value.page_id,
-            "page_type": value.page_type,
-            "duration_ms": value.duration_ms,
-            "aspect_ratio": value.aspect_ratio,
-        }
+    ) -> tuple[EffectPlanV2, PlanStatus, PlanSource, list[str], float]:
+        content = "\n".join(
+            part for part in [value.title, value.text, *value.cue_texts] if part
+        ).strip()
         if not content:
             return (
-                EffectPlanV2(**common, template="SafeSlide"),
+                EffectPlanV2(
+                    page_id=value.page_id,
+                    page_type=value.page_type,
+                    duration_ms=value.duration_ms,
+                    aspect_ratio=value.aspect_ratio,
+                    template="SafeSlide",
+                ),
                 "fallback",
                 "fallback",
                 ["empty_page_content"],
@@ -83,24 +93,43 @@ class EffectPlanner:
         if number_match:
             value_number = float(number_match.group(0))
             plan = EffectPlanV2(
-                **common,
+                page_id=value.page_id,
+                page_type=value.page_type,
+                duration_ms=value.duration_ms,
+                aspect_ratio=value.aspect_ratio,
                 template="StatCounter",
-                template_payload={
-                    "kind": "stat_counter",
-                    "label": value.title or "指标",
-                    "start": 0,
-                    "end": value_number,
-                },
+                template_payload=StatCounterPayload(
+                    label=value.title or "指标",
+                    start=0,
+                    end=value_number,
+                ),
             )
             return plan, "ready", "automatic", ["numeric_content"], 0.8
 
-        items = [item.strip() for item in (*value.cue_texts, *value.text.splitlines()) if item.strip()]
+        items = [
+            item.strip() for item in (*value.cue_texts, *value.text.splitlines()) if item.strip()
+        ]
         items = list(dict.fromkeys(items))[:6]
         if items:
             plan = EffectPlanV2(
-                **common,
+                page_id=value.page_id,
+                page_type=value.page_type,
+                duration_ms=value.duration_ms,
+                aspect_ratio=value.aspect_ratio,
                 template="ProgressiveReveal",
-                template_payload={"kind": "progressive_reveal", "items": items},
+                template_payload=ProgressiveRevealPayload(items=items),
             )
             return plan, "ready", "automatic", ["structured_text"], 0.75
-        return EffectPlanV2(**common, template="SafeSlide"), "fallback", "fallback", ["payload_empty"], 0.0
+        return (
+            EffectPlanV2(
+                page_id=value.page_id,
+                page_type=value.page_type,
+                duration_ms=value.duration_ms,
+                aspect_ratio=value.aspect_ratio,
+                template="SafeSlide",
+            ),
+            "fallback",
+            "fallback",
+            ["payload_empty"],
+            0.0,
+        )

@@ -16,6 +16,7 @@ import { PreflightWorkspace } from '../preflight/PreflightWorkspace';
 import { SubtitleActions } from '../subtitles/SubtitleActions';
 import { PreviewWorkspace } from '../video/PreviewWorkspace';
 import { EffectWorkspace } from '../effects/EffectWorkspace';
+import { RenderJobPanel } from '../video/RenderJobPanel';
 
 const STEPS = [
   '新建项目',
@@ -86,10 +87,15 @@ export function WorkflowShell() {
     mutationFn: (step: number) => api.setStep(projectId, step),
     onSuccess: accept,
   });
-  const videoRenderMutation = useMutation({
-    mutationFn: () => api.videoRender(projectId),
-    onSuccess: refreshVideoState,
-  });
+  const createRenderJobMutation = useMutation({
+    mutationFn: () => api.createRenderJob(projectId),
+    onSuccess: () => navigate(`/projects/${projectId}/step/7`),
+  }) as unknown as {
+    mutate: () => void;
+    isPending: boolean;
+    isError: boolean;
+    data: { job: { id: string } };
+  };
   const videoPreflightMutation = useMutation({
     mutationFn: (settings: { reduced_motion: boolean }) => api.videoPreflight(projectId, settings),
     onSuccess: (result) => {
@@ -117,6 +123,7 @@ export function WorkflowShell() {
   if (!project) return <main className="page error">项目无法打开。</main>;
 
   const paused = project.status === 'paused';
+  const legacyRenderPanelEnabled = false;
   const subtitlesUnlocked = audioGateQuery.data?.allowed === true;
   const pageLabels = Object.fromEntries(
     project.pages.map((page) => [page.id, `第${page.order}页`]),
@@ -245,7 +252,7 @@ export function WorkflowShell() {
                   }
                   void videoPreflightQuery.refetch();
                 }}
-                onRender={() => videoRenderMutation.mutate()}
+                onRender={() => createRenderJobMutation.mutate()}
               />
               <PreflightWorkspace
                 projectId={project.id}
@@ -258,22 +265,23 @@ export function WorkflowShell() {
               />
             </>
           )}
-          {project.current_step === 7 && (
+          {project.current_step === 7 && <RenderJobPanel projectId={project.id} enabled />}
+          {legacyRenderPanelEnabled && project!.current_step === 7 && (
             <section className="video-render-panel" aria-label="渲染与导出">
               <p className="success">完整预检已通过，可以开始渲染与导出。</p>
               <button
                 className="primary"
-                disabled={videoRenderMutation.isPending || preflightQuery.data?.allowed !== true}
-                onClick={() => videoRenderMutation.mutate()}
+                disabled={createRenderJobMutation.isPending || preflightQuery.data?.allowed !== true}
+                onClick={() => createRenderJobMutation.mutate()}
               >
-                {videoRenderMutation.isPending ? '正在渲染与导出…' : '开始渲染与导出'}
+                {createRenderJobMutation.isPending ? '正在提交任务…' : '开始渲染与导出'}
               </button>
-              {videoRenderMutation.isError && (
+              {createRenderJobMutation.isError && (
                 <p className="error">渲染失败。请检查预检结果和本地渲染环境后重试。</p>
               )}
-              {videoRenderMutation.data && (
+              {createRenderJobMutation.data && (
                 <p className="success">
-                  制作包已生成：{videoRenderMutation.data.package_relative_path}
+                  渲染任务已提交：{createRenderJobMutation.data?.job.id}
                 </p>
               )}
             </section>

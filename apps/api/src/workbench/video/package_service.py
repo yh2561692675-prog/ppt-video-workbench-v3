@@ -4,7 +4,6 @@ import hashlib
 import json
 import re
 import shutil
-import subprocess
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,14 +15,16 @@ from workbench.domain.enums import NodeStatus
 from workbench.domain.issues import PreflightReport
 from workbench.domain.models import AuditEvent, ProjectManifest, VideoExportRecord
 from workbench.exports.narration_docx import export_narration_docx
-from workbench.services.project_service import ProjectService
-
 from workbench.jobs.execution import (
     InlineRenderExecutionContext,
     RenderCancelled,
     RenderExecutionContext,
     RenderPauseRequested,
 )
+from workbench.services.project_service import ProjectService
+
+from .errors import RenderInputChanged, RenderInputStale, RenderJobFailure
+from .fingerprint import render_input_fingerprint
 from .preview_service import VideoPreviewService
 from .process_runner import (
     CancellableProcessRunner,
@@ -32,8 +33,8 @@ from .process_runner import (
     ProcessControl,
     ProcessExecutionError,
 )
-from .render_service import PageRenderer, RenderError, VideoRenderService
 from .publish import publish_render_outputs
+from .render_service import PageRenderer, RenderError, VideoRenderService
 
 
 class PackageError(ValueError):
@@ -132,7 +133,7 @@ class VideoExportService:
         context: RenderExecutionContext | None = None,
     ) -> VideoExportResult:
         project = self.projects.get(project_id)
-        execution = context or InlineRenderExecutionContext()
+        execution: RenderExecutionContext = context or InlineRenderExecutionContext()
         try:
             if self.preflight_gate is not None:
                 report = self.preflight_gate(project_id)
@@ -143,11 +144,15 @@ class VideoExportService:
             raise
         except (RenderCancelled, RenderPauseRequested):
             raise
+        except RenderJobFailure:
+            raise
         except (VideoExportError, RenderError, PackageError):
-            self.mark_failed(project_id, error_code="video_export_rejected")
+            if execution.job_id is None:
+                self.mark_failed(project_id, error_code="video_export_rejected")
             raise
         except Exception as error:
-            self.mark_failed(project_id, error_code="video_export_rejected")
+            if execution.job_id is None:
+                self.mark_failed(project_id, error_code="video_export_rejected")
             raise VideoExportError("视频导出失败，请检查渲染环境和制作素材") from error
 
     def _export(
@@ -156,16 +161,22 @@ class VideoExportService:
         project: ProjectManifest,
         context: RenderExecutionContext | None = None,
     ) -> VideoExportResult:
-        execution = context or InlineRenderExecutionContext()
+        execution: RenderExecutionContext = context or InlineRenderExecutionContext()
         preflight = self.preview.preflight(project_id)
         if not preflight.allowed or preflight.props is None:
             raise VideoExportBlocked("视频完整预检尚未通过")
+        if (
+            execution.input_fingerprint is not None
+            and render_input_fingerprint(preflight) != execution.input_fingerprint
+        ):
+            raise RenderInputStale("渲染输入已在任务入队后发生变化")
         props = preflight.props
         root = (self.projects.workspace_root / project.project_dir).resolve()
         run_id = str(execution.job_id or uuid4())
         output_dir = root / "08_输出"
         staging_root = output_dir / ".render-jobs" / run_id
         staging_root.mkdir(parents=True, exist_ok=True)
+        execution.register_temporary_paths((staging_root,))
         rendered = VideoRenderService(
             root,
             self.renderer,
@@ -298,7 +309,10 @@ class VideoExportService:
                 )
         (remotion_dir / "EffectCatalog.json").write_text(
             json.dumps(
-                {"catalog_version": props.catalog_version, "template_version": props.template_version},
+                {
+                    "catalog_version": props.catalog_version,
+                    "template_version": props.template_version,
+                },
                 ensure_ascii=False,
                 indent=2,
             )
@@ -334,6 +348,23 @@ class VideoExportService:
         (package / "制作包清单.json").write_text(
             manifest.model_dump_json(indent=2) + "\n", encoding="utf-8"
         )
+        execution.checkpoint(stage="publishing", progress=0.94, message="发布渲染产物")
+        execution.raise_if_cancelled()
+        latest_preflight = self.preview.preflight(project_id)
+        if not latest_preflight.allowed or latest_preflight.props is None:
+            raise RenderInputChanged("发布前预检已失效")
+        if (
+            execution.input_fingerprint is not None
+            and render_input_fingerprint(latest_preflight) != execution.input_fingerprint
+        ):
+            raise RenderInputChanged("渲染期间项目输入发生变化")
+        published = publish_render_outputs(
+            staging_root=staging_root,
+            output_root=output_dir,
+            run_id=run_id,
+            final_name=final_mp4.name,
+            package_name=package.name,
+        )
         result = VideoExportResult(
             mp4_relative_path="08_输出/最终视频.mp4",
             package_relative_path="08_输出/制作包",
@@ -343,6 +374,13 @@ class VideoExportService:
             artifact_count=len(manifest.artifacts) + 1,
             cached_pages=sum(item.cached for item in rendered),
         )
+        result = result.model_copy(
+            update={
+                "mp4_relative_path": published.mp4_path.relative_to(root).as_posix(),
+                "package_relative_path": published.package_path.relative_to(root).as_posix(),
+            }
+        )
+        execution.checkpoint(stage="completed", progress=1.0, message="渲染完成")
         latest = self.projects.get(project_id)
         self.projects.save(
             latest.model_copy(
@@ -361,27 +399,15 @@ class VideoExportService:
         )
         return result
 
-    def _run_ffmpeg(self, command: list[str], cwd: Path, control: ProcessControl | None = None) -> None:
+    def _run_ffmpeg(
+        self, command: list[str], cwd: Path, control: ProcessControl | None = None
+    ) -> None:
         try:
             self.process_runner.run(command, cwd, control or NullProcessControl())
         except ProcessCancelled:
             raise
         except ProcessExecutionError as error:
             raise VideoExportError("FFmpeg 合成失败，请检查视频日志") from error
-
-    def _run_ffmpeg_legacy(self, command: list[str], cwd: Path) -> None:
-        try:
-            completed = subprocess.run(
-                command,
-                cwd=cwd,
-                check=False,
-                capture_output=True,
-                text=True,
-            )
-        except OSError as error:
-            raise VideoExportError("未找到 FFmpeg，请先安装并加入 PATH") from error
-        if completed.returncode != 0:
-            raise VideoExportError("FFmpeg 合成失败，请检查视频日志")
 
     def _probe(self, path: Path, control: ProcessControl | None = None) -> dict[str, object]:
         try:
@@ -402,7 +428,7 @@ class VideoExportService:
         except ProcessCancelled:
             raise
         except ProcessExecutionError as error:
-            fallback = self._probe_with_ffmpeg(path)
+            fallback = self._probe_with_ffmpeg(path, control)
             if fallback is not None:
                 return fallback
             raise VideoExportError("无法校验最终视频") from error
@@ -423,19 +449,21 @@ class VideoExportService:
             "duration_ms": round(float(format_data.get("duration", 0)) * 1_000),
         }
 
-    def _probe_with_ffmpeg(self, path: Path) -> dict[str, object] | None:
+    def _probe_with_ffmpeg(
+        self, path: Path, control: ProcessControl | None = None
+    ) -> dict[str, object] | None:
         try:
-            completed = subprocess.run(
+            completed = self.process_runner.run(
                 [self.ffmpeg, "-hide_banner", "-i", str(path)],
-                cwd=path.parent,
-                check=False,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
+                path.parent,
+                control or NullProcessControl(),
             )
-        except OSError:
-            return None
+        except ProcessCancelled:
+            raise
+        except ProcessExecutionError as error:
+            if error.result is None:
+                return None
+            completed = error.result
         output = f"{completed.stdout}\n{completed.stderr}"
         duration = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", output)
         video = re.search(r"Video:\s*([^,\s]+).*?(\d{2,5})x(\d{2,5})", output)
@@ -450,44 +478,6 @@ class VideoExportService:
             "video_codec": video.group(1),
             "audio_codec": audio.group(1),
             "duration_ms": duration_ms,
-        }
-
-    def _probe_legacy(self, path: Path) -> dict[str, object]:
-        try:
-            completed = subprocess.run(
-                [
-                    self.ffprobe,
-                    "-v",
-                    "error",
-                    "-show_streams",
-                    "-show_format",
-                    "-of",
-                    "json",
-                    str(path),
-                ],
-                check=False,
-                capture_output=True,
-                text=True,
-            )
-        except OSError as error:
-            raise VideoExportError("未找到 FFprobe，请先安装并加入 PATH") from error
-        if completed.returncode != 0:
-            raise VideoExportError("无法校验最终视频")
-        payload = json.loads(completed.stdout)
-        streams: list[dict[str, object]] = payload.get("streams", [])
-        format_data = payload.get("format", {})
-        video: dict[str, object] = next(
-            (item for item in streams if item.get("width") is not None), {}
-        )
-        audio: dict[str, object] = next(
-            (item for item in streams if item.get("codec_name") == "aac"), {}
-        )
-        return {
-            "width": video.get("width"),
-            "height": video.get("height"),
-            "video_codec": video.get("codec_name"),
-            "audio_codec": audio.get("codec_name"),
-            "duration_ms": round(float(format_data.get("duration", 0)) * 1_000),
         }
 
     @staticmethod
@@ -520,8 +510,12 @@ def build_package_manifest(root: Path, paths: list[Path]) -> PackageManifest:
 
 
 def validate_media_probe(
-    probe: dict[str, object], *, expected_duration_ms: int, tolerance_ms: int,
-    expected_width: int = 1920, expected_height: int = 1080,
+    probe: dict[str, object],
+    *,
+    expected_duration_ms: int,
+    tolerance_ms: int,
+    expected_width: int = 1920,
+    expected_height: int = 1080,
 ) -> None:
     expected = {
         "width": expected_width,

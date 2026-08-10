@@ -5,13 +5,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from workbench.domain.models import PageRecord, ProjectManifest
+from workbench.domain.effects import EffectPlanRecord, calculate_plan_hash, validate_record_hash
+from workbench.domain.models import PageRecord
 from workbench.services.project_service import ProjectService
 
 from .catalog import EFFECT_CATALOG, EFFECT_CATALOG_VERSION
 from .planner import EffectPlanner, EffectPlanningInput
 from .schema import EffectPlanV2
-from workbench.domain.effects import EffectPlanRecord, calculate_plan_hash, validate_record_hash
 
 
 class EffectMutationResult(BaseModel):
@@ -95,14 +95,16 @@ class EffectService:
                 default_strength=project.effect_policy.default_strength,
                 catalog_version=project.effect_policy.catalog_version,
             )
-            record = self.planner.reconcile(page_input := input_data, page.effect_plan, force=force)
+            record = self.planner.reconcile(input_data, page.effect_plan, force=force)
             if page.effect_plan is not None and record.plan_hash == page.effect_plan.plan_hash:
                 skipped.append(page.id)
             else:
                 changed.append(page.id)
             pages.append(page.model_copy(update={"effect_plan": record}))
         if changed:
-            project = self.projects.save(project.model_copy(update={"pages": pages, "updated_at": datetime.now(UTC)}))
+            project = self.projects.save(
+                project.model_copy(update={"pages": pages, "updated_at": datetime.now(UTC)})
+            )
         return EffectMutationResult(
             project_id=project_id,
             changed_page_ids=changed,
@@ -111,7 +113,13 @@ class EffectService:
         )
 
     def update_page(
-        self, project_id: UUID, page_id: UUID, *, expected_revision: int, plan: EffectPlanV2, locked: bool
+        self,
+        project_id: UUID,
+        page_id: UUID,
+        *,
+        expected_revision: int,
+        plan: EffectPlanV2,
+        locked: bool,
     ) -> EffectPlanRecord:
         project = self.projects.get(project_id)
         page = next((item for item in project.pages if item.id == page_id), None)
@@ -132,11 +140,16 @@ class EffectService:
             updated_at=datetime.now(UTC),
         )
         validate_record_hash(record)
-        pages = [item.model_copy(update={"effect_plan": record}) if item.id == page_id else item for item in project.pages]
+        pages = [
+            item.model_copy(update={"effect_plan": record}) if item.id == page_id else item
+            for item in project.pages
+        ]
         self.projects.save(project.model_copy(update={"pages": pages}))
         return record
 
-    def unlock_page(self, project_id: UUID, page_id: UUID, *, expected_revision: int) -> EffectPlanRecord:
+    def unlock_page(
+        self, project_id: UUID, page_id: UUID, *, expected_revision: int
+    ) -> EffectPlanRecord:
         project = self.projects.get(project_id)
         page = next((item for item in project.pages if item.id == page_id), None)
         if page is None or page.effect_plan is None:
@@ -144,8 +157,15 @@ class EffectService:
         if page.effect_plan.revision != expected_revision:
             raise ValueError("effect_revision_conflict")
         record = page.effect_plan.model_copy(
-            update={"revision": page.effect_plan.revision + 1, "locked": False, "updated_at": datetime.now(UTC)}
+            update={
+                "revision": page.effect_plan.revision + 1,
+                "locked": False,
+                "updated_at": datetime.now(UTC),
+            }
         )
-        pages = [item.model_copy(update={"effect_plan": record}) if item.id == page_id else item for item in project.pages]
+        pages = [
+            item.model_copy(update={"effect_plan": record}) if item.id == page_id else item
+            for item in project.pages
+        ]
         self.projects.save(project.model_copy(update={"pages": pages}))
         return record

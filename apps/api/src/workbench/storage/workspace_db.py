@@ -68,6 +68,29 @@ jobs = Table(
     UniqueConstraint("project_id", "cache_key", name="uq_jobs_project_cache_key"),
 )
 
+peripheral_projection_inbox = Table(
+    "peripheral_projection_inbox",
+    metadata,
+    Column("job_id", String(36), primary_key=True),
+    Column("project_id", String(36), nullable=False),
+    Column("result_sha256", String(64), nullable=False),
+    Column("status", String(20), nullable=False),
+    Column("reason", String(500), nullable=True),
+    Column("created_at", String(40), nullable=False),
+    Column("updated_at", String(40), nullable=False),
+)
+
+peripheral_s1_submissions = Table(
+    "peripheral_s1_submissions",
+    metadata,
+    Column("idempotency_key", String(64), primary_key=True),
+    Column("job_id", String(36), nullable=False, unique=True),
+    Column("project_id", String(36), nullable=False),
+    Column("spec_json", Text, nullable=False),
+    Column("status", String(20), nullable=False),
+    Column("created_at", String(40), nullable=False),
+)
+
 
 class WorkspaceDatabase:
     def __init__(self, path: Path) -> None:

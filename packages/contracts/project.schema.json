@@ -1454,10 +1454,72 @@
           "default": null,
           "title": "Error"
         },
+        "error_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Code"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finished At"
+        },
+        "heartbeat_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Heartbeat At"
+        },
         "id": {
           "format": "uuid",
           "title": "Id",
           "type": "string"
+        },
+        "idempotency_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Idempotency Key"
+        },
+        "input_fingerprint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Input Fingerprint"
         },
         "job_type": {
           "$ref": "#/$defs/JobType"
@@ -1467,6 +1529,11 @@
           "minimum": 1,
           "title": "Max Attempts",
           "type": "integer"
+        },
+        "message": {
+          "default": "",
+          "title": "Message",
+          "type": "string"
         },
         "page_id": {
           "anyOf": [
@@ -1486,6 +1553,24 @@
           "title": "Paid",
           "type": "boolean"
         },
+        "parent_job_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Job Id"
+        },
+        "payload": {
+          "additionalProperties": true,
+          "title": "Payload",
+          "type": "object"
+        },
         "progress": {
           "default": 0.0,
           "maximum": 1.0,
@@ -1498,9 +1583,46 @@
           "title": "Project Id",
           "type": "string"
         },
+        "result": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Result"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "stage": {
+          "default": "queued",
+          "title": "Stage",
+          "type": "string"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started At"
+        },
         "status": {
-          "$ref": "#/$defs/NodeStatus",
-          "default": "not_started"
+          "$ref": "#/$defs/JobStatus",
+          "default": "queued"
         },
         "updated_at": {
           "format": "date-time",
@@ -1518,6 +1640,20 @@
       ],
       "title": "JobRecord",
       "type": "object"
+    },
+    "JobStatus": {
+      "enum": [
+        "queued",
+        "running",
+        "pause_requested",
+        "paused",
+        "cancel_requested",
+        "succeeded",
+        "failed",
+        "cancelled"
+      ],
+      "title": "JobStatus",
+      "type": "string"
     },
     "JobType": {
       "enum": [

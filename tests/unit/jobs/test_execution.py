@@ -80,3 +80,28 @@ def test_heartbeat_delegates_to_repository(tmp_path: Path) -> None:
     before = repository.get(context.job_id).revision
     context.heartbeat()
     assert repository.get(context.job_id).revision == before + 1
+
+
+def test_registered_temporary_paths_survive_later_checkpoints_without_progress_reset(
+    tmp_path: Path,
+) -> None:
+    repository, context, _ = setup_context(tmp_path)
+    repository.update_progress(
+        context.job_id,
+        0.4,
+        stage="rendering_pages",
+        message="恢复中的页面",
+    )
+    staging = context.project_dir / "08_输出" / ".render-jobs" / str(context.job_id)
+    staging.mkdir(parents=True)
+
+    context.register_temporary_paths((staging,))
+    context.checkpoint(stage="muxing", progress=0.7, message="合成中")
+
+    record = repository.get(context.job_id)
+    restored = context.store.latest(context.job_id)
+    assert record.progress == 0.7
+    assert restored is not None
+    assert restored.temporary_paths == [
+        f"08_输出/.render-jobs/{context.job_id}"
+    ]

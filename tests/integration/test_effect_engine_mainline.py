@@ -13,7 +13,9 @@ def test_effect_plan_round_trip_preserves_page_identity_and_hash(tmp_path) -> No
         project = projects.create("mainline")
         page_id = uuid4()
         projects.save(
-            project.model_copy(update={"pages": [PageRecord(id=page_id, order=1, title="第一阶段")]})
+            project.model_copy(
+                update={"pages": [PageRecord(id=page_id, order=1, title="第一阶段")]}
+            )
         )
         service = EffectService(projects)
         first = service.generate(project.id, page_ids=[page_id])

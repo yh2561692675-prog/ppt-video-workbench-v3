@@ -43,7 +43,6 @@ def migrate_v1_to_v2(connection: Connection) -> None:
     connection.exec_driver_sql("UPDATE jobs SET stage = 'queued' WHERE stage IS NULL")
     connection.exec_driver_sql("UPDATE jobs SET message = '' WHERE message IS NULL")
 
-    active_statuses = ("queued", "running", "pause_requested", "paused", "cancel_requested")
     rows = connection.exec_driver_sql(
         """
         SELECT id, project_id, updated_at, created_at

@@ -42,7 +42,12 @@
       "type": "string"
     },
     "severity": {
-      "enum": ["debug", "info", "warning", "error"],
+      "enum": [
+        "debug",
+        "info",
+        "warning",
+        "error"
+      ],
       "title": "Severity",
       "type": "string"
     },

@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+from workbench.video import publish as publish_module
 from workbench.video.publish import publish_render_outputs
 
 
@@ -41,7 +43,9 @@ def test_publish_keeps_previous_outputs_and_switches_latest_pointer_last(tmp_pat
     }
 
 
-def test_publish_replaces_stable_mp4_atomically_without_touching_package_history(tmp_path: Path) -> None:
+def test_publish_replaces_stable_mp4_atomically_without_touching_package_history(
+    tmp_path: Path,
+) -> None:
     output_root = tmp_path / "08_output"
     output_root.mkdir()
     staging = tmp_path / "staging"
@@ -76,3 +80,33 @@ def test_publish_replaces_stable_mp4_atomically_without_touching_package_history
     assert second.mp4_path.read_bytes() == b"newer"
     assert first.package_path.exists()
     assert second.package_path.exists()
+
+
+def test_package_copy_failure_keeps_previous_successful_mp4(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output_root = tmp_path / "08_output"
+    output_root.mkdir()
+    stable_mp4 = output_root / "final.mp4"
+    stable_mp4.write_bytes(b"previous")
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    (staging / "final.mp4").write_bytes(b"new")
+    (staging / "package").mkdir()
+
+    def fail_copytree(*args, **kwargs):
+        raise OSError("simulated package copy failure")
+
+    monkeypatch.setattr(publish_module.shutil, "copytree", fail_copytree)
+
+    with pytest.raises(OSError, match="package copy failure"):
+        publish_render_outputs(
+            staging_root=staging,
+            output_root=output_root,
+            run_id="job-failed",
+            final_name="final.mp4",
+            package_name="package",
+        )
+
+    assert stable_mp4.read_bytes() == b"previous"
+    assert not (output_root / "latest.json").exists()

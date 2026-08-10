@@ -1,10 +1,5 @@
 .venv/
 .worktrees/
-.superpowers/
-.tmp/
-.tmp-tests/
-backup/
-release/
 runtime-assets/
 node_modules/
 dist/

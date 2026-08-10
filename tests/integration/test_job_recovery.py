@@ -3,8 +3,10 @@ from uuid import uuid4
 
 import pytest
 from workbench.domain.enums import JobStatus, JobType
+from workbench.jobs.checkpoint import JobContext
 from workbench.jobs.repository import JobRepository, JobSpec
 from workbench.jobs.runner import CancellationToken, JobRunner
+from workbench.services.project_service import ProjectService
 from workbench.storage.workspace_db import WorkspaceDatabase
 
 
@@ -30,6 +32,7 @@ def test_running_job_is_paused_after_process_restart(tmp_path: Path, progress: f
     assert [job.id for job in recovered] == [job_id]
     assert recovered[0].status is JobStatus.PAUSED
     assert recovered[0].progress == progress
+    assert recovered[0].error_code == "render_worker_interrupted"
 
 
 def test_completed_job_is_reused_instead_of_enqueued_twice(tmp_path: Path) -> None:
@@ -105,3 +108,57 @@ def test_cancelled_job_pauses_without_calling_handler(tmp_path: Path) -> None:
 
     assert result.status is JobStatus.PAUSED
     assert called is False
+
+
+def test_restart_cleans_registered_cancelled_render_temporary_paths(tmp_path: Path) -> None:
+    service = ProjectService(tmp_path)
+    project = service.create("cancel cleanup")
+    project_root = tmp_path / project.project_dir
+    temporary = project_root / "08_输出" / ".render-jobs" / "job-temp"
+    temporary.mkdir(parents=True)
+    (temporary / "partial.mp4").write_bytes(b"partial")
+    job = service.jobs.enqueue_or_get(
+        JobSpec(
+            project_id=project.id,
+            job_type=JobType.EXPORT_PACKAGE,
+            cache_key="cancel-cleanup",
+        )
+    ).record
+    service.jobs.mark_running(job.id)
+    JobContext(job.id, project_root, JobType.EXPORT_PACKAGE).checkpoint(
+        0.5,
+        {
+            "stage": "rendering_pages",
+            "temporary_paths": ["08_输出/.render-jobs/job-temp"],
+        },
+    )
+    service.jobs.request_cancel(job.id)
+    service.close()
+
+    restarted = ProjectService(tmp_path)
+    recovered = restarted.jobs.get(job.id)
+    restarted.close()
+
+    assert recovered.status is JobStatus.CANCELLED
+    assert recovered.error_code == "render_cancelled"
+    assert not temporary.exists()
+
+
+def test_cancel_cleanup_failure_is_persisted_as_stable_error_code(tmp_path: Path) -> None:
+    repository = repository_at(tmp_path / "workspace.db")
+    job = repository.enqueue_or_get(
+        JobSpec(
+            project_id=uuid4(),
+            job_type=JobType.EXPORT_PACKAGE,
+            cache_key="cleanup-failure",
+        )
+    ).record
+    repository.mark_running(job.id)
+    repository.request_cancel(job.id)
+
+    recovered = repository.recover_interrupted_jobs(
+        lambda _: (_ for _ in ()).throw(OSError("locked"))
+    )
+
+    assert recovered[0].status is JobStatus.FAILED
+    assert recovered[0].error_code == "render_cancel_cleanup_failed"

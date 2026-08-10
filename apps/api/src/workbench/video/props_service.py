@@ -45,11 +45,7 @@ class VideoPropsService:
                     subtitle_cue_ids=[cue.id for cue in subtitles.cues if cue.page_id == page.id],
                     effect_plan=page.effect_plan.plan if page.effect_plan else None,
                     effect_plan_revision=page.effect_plan.revision if page.effect_plan else None,
-                    effect_plan_hash=(
-                        page.effect_plan.plan_hash
-                        if page.effect_plan
-                        else None
-                    ),
+                    effect_plan_hash=(page.effect_plan.plan_hash if page.effect_plan else None),
                 )
             )
             cursor_ms = end_ms

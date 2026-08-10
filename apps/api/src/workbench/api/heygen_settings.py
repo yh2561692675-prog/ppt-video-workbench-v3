@@ -13,6 +13,7 @@ from workbench.integrations.heygen.client import (
     SpeechResult,
 )
 from workbench.settings.heygen_store import HeyGenProfilePublic, HeyGenProfileStore
+from workbench.settings.secret_store import SecretStoreUnavailable
 
 
 class HeyGenProfileCreate(BaseModel):
@@ -85,6 +86,15 @@ def create_heygen_settings_router(store: HeyGenProfileStore, client: HeyGenClien
             )
         except KeyError as error:
             raise HTTPException(status_code=404, detail="HeyGen profile not found") from error
+        except SecretStoreUnavailable as error:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "heygen_secret_store_unavailable",
+                    "message": "无法解密 HeyGen 配置",
+                    "action": "请在当前 Windows 用户下重新保存 HeyGen API Key",
+                },
+            ) from error
         except HeyGenIntegrationError as error:
             raise HTTPException(
                 status_code=422,
@@ -106,6 +116,15 @@ def create_heygen_settings_router(store: HeyGenProfileStore, client: HeyGenClien
             return envelope(result)
         except KeyError as error:
             raise HTTPException(status_code=404, detail="HeyGen profile not found") from error
+        except SecretStoreUnavailable as error:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "heygen_secret_store_unavailable",
+                    "message": "无法解密 HeyGen 配置",
+                    "action": "请在当前 Windows 用户下重新保存 HeyGen API Key",
+                },
+            ) from error
         except HeyGenIntegrationError as error:
             raise HTTPException(
                 status_code=422,

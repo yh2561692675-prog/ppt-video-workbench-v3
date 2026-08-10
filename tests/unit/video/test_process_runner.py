@@ -63,8 +63,14 @@ class FakeProcess:
 
 def test_runner_returns_process_result_and_redacts_output(tmp_path: Path) -> None:
     process = FakeProcess()
+    captured = {}
+
+    def popen(*args, **kwargs):
+        captured.update(kwargs)
+        return process
+
     runner = CancellableProcessRunner(
-        popen=lambda *args, **kwargs: process,
+        popen=popen,
         sleeper=lambda _: None,
     )
 
@@ -73,6 +79,8 @@ def test_runner_returns_process_result_and_redacts_output(tmp_path: Path) -> Non
     assert result.returncode == 0
     assert result.stdout == "stdout"
     assert result.stderr == "stderr"
+    assert captured["encoding"] == "utf-8"
+    assert captured["errors"] == "replace"
 
 
 def test_runner_raises_for_nonzero_exit(tmp_path: Path) -> None:

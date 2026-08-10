@@ -45,7 +45,12 @@
           "type": "boolean"
         }
       },
-      "required": ["category", "code", "message", "retryable"],
+      "required": [
+        "category",
+        "code",
+        "message",
+        "retryable"
+      ],
       "title": "ErrorDetail",
       "type": "object"
     },
@@ -81,7 +86,13 @@
           "type": "string"
         }
       },
-      "required": ["logical_name", "kind", "staged_path", "size_bytes", "sha256"],
+      "required": [
+        "logical_name",
+        "kind",
+        "staged_path",
+        "size_bytes",
+        "sha256"
+      ],
       "title": "OutputArtifact",
       "type": "object"
     }
@@ -105,7 +116,10 @@
       "type": "string"
     },
     "outcome": {
-      "enum": ["succeeded", "failed"],
+      "enum": [
+        "succeeded",
+        "failed"
+      ],
       "title": "Outcome",
       "type": "string"
     },
@@ -123,7 +137,11 @@
       "type": "string"
     }
   },
-  "required": ["schema_version", "job_id", "outcome"],
+  "required": [
+    "schema_version",
+    "job_id",
+    "outcome"
+  ],
   "title": "JobResult",
   "type": "object"
 }

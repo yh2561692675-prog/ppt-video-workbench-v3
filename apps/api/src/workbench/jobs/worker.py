@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import suppress
 from threading import Event, Lock, Thread
 from time import sleep
 from uuid import UUID
@@ -53,10 +54,8 @@ class RenderJobWorker:
         self._stop_event.set()
         active_job_id = self.active_job_id
         if active_job_id is not None:
-            try:
+            with suppress(Exception):
                 self.repository.request_pause(active_job_id)
-            except Exception:
-                pass
         self._wake_event.set()
         if self._thread is not None:
             self._thread.join(timeout=max(timeout, 0.0))

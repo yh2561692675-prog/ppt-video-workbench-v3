@@ -15,6 +15,7 @@ def test_runtime_manifest_lists_required_files() -> None:
         "peripheral/peripheral-host.exe",
         "peripheral/schemas/job-envelope-1.0.json",
         "peripheral/schemas/job-result-1.0.json",
+        "peripheral/schemas/business-result-1.0.json",
         "peripheral/migrations/0001_s0_core.sql",
     }
 
@@ -31,6 +32,15 @@ def test_pyinstaller_spec_bundles_protocol_database_and_echo_module() -> None:
     assert "peripheral_modules.echo.__main__" in source
     assert 'contents_directory="."' in source
     assert 'name="peripheral"' in source
+
+
+def test_pyinstaller_spec_bundles_s1_business_entrypoints() -> None:
+    source = (ROOT / "packaging" / "peripheral-host.spec").read_text(encoding="utf-8")
+
+    assert 'project_root / "apps" / "api" / "src"' in source
+    assert "workbench.business_modules.registry" in source
+    for module in range(3, 13):
+        assert f"workbench.business_modules.p{module:02d}_" in source
 
 
 def test_initialize_script_has_workspace_and_disk_safety_gates() -> None:
@@ -63,9 +73,7 @@ def test_launcher_degrades_without_killing_unowned_peripheral_processes() -> Non
 
 
 def test_release_build_has_enabled_peripheral_gate_and_payload_verification() -> None:
-    source = (REPOSITORY_ROOT / "scripts" / "build-release.ps1").read_text(
-        encoding="ascii"
-    )
+    source = (REPOSITORY_ROOT / "scripts" / "build-release.ps1").read_text(encoding="ascii")
 
     assert "build-s0.ps1" in source
     assert "peripheral\\peripheral-host.exe" in source
@@ -100,8 +108,8 @@ def test_smoke_script_uses_one_available_loopback_port_for_host_and_probes() -> 
     source = (ROOT / "scripts" / "smoke-s0.ps1").read_text(encoding="ascii")
 
     assert "function Get-AvailableLoopbackPort" in source
-    assert '$port = Get-AvailableLoopbackPort' in source
-    assert '$env:PERIPHERAL_PORT = [string]$port' in source
+    assert "$port = Get-AvailableLoopbackPort" in source
+    assert "$env:PERIPHERAL_PORT = [string]$port" in source
     assert '$baseUrl = "http://127.0.0.1:$port/internal/v1"' in source
     assert '"$baseUrl/health"' in source
     assert '"$baseUrl/jobs"' in source
