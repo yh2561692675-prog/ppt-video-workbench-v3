@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects-program",
+  "wave": "W1",
+  "task": "A12",
+  "gate": "G1_G5_INTEGRATED",
+  "status": "passed",
+  "recorded_at": "2026-08-11T19:57:40+08:00",
+  "owner_line": "A Core Workbench",
+  "branch": "codex/program-core-workbench",
+  "head_before_evidence": "15a2c6d04903a7391b9872bb086075a2124d2854",
+  "foundation_source_commit": "5a071cb95d9af8f91c978abac75d3df77a0910ab",
+  "integration_source_commits": [
+    "71a7c94255887ed9fae439d3788a62bd9b939147",
+    "e0766f58b86ec48faadfcbdca6a78e2febf1c3a6",
+    "1a47927535cccaa339bd8d2880126549fab8f707"
+  ],
+  "integration_order": [
+    {
+      "gate": "G1",
+      "capability": "durable jobs, attempts, checkpoints, leases, restart recovery and exactly-once publication",
+      "stop_point": "2026-08-11-p1-durable-jobs-g1.json"
+    },
+    {
+      "gate": "G2",
+      "capability": "content-addressed image, video and audio derivatives, FFprobe and waveform",
+      "stop_point": "2026-08-11-p2-asset-derivatives-g2.json"
+    },
+    {
+      "gate": "G3",
+      "capability": "authoritative range preview, immutable graph binding and Web preview",
+      "stop_point": "2026-08-11-p3-authoritative-preview-g3.json"
+    },
+    {
+      "gate": "G4",
+      "capability": "dependency-aware selective invalidation, persistent cache index and concurrent-safe GC",
+      "stop_point": "2026-08-11-p4-cache-invalidation-g4.json"
+    },
+    {
+      "gate": "G5",
+      "capability": "legacy read-only adapter, migration preview, journal, rollback and compatibility API",
+      "stop_point": "2026-08-11-p5-legacy-migration-g5.json"
+    }
+  ],
+  "conflict_resolution": {
+    "job_registry": "One durable JobType and state machine remain authoritative; executors register without replacing lifecycle semantics.",
+    "migration_sequence": "Workspace migrations remain monotonically ordered and covered by workspace migration and V2 migration tests.",
+    "error_contract": "API errors and durable job fixtures are consumed from the committed contract snapshot.",
+    "legacy_boundary": "Legacy projects open read-only; V2 publication is atomic and rollback preserves the source and last successful output.",
+    "web_projection": "Web durable-job, preview, cache and task-center clients consume the same committed API fields."
+  },
+  "independent_verification": [
+    {
+      "command": "pytest all Python test files changed between 117fb60 and 5a071cb from current A-line HEAD",
+      "result": "144 passed across 42 files"
+    },
+    {
+      "command": "DG0.5 focused harness verification after foundation integration",
+      "result": "5 passed; Ruff and strict mypy passed"
+    },
+    {
+      "command": "A10 Web full suite and production build",
+      "result": "84 tests passed; TypeScript and Vite build passed"
+    },
+    {
+      "command": "A10 Remotion full suite and typecheck",
+      "result": "32 tests passed; typecheck passed"
+    }
+  ],
+  "drift_checks": {
+    "shared_foundation_changes_after_5a071cb": 0,
+    "A_line_changes_after_foundation": [
+      "DP10-DP14 debug harness",
+      "DG0.5 evidence"
+    ],
+    "untracked_source_dependencies": 0
+  },
+  "next_task": "A13 freeze V1 core contract catalog, golden fixtures and drift fingerprints"
+}
