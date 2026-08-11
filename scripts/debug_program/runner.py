@@ -40,6 +40,7 @@ class CommandSpec:
     cwd: Path
     env: dict[str, str]
     timeout_seconds: int = 1800
+    blocked_exit_codes: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -166,10 +167,14 @@ def run_plan(
     command_root = writer.run_root / "commands"
     results: list[CommandResult] = []
     first_failure: dict[str, Any] | None = None
+    blocked_commands: list[str] = []
     for index, spec in enumerate(commands, start=1):
         result = execute_command(spec, command_root, index)
         results.append(result)
         if result.status == "failed" and first_failure is None:
+            if result.exit_code in spec.blocked_exit_codes:
+                blocked_commands.append(result.name)
+                continue
             first_failure = {
                 "name": result.name,
                 "exit_code": result.exit_code,
@@ -177,7 +182,7 @@ def run_plan(
             }
             if stop_on_failure:
                 break
-    status = "failed" if first_failure else "passed"
+    status = "failed" if first_failure else ("blocked" if blocked_commands else "passed")
     verdict = {
         "schema_version": "1.0",
         "candidate_id": writer.candidate_id,
@@ -199,6 +204,11 @@ def run_plan(
         ],
         "first_failure": first_failure,
     }
+    if blocked_commands:
+        verdict["notes"] = [
+            "external CI evidence is required",
+            *[f"blocked command: {name}" for name in blocked_commands],
+        ]
     validate_automation_verdict(verdict, writer.run_root)
     _write_new(writer.run_root / "automation-verdict.json", verdict)
     writer.manifest()
@@ -289,8 +299,16 @@ def full_automation_plan(
         argv: Sequence[str],
         timeout_seconds: int,
         env: dict[str, str] | None = None,
+        blocked_exit_codes: tuple[int, ...] = (),
     ) -> CommandSpec:
-        return CommandSpec(name, tuple(argv), repo_root, env or {}, timeout_seconds)
+        return CommandSpec(
+            name,
+            tuple(argv),
+            repo_root,
+            env or {},
+            timeout_seconds,
+            blocked_exit_codes,
+        )
 
     tool_preflight_command = [
         python,
@@ -401,5 +419,6 @@ def full_automation_plan(
             ],
             300,
             python_env,
+            blocked_exit_codes=(2,),
         ),
     )

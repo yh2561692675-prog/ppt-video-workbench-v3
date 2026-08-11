@@ -170,6 +170,32 @@ def test_runner_executes_and_preserves_first_failure(tmp_path: Path) -> None:
     assert json.loads(result.read_text(encoding="utf-8"))["exit_code"] == 7
 
 
+def test_runner_preserves_external_ci_block_as_blocked(tmp_path: Path) -> None:
+    root = tmp_path / "evidence"
+    candidate_id = "v1-rc-abc1234-20260811T193000Z"
+    writer = EvidenceWriter(root, candidate_id, "run-dp20-001")
+    verdict = run_plan(
+        writer=writer,
+        matrix="dp20-full",
+        commands=(
+            CommandSpec(
+                "ci-wiring-check",
+                (sys.executable, "-c", "raise SystemExit(2)"),
+                tmp_path,
+                {},
+                30,
+                (2,),
+            ),
+        ),
+    )
+
+    assert verdict["status"] == "blocked"
+    assert verdict["first_failure"] is None
+    assert verdict["commands"][0]["status"] == "failed"
+    assert "external CI evidence is required" in verdict["notes"]
+    validate_automation_verdict(verdict, writer.run_root)
+
+
 def test_runner_rejects_empty_plan_without_creating_a_passed_run(tmp_path: Path) -> None:
     writer = EvidenceWriter(
         tmp_path / "evidence", "v1-rc-abc1234-20260811T193000Z", "run-empty-001"
