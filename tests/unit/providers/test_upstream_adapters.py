@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
+from PIL import Image
 from workbench.contracts.p2_platform import BudgetV1, OperationContextV1
 from workbench.providers.adapter import ProviderAdapterError
 from workbench.providers.broker import ProviderBroker
@@ -12,6 +15,10 @@ from workbench.providers.models import ProviderDescriptorV1, ProviderInvocationV
 from workbench.providers.registry import ProviderRegistry
 from workbench.providers.upstream import (
     BrokerCompletionClient,
+    BrokerOcrEngine,
+    BrokerPageRenderer,
+    BrokerSpeechSynthesizer,
+    BrokerTranscriptionBackend,
     BuiltinArtifactStore,
     BuiltinProviderAdapter,
     builtin_descriptors,
@@ -137,3 +144,77 @@ def test_broker_completion_client_reads_text_from_local_artifact_bridge() -> Non
         model="stable",
         messages=[{"role": "user", "content": "hello"}],
     ) == "broker completion"
+
+
+def _broker_with_handlers(artifacts: BuiltinArtifactStore) -> ProviderBroker:
+    descriptors = builtin_descriptors()
+
+    def handler(invocation: ProviderInvocationV1) -> object:
+        if invocation.provider_id == "builtin-asr":
+            return json.dumps(
+                {
+                    "language": "zh",
+                    "segments": [
+                        {
+                            "start": 0,
+                            "end": 1,
+                            "text": "你好",
+                            "words": [
+                                {"text": "你好", "start": 0, "end": 1, "probability": 0.99}
+                            ],
+                        }
+                    ],
+                }
+            )
+        if invocation.provider_id == "builtin-ocr":
+            return json.dumps([{"text": "标题", "bbox": [0, 0, 10, 10], "confidence": 0.9}])
+        if invocation.provider_id == "builtin-renderer":
+            return b"rendered"
+        if invocation.provider_id in {"builtin-tts", "builtin-avatar"}:
+            return b"speech"
+        return "unused"
+
+    adapters = {
+        descriptor.provider_id: BuiltinProviderAdapter(
+            descriptor, handler, artifact_store=artifacts
+        )
+        for descriptor in descriptors
+    }
+    return ProviderBroker(ProviderRegistry(descriptors), adapters)
+
+
+def test_broker_upstream_facades_preserve_asr_ocr_speech_and_renderer_contracts(
+    tmp_path: Path,
+) -> None:
+    artifacts = BuiltinArtifactStore()
+    broker = _broker_with_handlers(artifacts)
+    tenant_id = uuid4()
+
+    audio = tmp_path / "audio.wav"
+    audio.write_bytes(b"audio")
+    segments, language = BrokerTranscriptionBackend(
+        broker, artifacts, tenant_id=tenant_id
+    ).transcribe(audio, language="zh", device="cpu")
+    segment = list(segments)[0]
+    assert language == "zh"
+    assert segment.text == "你好"
+
+    ocr = BrokerOcrEngine(broker, artifacts, tenant_id=tenant_id)
+    assert ocr.recognize(Image.new("RGB", (10, 10)))[0].text == "标题"
+
+    assert BrokerSpeechSynthesizer(
+        broker, artifacts, tenant_id=tenant_id, kind="tts"
+    ).synthesize("你好", voice_id="voice-1") == b"speech"
+    assert BrokerSpeechSynthesizer(
+        broker, artifacts, tenant_id=tenant_id, kind="avatar"
+    ).synthesize("你好", voice_id="voice-1") == b"speech"
+
+    props = SimpleNamespace(model_dump=lambda **_: {"project_id": "p"})
+    page = SimpleNamespace(model_dump=lambda **_: {"page_order": 1})
+    source = tmp_path / "source.png"
+    source.write_bytes(b"source")
+    output = tmp_path / "out.mp4"
+    BrokerPageRenderer(broker, artifacts, tenant_id=tenant_id).render(
+        props, page, source, output
+    )
+    assert output.read_bytes() == b"rendered"

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from math import ceil
 from typing import Literal
 from uuid import UUID, uuid4
 
@@ -18,6 +19,7 @@ from workbench.contracts.p2_platform import (
 )
 
 from .adapter import ProviderAdapter
+from .billing import ProviderRateLimiter
 from .broker import ProviderBroker, ProviderBrokerError, RouteRequest
 from .cache import ProviderCache
 from .credentials import CredentialMetadataV1, CredentialStore, CredentialStoreError
@@ -46,6 +48,8 @@ class ProviderEstimateRequest(_ContractModel):
 
 class ProviderInvokeRequest(_ContractModel):
     tenant_id: UUID
+    project_id: str | None = Field(default=None, max_length=200)
+    credential_ref: str | None = Field(default=None, max_length=200)
     capability_id: str = Field(min_length=1, max_length=100)
     model: str | None = Field(default=None, max_length=200)
     input_refs: list[str] = Field(default_factory=list, max_length=10_000)
@@ -87,6 +91,7 @@ class ProviderApiState:
     health: dict[tuple[str, str], object] = field(default_factory=dict)
     broker: ProviderBroker | None = None
     credential_store: CredentialStore | None = None
+    rate_limiter: ProviderRateLimiter = field(default_factory=ProviderRateLimiter)
 
     def __post_init__(self) -> None:
         if self.broker is None:
@@ -196,6 +201,18 @@ def create_provider_router(state: ProviderApiState) -> APIRouter:
         descriptor = state.registry.get(provider_id)
         if adapter is None or descriptor is None:
             raise HTTPException(status_code=404, detail="provider_not_found")
+        if request.credential_ref:
+            decision = state.rate_limiter.consume(
+                provider_id,
+                request.credential_ref,
+                request.capability_id,
+            )
+            if not decision.allowed:
+                raise HTTPException(
+                    status_code=429,
+                    detail="provider_rate_limited",
+                    headers={"Retry-After": str(max(1, ceil(decision.retry_after_seconds)))},
+                )
         context = _context(request.tenant_id, "provider.invoke", request.timeout_ms)
         assert state.broker is not None
         try:
@@ -216,6 +233,10 @@ def create_provider_router(state: ProviderApiState) -> APIRouter:
                     allow_failover=request.allow_failover,
                 )
             )
+            if request.project_id and not routed.cache_hit:
+                billed = routed.result.billed_cost or 0
+                key = (str(request.tenant_id), request.project_id)
+                state.usage_minor[key] = state.usage_minor.get(key, 0) + int(billed)
             return routed.result
         except ProviderBrokerError as error:
             raise HTTPException(

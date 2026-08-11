@@ -19,6 +19,7 @@ class SyncClientState:
     accepted: int
     failed: int
     last_cursor: str | None
+    remote_operations: int = 0
 
 
 class SyncTransportError(RuntimeError):
@@ -32,6 +33,8 @@ class SyncTransportError(RuntimeError):
 
 class SyncTransport(Protocol):
     def append_operation(self, operation_id: str, payload: dict[str, Any]) -> dict[str, Any]: ...
+
+    def list_operations(self, cursor: str | None = None) -> dict[str, Any]: ...
 
     def download_object(self, object_id: str) -> bytes: ...
 
@@ -73,6 +76,15 @@ class SyncClient:
                 "CREATE TABLE IF NOT EXISTS inbox ("
                 "object_id TEXT PRIMARY KEY, staging_path TEXT NOT NULL, "
                 "content_sha256 TEXT NOT NULL, applied_at TEXT NOT NULL)"
+            )
+            db.execute(
+                "CREATE TABLE IF NOT EXISTS remote_operations ("
+                "operation_id TEXT PRIMARY KEY, payload_json TEXT NOT NULL, "
+                "cursor TEXT NOT NULL, applied_at TEXT NOT NULL)"
+            )
+            db.execute(
+                "CREATE TABLE IF NOT EXISTS sync_state ("
+                "key TEXT PRIMARY KEY, value TEXT NOT NULL)"
             )
 
     def enqueue(self, operation_id: str, payload: dict[str, Any]) -> bool:
@@ -142,9 +154,15 @@ class SyncClient:
                     "SELECT status, count(*) AS count FROM outbox GROUP BY status"
                 )
             }
-            row = db.execute(
-                "SELECT cursor FROM outbox WHERE status='accepted' ORDER BY updated_at DESC LIMIT 1"
-            ).fetchone()
+            row = db.execute("SELECT value FROM sync_state WHERE key='remote_cursor'").fetchone()
+            if row is None:
+                row = db.execute(
+                    "SELECT cursor FROM outbox WHERE status='accepted' "
+                    "ORDER BY updated_at DESC LIMIT 1"
+                ).fetchone()
+            remote_count = int(
+                db.execute("SELECT count(*) FROM remote_operations").fetchone()[0]
+            )
         return SyncClientState(
             pending=int(counts.get("pending", 0)),
             retryable=int(counts.get("retryable", 0)),
@@ -152,7 +170,58 @@ class SyncClient:
             accepted=int(counts.get("accepted", 0)),
             failed=int(counts.get("failed", 0)),
             last_cursor=str(row[0]) if row else None,
+            remote_operations=remote_count,
         )
+
+    def pull(self, transport: SyncTransport, *, limit: int = 100) -> list[dict[str, Any]]:
+        """Durably stage a remote operation page before a merge service applies it."""
+
+        self._require_enabled()
+        if limit < 1 or limit > 100:
+            raise ValueError("limit must be between 1 and 100")
+        if not hasattr(transport, "list_operations"):
+            raise SyncTransportError(
+                "sync transport does not support pulling operations", retryable=False
+            )
+        with self._connect() as db:
+            row = db.execute("SELECT value FROM sync_state WHERE key='remote_cursor'").fetchone()
+        cursor = str(row[0]) if row else None
+        response = transport.list_operations(cursor)
+        items = response.get("items", []) if isinstance(response, dict) else []
+        if not isinstance(items, list):
+            raise SyncTransportError("cloud sync returned invalid operation page", retryable=False)
+        accepted: list[dict[str, Any]] = []
+        next_cursor = cursor
+        with self._lock, self._connect() as db:
+            for item in items[:limit]:
+                if not isinstance(item, dict):
+                    raise SyncTransportError(
+                        "cloud sync returned invalid operation", retryable=False
+                    )
+                operation_id = str(item.get("operation_id", ""))
+                if not operation_id:
+                    raise SyncTransportError("cloud sync operation has no id", retryable=False)
+                _assert_sync_payload(item)
+                server_cursor = str(item.get("server_revision_id") or operation_id)
+                db.execute(
+                    "INSERT OR IGNORE INTO remote_operations "
+                    "(operation_id, payload_json, cursor, applied_at) VALUES (?, ?, ?, ?)",
+                    (
+                        operation_id,
+                        json.dumps(item, ensure_ascii=False, sort_keys=True),
+                        server_cursor,
+                        _now(),
+                    ),
+                )
+                accepted.append(item)
+                next_cursor = operation_id
+            if next_cursor is not None and next_cursor != cursor:
+                db.execute(
+                    "INSERT INTO sync_state(key, value) VALUES('remote_cursor', ?) "
+                    "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                    (next_cursor,),
+                )
+        return accepted
 
     def stage_object(self, object_id: str, content: bytes, staging_root: Path) -> Path:
         self._require_enabled()

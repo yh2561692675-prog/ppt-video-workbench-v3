@@ -10,18 +10,25 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import inspect
+import io
+import json
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 from uuid import UUID, uuid4
 
+from PIL import Image
+
+from workbench.audio.models import RecognizedSegment, RecognizedWord
 from workbench.contracts.p2_platform import (
     BudgetV1,
     ErrorCategory,
     OperationContextV1,
     StructuredErrorV1,
 )
+from workbench.ocr.paddle_adapter import OcrResult
 
 from .adapter import ProviderAdapter, ProviderAdapterError
 from .broker import ProviderBroker, RouteRequest
@@ -423,3 +430,245 @@ class BrokerCompletionClient:
         if not isinstance(value, str):
             raise RuntimeError("LLM provider returned a non-text artifact")
         return value
+
+
+def _operation_context(tenant_id: UUID, request_kind: str) -> OperationContextV1:
+    now = datetime.now(UTC)
+    return OperationContextV1(
+        operation_id=uuid4(),
+        idempotency_key=uuid4(),
+        attempt_id=uuid4(),
+        tenant_id=tenant_id,
+        request_kind=request_kind,
+        started_at=now,
+        deadline_at=now + timedelta(seconds=120),
+        budget=BudgetV1(timeout_ms=120_000),
+    )
+
+
+def _artifact_value(
+    broker: ProviderBroker,
+    artifacts: BuiltinArtifactStore,
+    *,
+    tenant_id: UUID,
+    kind: str,
+    capability_id: str,
+    expected_schema: str,
+    input_refs: list[str],
+    parameters: dict[str, object],
+    model: str | None = None,
+    fixed_provider_id: str | None = None,
+) -> str | bytes:
+    request = RouteRequest(
+        context=_operation_context(tenant_id, "provider.invoke"),
+        kind=kind,
+        capability_id=capability_id,
+        input_refs=input_refs,
+        parameters=parameters,
+        expected_output_schema=expected_schema,
+        model=model,
+        fixed_provider_id=fixed_provider_id or f"builtin-{kind}",
+        allow_failover=False,
+    )
+    result = asyncio.run(broker.invoke(request)).result
+    if result.status != "succeeded" or not result.output_refs:
+        raise RuntimeError(f"{kind} provider returned no output artifact")
+    return artifacts.get(result.output_refs[0])
+
+
+def _put_file(artifacts: BuiltinArtifactStore, path: Path) -> str:
+    try:
+        return artifacts.put(path.read_bytes())
+    except OSError as error:
+        raise ProviderAdapterError(
+            "provider.input_unavailable",
+            "Provider input could not be staged",
+            retryable=True,
+            failover_allowed=True,
+        ) from error
+
+
+class BrokerTranscriptionBackend:
+    """TranscriptionBackend-compatible bridge using logical audio artifacts."""
+
+    requires_local_model = False
+
+    def __init__(
+        self,
+        broker: ProviderBroker,
+        artifacts: BuiltinArtifactStore,
+        *,
+        tenant_id: UUID,
+        model: str | None = None,
+    ) -> None:
+        self.broker = broker
+        self.artifacts = artifacts
+        self.tenant_id = tenant_id
+        self.model = model
+
+    def transcribe(
+        self, audio: Path, **kwargs: object
+    ) -> tuple[Iterable[RecognizedSegment], str]:
+        value = _artifact_value(
+            self.broker,
+            self.artifacts,
+            tenant_id=self.tenant_id,
+            kind="asr",
+            capability_id="transcription",
+            expected_schema="transcript-v1",
+            input_refs=[_put_file(self.artifacts, audio)],
+            parameters={
+                key: kwargs[key]
+                for key in ("language", "device", "compute_type", "word_timestamps")
+                if key in kwargs
+            },
+            model=self.model,
+        )
+        if not isinstance(value, str | bytes):
+            raise RuntimeError("ASR provider returned an invalid transcript artifact")
+        payload = json.loads(value.decode("utf-8") if isinstance(value, bytes) else value)
+        if not isinstance(payload, dict) or not isinstance(payload.get("segments"), list):
+            raise RuntimeError("ASR provider returned an invalid transcript schema")
+        segments = [
+            RecognizedSegment(
+                start=float(item["start"]),
+                end=float(item["end"]),
+                text=str(item["text"]),
+                words=[
+                    RecognizedWord(
+                        text=str(word["text"]),
+                        start=float(word["start"]),
+                        end=float(word["end"]),
+                        probability=float(word["probability"]),
+                    )
+                    for word in item.get("words", [])
+                ],
+            )
+            for item in payload["segments"]
+        ]
+        return segments, str(payload.get("language") or kwargs.get("language") or "und")
+
+
+class BrokerSpeechSynthesizer:
+    """Small TTS/avatar bridge for services that already own persistence."""
+
+    def __init__(
+        self,
+        broker: ProviderBroker,
+        artifacts: BuiltinArtifactStore,
+        *,
+        tenant_id: UUID,
+        kind: str = "tts",
+        provider_id: str | None = None,
+    ) -> None:
+        if kind not in {"tts", "avatar"}:
+            raise ValueError("speech kind must be tts or avatar")
+        self.broker = broker
+        self.artifacts = artifacts
+        self.tenant_id = tenant_id
+        self.kind = kind
+        self.provider_id = provider_id or f"builtin-{kind}"
+
+    def synthesize(
+        self,
+        text: str,
+        *,
+        voice_id: str,
+        language: str = "zh",
+        speed: float = 1.0,
+    ) -> bytes:
+        if not text.strip():
+            raise ValueError("speech text cannot be empty")
+        value = _artifact_value(
+            self.broker,
+            self.artifacts,
+            tenant_id=self.tenant_id,
+            kind=self.kind,
+            capability_id="speech.synthesize" if self.kind == "tts" else "avatar.generate",
+            expected_schema="audio-v1" if self.kind == "tts" else "video-v1",
+            input_refs=[self.artifacts.put(text)],
+            parameters={"voice_id": voice_id, "language": language, "speed": speed},
+            fixed_provider_id=self.provider_id,
+        )
+        if not isinstance(value, bytes):
+            raise RuntimeError("speech provider returned a non-binary artifact")
+        return value
+
+
+class BrokerOcrEngine:
+    """OcrEngine-compatible JSON bridge with bounded image staging."""
+
+    def __init__(
+        self,
+        broker: ProviderBroker,
+        artifacts: BuiltinArtifactStore,
+        *,
+        tenant_id: UUID,
+    ) -> None:
+        self.broker = broker
+        self.artifacts = artifacts
+        self.tenant_id = tenant_id
+
+    def recognize(self, image: Image.Image) -> list[OcrResult]:
+        buffer = io.BytesIO()
+        image.convert("RGB").save(buffer, format="PNG")
+        value = _artifact_value(
+            self.broker,
+            self.artifacts,
+            tenant_id=self.tenant_id,
+            kind="ocr",
+            capability_id="text.extract",
+            expected_schema="ocr-v1",
+            input_refs=[self.artifacts.put(buffer.getvalue())],
+            parameters={"language": "zh", "gpu": False},
+        )
+        if not isinstance(value, str | bytes):
+            raise RuntimeError("OCR provider returned an invalid result artifact")
+        payload = json.loads(value.decode("utf-8") if isinstance(value, bytes) else value)
+        if not isinstance(payload, list):
+            raise RuntimeError("OCR provider returned an invalid result schema")
+        return [OcrResult.model_validate(item) for item in payload]
+
+
+class BrokerPageRenderer:
+    """PageRenderer-compatible bridge that writes only validated output bytes."""
+
+    def __init__(
+        self,
+        broker: ProviderBroker,
+        artifacts: BuiltinArtifactStore,
+        *,
+        tenant_id: UUID,
+    ) -> None:
+        self.broker = broker
+        self.artifacts = artifacts
+        self.tenant_id = tenant_id
+
+    def render(
+        self,
+        props: object,
+        page: object,
+        source: Path,
+        output: Path,
+        control: object | None = None,
+    ) -> None:
+        del control
+        value = _artifact_value(
+            self.broker,
+            self.artifacts,
+            tenant_id=self.tenant_id,
+            kind="renderer",
+            capability_id="render.page",
+            expected_schema="render-v1",
+            input_refs=[_put_file(self.artifacts, source)],
+            parameters={
+                "props": props.model_dump(mode="json"),  # type: ignore[attr-defined]
+                "page": page.model_dump(mode="json"),  # type: ignore[attr-defined]
+            },
+        )
+        if not isinstance(value, bytes):
+            raise RuntimeError("renderer provider returned a non-binary artifact")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        temporary = output.with_name(f".{output.name}.tmp")
+        temporary.write_bytes(value)
+        temporary.replace(output)

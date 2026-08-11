@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import json
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import httpx
 from fastapi.testclient import TestClient
@@ -12,6 +12,7 @@ from workbench.domain.extraction import PageExtraction
 from workbench.domain.matching import MatchCandidate, MatchComponents, MatchWeights, PageMatch
 from workbench.domain.models import PageRecord, stable_page_id
 from workbench.main import create_app
+from workbench.p2 import P2FeatureFlags
 from workbench.settings.secret_store import SecretProtector
 
 
@@ -162,3 +163,47 @@ def test_generate_narration_uses_current_sources_and_persists_profile_metadata(
     assert saved.llm_usage[-1].model == "compatible-model"
     manifest_text = (tmp_path / saved.project_dir / "project.json").read_text(encoding="utf-8")
     assert "sk-generation-secret" not in manifest_text
+
+
+def test_opt_in_provider_llm_route_uses_artifact_bridge_without_returning_secret(
+    tmp_path: Path,
+) -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": "provider text"}}]},
+        )
+
+    app = create_app(
+        tmp_path,
+        secret_protector=TestProtector(),
+        llm_transport=httpx.MockTransport(handler),
+        p2_flags=P2FeatureFlags(provider_platform_enabled=True),
+    )
+    profile = app.state.llm_profile_store.save(
+        name="provider-profile",
+        base_url="https://llm.example.test/v1",
+        api_key="sk-provider-secret",
+        model="compatible-model",
+    )
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/providers/builtin-llm/invoke",
+            json={
+                "tenant_id": str(uuid4()),
+                "capability_id": "completion",
+                "model": "compatible-model",
+                "parameters": {
+                    "llm.profile_id": str(profile.id),
+                    "llm.messages": [{"role": "user", "content": "hello"}],
+                    "llm.max_tokens": 8,
+                },
+                "expected_output_schema": "text-v1",
+            },
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "succeeded"
+    assert payload["output_refs"][0].startswith("artifact://sha256:")
+    assert "sk-provider-secret" not in response.text

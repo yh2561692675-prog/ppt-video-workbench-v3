@@ -68,6 +68,8 @@ class PauseController:
 
 
 class FasterWhisperBackend:
+    requires_local_model = True
+
     def transcribe(self, audio: Path, **kwargs: object) -> tuple[Iterable[RecognizedSegment], str]:
         try:
             from faster_whisper import WhisperModel  # type: ignore[import-not-found]
@@ -126,7 +128,9 @@ class Transcriber:
         controller: PauseController | None = None,
         checkpoint: Path | None = None,
     ) -> Transcript:
-        if not self.models.is_available(self.model):
+        if getattr(self.backend, "requires_local_model", True) and not self.models.is_available(
+            self.model
+        ):
             raise ModelUnavailable(f"本地语音模型 {self.model} 尚未下载")
         compute_type = "int8" if device == "cpu" else "float16"
         raw_segments, detected_language = self.backend.transcribe(

@@ -853,7 +853,12 @@ class CloudRepository:
         ]
 
     @staticmethod
-    def _select_executor(db: sqlite3.Connection, workspace_id: str, kind: str) -> str | None:
+    def _select_executor(
+        db: sqlite3.Connection,
+        workspace_id: str,
+        kind: str,
+        required_capabilities: set[str] | None = None,
+    ) -> str | None:
         rows = db.execute(
             "SELECT id, capabilities_json, expires_at FROM executors "
             "WHERE workspace_id=? AND status='active' ORDER BY id",
@@ -864,7 +869,8 @@ class CloudRepository:
             if datetime.fromisoformat(row["expires_at"].replace("Z", "+00:00")) <= now:
                 continue
             capabilities = set(json.loads(row["capabilities_json"]))
-            if kind in capabilities or "*" in capabilities:
+            required = required_capabilities or set()
+            if (kind in capabilities or "*" in capabilities) and required.issubset(capabilities):
                 return str(row["id"])
         return None
 
@@ -875,9 +881,19 @@ class CloudRepository:
         if str(request.revision_id) != project["current_revision_id"]:
             raise HTTPException(status_code=409, detail="job_revision_is_not_head")
         _assert_portable_document(request.parameters, field="job.parameters")
+        required_raw = request.parameters.get("required_capabilities", [])
+        if not isinstance(required_raw, list) or any(
+            not isinstance(item, str) or not item for item in required_raw
+        ):
+            raise HTTPException(status_code=422, detail="invalid_required_capabilities")
         job_id, created_at = str(uuid4()), _now()
         with self._connect() as db:
-            executor_id = self._select_executor(db, project["workspace_id"], request.kind)
+            executor_id = self._select_executor(
+                db,
+                project["workspace_id"],
+                request.kind,
+                set(required_raw),
+            )
             db.execute(
                 "INSERT INTO jobs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
@@ -967,6 +983,14 @@ class CloudRepository:
             raise HTTPException(status_code=422, detail="invalid_result_reference")
         created_at = _now()
         with self._lock, self._connect() as db:
+            for reference in report.output_refs:
+                object_id = reference.removeprefix("artifact://")
+                owned = db.execute(
+                    "SELECT 1 FROM objects WHERE id=? AND project_id=?",
+                    (object_id, project_id),
+                ).fetchone()
+                if owned is None:
+                    raise HTTPException(status_code=422, detail="result_object_not_owned")
             existing = db.execute(
                 "SELECT * FROM job_results WHERE attempt_id=?", (str(report.attempt_id),)
             ).fetchone()

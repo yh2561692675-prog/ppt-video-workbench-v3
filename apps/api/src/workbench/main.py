@@ -97,7 +97,14 @@ from workbench.rendering.models import RenderGraphV2
 from workbench.rendering.preflight import GraphPreflight
 from workbench.rendering.preview_service import AuthoritativePreviewService
 from workbench.rendering.project_reader import ProjectRenderSourceReader
-from workbench.providers.upstream import BrokerCompletionClient, create_llm_handler
+from workbench.providers.upstream import (
+    BrokerCompletionClient,
+    BrokerOcrEngine,
+    BrokerPageRenderer,
+    BrokerSpeechSynthesizer,
+    BrokerTranscriptionBackend,
+    create_llm_handler,
+)
 from workbench.runtime.layout import RuntimeComponentMissingError, RuntimeLayout
 from workbench.scheduler.service import BatchSchedulerService
 from workbench.services.import_service import ImportService
@@ -208,6 +215,13 @@ def create_app(
     )
     p2_composition.install(app)
     completion_factory: Callable[[UUID], BrokerCompletionClient] | None = None
+    provider_broker = None
+    artifact_store = None
+    provider_tenant_id: UUID | None = None
+    configured_transcription_backend = transcription_backend
+    configured_ocr_engine = ocr_engine
+    configured_video_renderer = video_renderer
+    configured_speech_synthesizer = None
     if (
         p2_composition.provider_state is not None
         and p2_composition.provider_state.broker is not None
@@ -215,16 +229,32 @@ def create_app(
     ):
         provider_broker = p2_composition.provider_state.broker
         artifact_store = p2_composition.artifact_store
-        tenant_id = uuid5(NAMESPACE_URL, configured_root.resolve().as_uri())
+        provider_tenant_id = uuid5(NAMESPACE_URL, configured_root.resolve().as_uri())
+
         def make_completion_client(profile_id: UUID) -> BrokerCompletionClient:
             return BrokerCompletionClient(
                 provider_broker,
                 artifact_store,
-                tenant_id=tenant_id,
+                tenant_id=provider_tenant_id,
                 profile_id=profile_id,
             )
 
         completion_factory = make_completion_client
+        if configured_transcription_backend is None:
+            configured_transcription_backend = BrokerTranscriptionBackend(
+                provider_broker, artifact_store, tenant_id=provider_tenant_id
+            )
+        if configured_ocr_engine is None:
+            configured_ocr_engine = BrokerOcrEngine(
+                provider_broker, artifact_store, tenant_id=provider_tenant_id
+            )
+        if configured_video_renderer is None:
+            configured_video_renderer = BrokerPageRenderer(
+                provider_broker, artifact_store, tenant_id=provider_tenant_id
+            )
+        configured_speech_synthesizer = BrokerSpeechSynthesizer(
+            provider_broker, artifact_store, tenant_id=provider_tenant_id
+        )
     try:
         configured_diagnostic_center = (
             diagnostic_center_factory(configured_diagnostic_root)
@@ -281,7 +311,7 @@ def create_app(
         video_preview_service,
         ffmpeg=(str(renderer_runtime.ffmpeg_executable) if renderer_runtime else "ffmpeg"),
         ffprobe=(str(renderer_runtime.ffprobe_executable) if renderer_runtime else "ffprobe"),
-        renderer=video_renderer,
+        renderer=configured_video_renderer,
         preflight_gate=preflight_service.render_gate,
     )
     quality_job_service = QualityJobService(
@@ -501,7 +531,7 @@ def create_app(
     )
     transcriber = Transcriber(
         presenter_models,
-        transcription_backend,
+        configured_transcription_backend,
     )
     app.include_router(
         create_audio_router(
@@ -509,7 +539,12 @@ def create_app(
             TranscriptionService(service, transcriber),
             DifferenceService(service),
             TimelineService(service),
-            HeyGenService(service, heygen_profile_store, heygen_client),
+            HeyGenService(
+                service,
+                heygen_profile_store,
+                heygen_client,
+                speech_synthesizer=configured_speech_synthesizer,
+            ),
             service,
             audio_gate,
         )
@@ -539,7 +574,9 @@ def create_app(
     app.include_router(create_preflight_router(preflight_service, video_export_service))
     app.include_router(create_sources_router(ImportService(service)))
     app.include_router(create_matching_router(MatchingService(service)))
-    app.include_router(create_materials_router(MaterialProcessingService(service, ocr=ocr_engine)))
+    app.include_router(
+        create_materials_router(MaterialProcessingService(service, ocr=configured_ocr_engine))
+    )
     app.include_router(
         create_narrations_router(
             narration_repository,

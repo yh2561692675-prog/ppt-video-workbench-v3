@@ -79,3 +79,34 @@ def test_sync_flush_preserves_retry_and_conflict_states(tmp_path: Path) -> None:
     assert result.retryable == 1
     assert result.conflict == 1
     assert client.state().last_cursor == "cursor-1"
+
+
+def test_sync_client_pulls_operations_atomically_and_resumes(tmp_path: Path) -> None:
+    client = SyncClient(tmp_path / "sync.db", enabled=True)
+
+    class Transport:
+        pages = [
+            {"items": [{"operation_id": "op-1", "kind": "page.insert"}]},
+            {"items": []},
+        ]
+        cursors: list[str | None] = []
+
+        def list_operations(self, cursor: str | None = None) -> dict[str, object]:
+            self.cursors.append(cursor)
+            return self.pages.pop(0)
+
+    transport = Transport()
+    assert client.pull(transport) == [{"operation_id": "op-1", "kind": "page.insert"}]
+    assert client.state().remote_operations == 1
+    assert client.pull(transport) == []
+    assert transport.cursors == [None, "op-1"]
+
+
+def test_sync_client_requires_pull_capability(tmp_path: Path) -> None:
+    client = SyncClient(tmp_path / "sync.db", enabled=True)
+
+    class Transport:
+        pass
+
+    with pytest.raises(SyncTransportError, match="pulling operations"):
+        client.pull(Transport())  # type: ignore[arg-type]

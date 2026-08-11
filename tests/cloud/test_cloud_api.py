@@ -315,18 +315,52 @@ def test_cloud_executor_result_is_hash_checked_and_idempotent(tmp_path: Path) ->
             headers=headers,
         ).json()
         result = {"media_type": "video/mp4", "duration_ms": 1000}
+        output_object = "sha256:" + "b" * 64
+        result_url = (
+            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}"
+            f"/jobs/{job['job_id']}/result"
+        )
+        unowned = client.post(
+            result_url,
+            json={
+                "attempt_id": str(uuid4()),
+                "executor_id": executor["executor_id"],
+                "status": "completed",
+                "result": result,
+                "result_sha256": canonical_sha256(result),
+                "output_refs": ["artifact://" + output_object],
+            },
+            headers=headers,
+        )
+        assert unowned.status_code == 422
+        assert unowned.json()["detail"] == "result_object_not_owned"
+        upload = client.post(
+            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}/objects/uploads",
+            json={
+                "object": {
+                    "object_id": output_object,
+                    "size_bytes": 0,
+                    "media_type": "video/mp4",
+                    "classification": "internal",
+                }
+            },
+            headers=headers,
+        )
+        assert upload.status_code == 201
+        assert client.post(
+            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}"
+            f"/objects/uploads/{upload.json()['upload_id']}/complete",
+            json={"parts": [{"part_number": 1, "etag": "empty"}]},
+            headers=headers,
+        ).status_code == 201
         report = {
             "attempt_id": str(uuid4()),
             "executor_id": executor["executor_id"],
             "status": "completed",
             "result": result,
             "result_sha256": canonical_sha256(result),
-            "output_refs": ["artifact://sha256:" + "b" * 64],
+            "output_refs": ["artifact://" + output_object],
         }
-        result_url = (
-            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}"
-            f"/jobs/{job['job_id']}/result"
-        )
         completed = client.post(result_url, json=report, headers=headers)
         assert completed.status_code == 200
         assert completed.json()["status"] == "completed"
@@ -338,3 +372,42 @@ def test_cloud_executor_result_is_hash_checked_and_idempotent(tmp_path: Path) ->
         ).json()
         assert job_after["result"]["result_sha256"] == report["result_sha256"]
         assert job_after["result"]["output_refs"] == report["output_refs"]
+
+
+def test_cloud_job_dispatch_matches_required_executor_capabilities(tmp_path: Path) -> None:
+    app = create_cloud_app(tmp_path / "control.db", tmp_path / "objects")
+    with TestClient(app) as client:
+        headers = {"X-Actor-ID": "alice"}
+        workspace_id = client.post("/v1/workspaces", json={"name": "Team"}, headers=headers).json()[
+            "workspace_id"
+        ]
+        project = client.post(
+            f"/v1/workspaces/{workspace_id}/projects",
+            json={"name": "Course"},
+            headers=headers,
+        ).json()
+        client.post(
+            f"/v1/workspaces/{workspace_id}/executors",
+            json={"platform": "windows", "capabilities": ["render"], "region": "local"},
+            headers=headers,
+        )
+        capable = client.post(
+            f"/v1/workspaces/{workspace_id}/executors",
+            json={
+                "platform": "windows",
+                "capabilities": ["render", "gpu.nvidia"],
+                "region": "local",
+            },
+            headers=headers,
+        ).json()
+        job = client.post(
+            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}/jobs",
+            json={
+                "revision_id": project["current_revision_id"],
+                "kind": "render",
+                "parameters": {"required_capabilities": ["gpu.nvidia"]},
+            },
+            headers=headers,
+        ).json()
+    assert job["status"] == "dispatched"
+    assert job["executor_id"] == capable["executor_id"]

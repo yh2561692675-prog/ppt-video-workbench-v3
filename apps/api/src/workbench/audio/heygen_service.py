@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from datetime import UTC, datetime
+from typing import Protocol
 from uuid import UUID, uuid4
 
 from workbench.audio.ffmpeg import AudioNormalizationError, normalize_audio
@@ -29,16 +30,29 @@ class HeyGenRouteSwitchRequired(RuntimeError):
     pass
 
 
+class SpeechSynthesizer(Protocol):
+    def synthesize(
+        self,
+        text: str,
+        *,
+        voice_id: str,
+        language: str = "zh",
+        speed: float = 1.0,
+    ) -> bytes: ...
+
+
 class HeyGenService:
     def __init__(
         self,
         projects: ProjectService,
         profiles: HeyGenProfileStore,
         client: HeyGenClient,
+        speech_synthesizer: SpeechSynthesizer | None = None,
     ) -> None:
         self.projects = projects
         self.profiles = profiles
         self.client = client
+        self.speech_synthesizer = speech_synthesizer
 
     def synthesize_page(
         self,
@@ -92,19 +106,29 @@ class HeyGenService:
         for index, text_part in enumerate(text_parts, start=1):
             cached_part = chunks.get(index)
             if cached_part is None:
-                speech = self.client.generate_speech(
-                    credentials.api_key,
-                    text=text_part,
-                    voice_id=voice_id,
-                    speed=speed,
-                    language="zh",
-                    base_url=str(credentials.profile.base_url),
-                )
-                downloaded = self.client.download(str(speech.audio_url))
-                suffix = ".wav" if "wav" in downloaded.content_type else ".mp3"
+                if self.speech_synthesizer is not None:
+                    content = self.speech_synthesizer.synthesize(
+                        text_part, voice_id=voice_id, language="zh", speed=speed
+                    )
+                    content_type = "audio/wav"
+                    request_id = "provider:" + hashlib.sha256(content).hexdigest()
+                else:
+                    speech = self.client.generate_speech(
+                        credentials.api_key,
+                        text=text_part,
+                        voice_id=voice_id,
+                        speed=speed,
+                        language="zh",
+                        base_url=str(credentials.profile.base_url),
+                    )
+                    downloaded = self.client.download(str(speech.audio_url))
+                    content = downloaded.content
+                    content_type = downloaded.content_type
+                    request_id = speech.request_id
+                suffix = ".wav" if "wav" in content_type else ".mp3"
                 remote = chunk_root / "远端原始" / f"part-{index:03d}{suffix}"
                 remote.parent.mkdir(parents=True, exist_ok=True)
-                remote.write_bytes(downloaded.content)
+                remote.write_bytes(content)
                 try:
                     normalized = normalize_audio(remote, chunk_root / "规范化")
                 except AudioNormalizationError:
@@ -118,7 +142,7 @@ class HeyGenService:
                     ).as_posix(),
                     remote_relative_path=remote.relative_to(project_dir).as_posix(),
                     duration_ms=normalized.duration_ms,
-                    request_id=speech.request_id,
+                    request_id=request_id,
                 )
                 chunks[index] = cached_part
                 save_completed_chunks(state_path, cache_key, chunks)

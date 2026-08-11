@@ -186,3 +186,31 @@ def test_provider_api_never_returns_credential_value() -> None:
         )
         assert cancelled.status_code == 200
         assert cancelled.json()["status"] == "cancel_requested"
+
+
+def test_provider_api_applies_rate_limit_and_records_project_usage() -> None:
+    fake = DeterministicFakeProvider(descriptor("fake-a"))
+    state = ProviderApiState(
+        ProviderRegistry([fake.descriptor]),
+        {"fake-a": fake},
+        rate_limiter=ProviderRateLimiter(capacity=1, refill_per_second=1),
+    )
+    app = FastAPI()
+    app.include_router(create_provider_router(state), prefix="/api")
+    tenant = str(uuid4())
+    payload = {
+        "tenant_id": tenant,
+        "project_id": "project-a",
+        "credential_ref": "fake.main",
+        "capability_id": "synthesize.speech",
+        "expected_output_schema": "audio-v1",
+        "input_refs": ["sha256:" + "a" * 64],
+    }
+    with TestClient(app) as client:
+        first = client.post("/api/providers/fake-a/invoke", json=payload)
+        second = client.post("/api/providers/fake-a/invoke", json=payload)
+        usage = client.get(f"/api/providers/projects/project-a/usage?tenant_id={tenant}")
+    assert first.status_code == 200
+    assert second.status_code == 429
+    assert int(second.headers["retry-after"]) >= 1
+    assert usage.json()["billed_minor"] == 1

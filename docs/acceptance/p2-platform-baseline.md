@@ -21,12 +21,12 @@ Run from the integration worktree with the repository virtual environment:
 ```powershell
 $py = 'F:\ppt-video-workbench-v3\.venv\Scripts\python.exe'
 $env:PYTHONPATH = 'apps/api/src'
-& $py -m pytest tests/contract/test_p2_platform_contracts.py tests/unit/providers tests/unit/platform_foundation tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/cloud tests/platform -q
+& $py -m pytest tests/contract/test_p2_platform_contracts.py tests/unit/providers tests/unit/platform_foundation tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/integration/test_narration_generation_api.py tests/cloud tests/platform -q
 & $py -m mypy apps/api/src/workbench/p2.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype
-& $py -m ruff check apps/api/src/workbench/p2.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype tests/contract/test_p2_platform_contracts.py tests/unit/providers tests/unit/platform_foundation tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/cloud tests/platform
+& $py -m ruff check apps/api/src/workbench/p2.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype tests/contract/test_p2_platform_contracts.py tests/unit/providers tests/unit/platform_foundation tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/integration/test_narration_generation_api.py tests/cloud tests/platform
 ```
 
-Current result: **64 tests passed**, mypy reports no issues in 24 source files,
+Current result: **74 tests passed**, mypy reports no issues in 24 source files,
 and Ruff reports no violations.
 
 The web workspace also passes TypeScript `--noEmit` and all 28 Vitest files
@@ -44,3 +44,6 @@ The web workspace also passes TypeScript `--noEmit` and all 28 Vitest files
   PITR/restore evidence, object-retention controls, dependency/SAST/DAST scans,
   and operational SLO evidence. The prototype fails closed until those gates
   exist.
+- Provider migration is intentionally incremental: reviewed LLM/ASR/TTS/avatar/OCR/
+  renderer bridge facades and opt-in create_app wiring are verified; real vendor
+  and remote acceptance evidence still requires its upstream business windows.
