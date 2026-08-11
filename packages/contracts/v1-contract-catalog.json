@@ -1,5 +1,6 @@
 {
   "schema_version": "1.0",
+  "hash_algorithm": "sha256-canonical-json-v1",
   "golden_fixture": "packages/contracts/fixtures/v1-core-contracts.golden.json",
   "contracts": [
     {
@@ -10,7 +11,7 @@
       "enum_path": "status",
       "python": { "module": "workbench.domain.models", "symbol": "ProjectManifest" },
       "typescript": { "path": "apps/web/src/api/client.ts", "symbol": "Project" },
-      "json_schema": { "path": "packages/contracts/project.schema.json", "pointer": "#", "sha256": "ecaf849b4f5b76207fbd6cdce57fc3d2c3a5beec70db3dc2871bcb26c2801976" },
+      "json_schema": { "path": "packages/contracts/project.schema.json", "pointer": "#", "sha256": "aaaa62b346e0cf42c0b6a265a040b287f415acf48ea1fae0f9197dc00d5c2dbb" },
       "openapi_component": "ProjectManifest",
       "fixture_sha256": "91cd90b416c1101d3c32c60c50e347d38f821e16dc996d7b9eedc6e20c494fdf",
       "compatibility": { "unknown_fields": "reject", "older_versions": "explicit_migration", "invalid_enum": "reject" }
@@ -23,7 +24,7 @@
       "enum_path": "kind",
       "python": { "module": "workbench.assets.models", "symbol": "AssetRecord" },
       "typescript": { "path": "apps/web/src/api/client.ts", "symbol": "AssetRecord" },
-      "json_schema": { "path": "schemas/asset-manifest-v1.schema.json", "pointer": "#", "sha256": "dc528637a2970e32637c082d23ded919d45521ce1ffc2d92fee196604ec4f147" },
+      "json_schema": { "path": "schemas/asset-manifest-v1.schema.json", "pointer": "#", "sha256": "edca906e4fcd51349bd5bed00ca31d3d4d56f4d7824e81c2d4c93be7f5ac22d6" },
       "openapi_component": "AssetRecord",
       "fixture_sha256": "688de2edc7ed4b104033875d26243ff4dbdfd247ff7553bc3581ecb86d7180e6",
       "compatibility": { "unknown_fields": "reject", "older_versions": "explicit_migration", "invalid_enum": "reject" }
@@ -36,7 +37,7 @@
       "enum_path": "outline_mode",
       "python": { "module": "workbench.materials.models", "symbol": "MaterialCollection" },
       "typescript": { "path": "apps/web/src/api/client.ts", "symbol": "MaterialCollectionRecord" },
-      "json_schema": { "path": "schemas/material-collection-v1.schema.json", "pointer": "#", "sha256": "aad29b7566fbac705c29930964f781bd925742be0d810e17205f723dc5234ab6" },
+      "json_schema": { "path": "schemas/material-collection-v1.schema.json", "pointer": "#", "sha256": "e1ab4271b0537eb996d2bc96ea4061e7cc490d5b0e0c589bbc7dabbdd005d3d2" },
       "openapi_component": "MaterialCollection",
       "fixture_sha256": "6c8e85abc1f087d8ba6439671ffdee9cb6387b5e738b36ef7911626a40d1378e",
       "compatibility": { "unknown_fields": "reject", "older_versions": "explicit_migration", "invalid_enum": "reject" }
@@ -49,7 +50,7 @@
       "enum_path": "tracks.0.kind",
       "python": { "module": "workbench.timeline.production", "symbol": "ProductionTimeline" },
       "typescript": { "path": "apps/web/src/api/client.ts", "symbol": "ProductionTimelineRecord" },
-      "json_schema": { "path": "schemas/production-timeline-v1.schema.json", "pointer": "#", "sha256": "76e0b032b5096245b33c7c71fc2159e20dcb56ccf5ea0c10b98473c422b00edb" },
+      "json_schema": { "path": "schemas/production-timeline-v1.schema.json", "pointer": "#", "sha256": "82ba47e7bcba008fb338cc81f245a2e85c41f1d23a16001197db308cc623987d" },
       "openapi_component": "ProductionTimeline",
       "fixture_sha256": "172db7b0b4c81cc2b0a1f473c87e622e06407b1e87879fa5ed6dea18fc2516c7",
       "compatibility": { "unknown_fields": "reject", "older_versions": "explicit_migration", "invalid_enum": "reject" }
@@ -62,7 +63,7 @@
       "enum_path": "render_mode",
       "python": { "module": "workbench.subtitles.workbench_models", "symbol": "SubtitleWorkbenchDocument" },
       "typescript": { "path": "apps/web/src/api/client.ts", "symbol": "SubtitleWorkbenchRecord" },
-      "json_schema": { "path": "schemas/subtitle-document-v2.schema.json", "pointer": "#", "sha256": "e380b8fd9b8abed653375cc5483b0ffed223ea8dd3e28f9c5e1dfecd1e270057" },
+      "json_schema": { "path": "schemas/subtitle-document-v2.schema.json", "pointer": "#", "sha256": "dba314b1368d8a1377dbc6c4372c606c437ec70495076383b51ddd54af0e86ec" },
       "openapi_component": "SubtitleWorkbenchDocument",
       "fixture_sha256": "a1c933596a0e9bee4b1716103dc9faa7b8cc202cb9de1bf3d9ccbab49ec390c4",
       "compatibility": { "unknown_fields": "reject", "older_versions": "explicit_migration", "invalid_enum": "reject" }
@@ -75,7 +76,7 @@
       "enum_path": "transitions.0.kind",
       "python": { "module": "workbench.continuity.models", "symbol": "ContinuityPlan" },
       "typescript": { "path": "apps/web/src/api/client.ts", "symbol": "ContinuityPlanRecord" },
-      "json_schema": { "path": "schemas/continuity-plan-v1.schema.json", "pointer": "#", "sha256": "4fda1ad582021bb838fa8bfb34d5dba78d97a27a5962cf65009a86264da71ed6" },
+      "json_schema": { "path": "schemas/continuity-plan-v1.schema.json", "pointer": "#", "sha256": "25fe78d954d869151453007181cae3a34e22eb4c6e6ad3b988ef88ae69bccb47" },
       "openapi_component": "ContinuityPlan",
       "fixture_sha256": "7a207d52be4d2763245e5d5d3a957cbab765288623ccaabdaac49de79c9e1c6d",
       "compatibility": { "unknown_fields": "reject", "older_versions": "explicit_migration", "invalid_enum": "reject" }
@@ -88,7 +89,7 @@
       "enum_path": "subtitle_plan.render_mode",
       "python": { "module": "workbench.rendering.models", "symbol": "RenderGraphV2" },
       "typescript": { "path": "remotion/src/render-graph/types.ts", "symbol": "RenderGraphV2" },
-      "json_schema": { "path": "schemas/render-graph-v2.schema.json", "pointer": "#", "sha256": "a7da6241d352f755c6f44e02bd2a6d9ae55fdc458f77e02987413ef5b8ff7e90" },
+      "json_schema": { "path": "schemas/render-graph-v2.schema.json", "pointer": "#", "sha256": "ee6b184b9f04d0f5c6fe56777921396c43139c40f0156e8abca9bbb4a98f1d4e" },
       "openapi_component": "RenderGraphV2",
       "fixture_sha256": "a87b2d956226681df5fd6baaaa7373551c760d3c5935c9d41a3709f140016ce4",
       "compatibility": { "unknown_fields": "reject", "older_versions": "explicit_migration", "invalid_enum": "reject" }
@@ -101,7 +102,7 @@
       "enum_path": "job_type",
       "python": { "module": "workbench.domain.models", "symbol": "JobRecord" },
       "typescript": { "path": "apps/web/src/api/client.ts", "symbol": "DurableJobRecord" },
-      "json_schema": { "path": "packages/contracts/project.schema.json", "pointer": "#/$defs/JobRecord", "sha256": "ecaf849b4f5b76207fbd6cdce57fc3d2c3a5beec70db3dc2871bcb26c2801976" },
+      "json_schema": { "path": "packages/contracts/project.schema.json", "pointer": "#/$defs/JobRecord", "sha256": "aaaa62b346e0cf42c0b6a265a040b287f415acf48ea1fae0f9197dc00d5c2dbb" },
       "openapi_component": "JobRecord",
       "fixture_sha256": "ec2e09e92b4043f2043fb181805d8ef7e42634fad5da12f397504902a3e3680a",
       "compatibility": { "unknown_fields": "reject", "older_versions": "explicit_migration", "invalid_enum": "reject" }
@@ -114,7 +115,7 @@
       "enum_path": "preset.platform",
       "python": { "module": "workbench.exports.presets", "symbol": "ExportPlan" },
       "typescript": { "path": "apps/web/src/api/client.ts", "symbol": "ExportPlanRecord" },
-      "json_schema": { "path": "schemas/export-plan-v1.schema.json", "pointer": "#", "sha256": "17f9e7e5308c95b2f14e380f30526f969692f5d8d2837725426eb18c3db2deaa" },
+      "json_schema": { "path": "schemas/export-plan-v1.schema.json", "pointer": "#", "sha256": "f42b93ed5abf80309ed875f36220d2b22e070041284106f191074f07a1dca44a" },
       "openapi_component": "ExportPlan",
       "fixture_sha256": "abbcf699521a6ba66c6c38b7f4f8676beed49218bd7d16294f55169297abe1a6",
       "compatibility": { "unknown_fields": "reject", "older_versions": "explicit_migration", "invalid_enum": "reject" }
@@ -127,11 +128,11 @@
       "enum_path": "result",
       "python": { "module": "workbench.quality.models", "symbol": "QualityReport" },
       "typescript": { "path": "apps/web/src/api/client.ts", "symbol": "QualityReport" },
-      "json_schema": { "path": "schemas/quality-report-v1.schema.json", "pointer": "#", "sha256": "f8d331d81c60fed18d3acd136ea1b7c41796b493c05a6378104eb8bd28c1954a" },
+      "json_schema": { "path": "schemas/quality-report-v1.schema.json", "pointer": "#", "sha256": "d212ee09453bfb875261139b07d35e5b9393ade344103ecbc07de7c768a95d70" },
       "openapi_component": "QualityReport",
       "fixture_sha256": "385155147570310f27d58bfe19bf447d550eff5592b653c3fa52c6d1844c80f8",
       "compatibility": { "unknown_fields": "reject", "older_versions": "explicit_migration", "invalid_enum": "reject" }
     }
   ],
-  "contract_set_sha256": "7c63aab737d6fe9281ce83cd8fec0e2ddf52f2148d51938f6be4f80ac55f5488"
+  "contract_set_sha256": "de55cc1090e49b0ab4d7fb6375b4509cb878d5888e8bef54fd00407a34fbebf6"
 }

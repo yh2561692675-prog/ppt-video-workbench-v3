@@ -82,6 +82,7 @@ def test_cloud_database_migrations_are_versioned_and_idempotent(tmp_path: Path) 
         (5, "0005_offline_sync_conflicts"),
         (6, "0006_remote_job_provider_budget"),
         (7, "0007_core_contract_compatibility"),
+        (8, "0008_core_contract_canonical_fingerprint"),
     ]
     assert all(re.fullmatch(r"sha256:[0-9a-f]{64}", row[2]) for row in rows)
 

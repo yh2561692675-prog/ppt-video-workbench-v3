@@ -64,7 +64,7 @@ export interface CloudJobResultV1 {
  */
 export interface CoreContractCompatibilityV1 {
   schema_version: 1;
-  core_contract_set_sha256: "7c63aab737d6fe9281ce83cd8fec0e2ddf52f2148d51938f6be4f80ac55f5488";
+  core_contract_set_sha256: "de55cc1090e49b0ab4d7fb6375b4509cb878d5888e8bef54fd00407a34fbebf6";
   job_schema_version: "1.0";
   asset_schema_version: "1.0";
   error_mapping_version: "1.0";

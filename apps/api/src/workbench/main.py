@@ -90,13 +90,6 @@ from workbench.peripheral_s1.coordinator import S1Coordinator
 from workbench.peripheral_s1.inbox import ProjectionInbox
 from workbench.peripheral_s1.projector import ProjectorRegistry
 from workbench.preflight.engine import PreflightEngine, RuntimeProbe
-from workbench.quality.jobs import QualityJobService
-from workbench.rendering.export_pipeline import RenderGraphExportPipeline
-from workbench.rendering.feature_flags import RenderFeatureFlags
-from workbench.rendering.models import RenderGraphV2
-from workbench.rendering.preflight import GraphPreflight
-from workbench.rendering.preview_service import AuthoritativePreviewService
-from workbench.rendering.project_reader import ProjectRenderSourceReader
 from workbench.providers.upstream import (
     BrokerCompletionClient,
     BrokerOcrEngine,
@@ -106,6 +99,13 @@ from workbench.providers.upstream import (
     BuiltinHandler,
     create_llm_handler,
 )
+from workbench.quality.jobs import QualityJobService
+from workbench.rendering.export_pipeline import RenderGraphExportPipeline
+from workbench.rendering.feature_flags import RenderFeatureFlags
+from workbench.rendering.models import RenderGraphV2
+from workbench.rendering.preflight import GraphPreflight
+from workbench.rendering.preview_service import AuthoritativePreviewService
+from workbench.rendering.project_reader import ProjectRenderSourceReader
 from workbench.runtime.layout import RuntimeComponentMissingError, RuntimeLayout
 from workbench.scheduler.service import BatchSchedulerService
 from workbench.services.import_service import ImportService

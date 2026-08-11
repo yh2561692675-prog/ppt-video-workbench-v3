@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from pathlib import Path
 from uuid import uuid4
 
@@ -112,3 +113,26 @@ def test_openapi_and_typescript_publish_the_same_core_envelope() -> None:
     assert CORE_CONTRACT_SET_SHA256 in openapi
     assert "interface CoreContractCompatibilityV1" in typescript
     assert CORE_CONTRACT_SET_SHA256 in typescript
+
+
+def test_canonical_fingerprint_migration_updates_existing_remote_jobs(
+    tmp_path: Path,
+) -> None:
+    old_hash = "7c63aab737d6fe9281ce83cd8fec0e2ddf52f2148d51938f6be4f80ac55f5488"
+    database = tmp_path / "compatibility.db"
+    with sqlite3.connect(database) as connection:
+        connection.execute("CREATE TABLE jobs (core_contracts_json TEXT NOT NULL)")
+        connection.execute(
+            "INSERT INTO jobs (core_contracts_json) VALUES (?)",
+            (json.dumps({"core_contract_set_sha256": old_hash}),),
+        )
+        migration = (
+            ROOT
+            / "cloud_prototype"
+            / "migrations"
+            / "0008_core_contract_canonical_fingerprint.sql"
+        ).read_text(encoding="utf-8")
+        connection.executescript(migration)
+        stored = connection.execute("SELECT core_contracts_json FROM jobs").fetchone()
+    assert stored is not None
+    assert json.loads(stored[0])["core_contract_set_sha256"] == CORE_CONTRACT_SET_SHA256

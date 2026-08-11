@@ -71,6 +71,7 @@ def test_v1_catalog_binds_all_authoritative_contract_surfaces() -> None:
     openapi = json.loads((ROOT / "packages/contracts/openapi.json").read_text("utf-8"))
 
     assert catalog["schema_version"] == "1.0"
+    assert catalog["hash_algorithm"] == "sha256-canonical-json-v1"
     assert {entry["name"] for entry in entries} == EXPECTED_CONTRACTS
     assert set(fixtures["contracts"]) == EXPECTED_CONTRACTS
 
@@ -79,9 +80,7 @@ def test_v1_catalog_binds_all_authoritative_contract_surfaces() -> None:
         fixture = fixtures["contracts"][name]
         schema_path = ROOT / entry["json_schema"]["path"]
         schema = json.loads(schema_path.read_text(encoding="utf-8"))
-        assert hashlib.sha256(schema_path.read_bytes()).hexdigest() == entry["json_schema"][
-            "sha256"
-        ]
+        assert _canonical_hash(schema) == entry["json_schema"]["sha256"]
         assert isinstance(_resolve_pointer(schema, entry["json_schema"]["pointer"]), dict)
         assert _canonical_hash(fixture) == entry["fixture_sha256"]
         _model(entry).model_validate(fixture)
