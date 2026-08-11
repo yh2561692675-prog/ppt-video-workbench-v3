@@ -55,6 +55,7 @@ class ProcessResultV1(_ContractModel):
     stderr: str = Field(max_length=1_000_000)
     timed_out: bool = False
     cancelled: bool = False
+    output_truncated: bool = False
     duration_ms: int = Field(ge=0)
 
 

@@ -293,7 +293,8 @@ class CloudRepository:
                 CREATE TABLE IF NOT EXISTS job_results (
                     attempt_id TEXT PRIMARY KEY, job_id TEXT NOT NULL REFERENCES jobs(id),
                     status TEXT NOT NULL, result_sha256 TEXT NOT NULL,
-                    result_json TEXT NOT NULL, created_at TEXT NOT NULL
+                    result_json TEXT NOT NULL, output_refs_json TEXT NOT NULL DEFAULT '[]',
+                    created_at TEXT NOT NULL
                 );
                 CREATE TABLE IF NOT EXISTS executors (
                     id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL REFERENCES workspaces(id),
@@ -305,6 +306,13 @@ class CloudRepository:
             columns = {row["name"] for row in db.execute("PRAGMA table_info(jobs)")}
             if "executor_id" not in columns:
                 db.execute("ALTER TABLE jobs ADD COLUMN executor_id TEXT")
+            result_columns = {
+                row["name"] for row in db.execute("PRAGMA table_info(job_results)")
+            }
+            if "output_refs_json" not in result_columns:
+                db.execute(
+                    "ALTER TABLE job_results ADD COLUMN output_refs_json TEXT NOT NULL DEFAULT '[]'"
+                )
 
     def create_workspace(self, actor_id: str, name: str) -> dict[str, Any]:
         workspace_id = str(uuid4())
@@ -917,8 +925,9 @@ class CloudRepository:
                 (job_id, project_id),
             ).fetchone()
             result = db.execute(
-                "SELECT attempt_id, status, result_sha256, result_json, created_at "
-                "FROM job_results WHERE job_id=? ORDER BY created_at DESC LIMIT 1",
+                "SELECT attempt_id, status, result_sha256, result_json, created_at, "
+                "output_refs_json FROM job_results WHERE job_id=? "
+                "ORDER BY created_at DESC LIMIT 1",
                 (job_id,),
             ).fetchone()
         if row is None:
@@ -930,6 +939,7 @@ class CloudRepository:
                 "status": result["status"],
                 "result_sha256": result["result_sha256"],
                 "result": json.loads(result["result_json"]),
+                "output_refs": json.loads(result["output_refs_json"]),
                 "created_at": result["created_at"],
             }
         return payload
@@ -962,13 +972,14 @@ class CloudRepository:
             ).fetchone()
             if existing is None:
                 db.execute(
-                    "INSERT INTO job_results VALUES (?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO job_results VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (
                         str(report.attempt_id),
                         job_id,
                         report.status,
                         report.result_sha256,
                         json.dumps(report.result, ensure_ascii=False, sort_keys=True),
+                        json.dumps(report.output_refs, ensure_ascii=False),
                         created_at,
                     ),
                 )

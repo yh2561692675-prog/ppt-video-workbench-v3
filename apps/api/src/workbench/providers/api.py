@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import Literal
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Header, HTTPException, Response
@@ -17,6 +18,8 @@ from workbench.contracts.p2_platform import (
 )
 
 from .adapter import ProviderAdapter
+from .broker import ProviderBroker, ProviderBrokerError, RouteRequest
+from .credentials import CredentialMetadataV1, CredentialStore, CredentialStoreError
 from .models import ProviderCostEstimateV1
 from .policy import ProviderPolicyV1
 from .probe import CapabilityProbeService, ProbeMode
@@ -48,6 +51,10 @@ class ProviderInvokeRequest(_ContractModel):
     parameters: dict[str, object] = Field(default_factory=dict, max_length=128)
     expected_output_schema: str = Field(min_length=1, max_length=200)
     timeout_ms: int = Field(default=120_000, ge=100, le=86_400_000)
+    region: str | None = Field(default=None, max_length=64)
+    data_classification: Literal["public", "internal", "sensitive", "restricted"] = "sensitive"
+    max_cost_minor: int | None = Field(default=None, ge=0)
+    allow_failover: bool = True
 
 
 class ProviderCancelRequest(_ContractModel):
@@ -58,6 +65,17 @@ class ProviderPolicyUpdate(_ContractModel):
     policy: ProviderPolicyV1
 
 
+class CredentialPutRequest(_ContractModel):
+    credential_ref: str
+    provider_id: str
+    secret: str = Field(min_length=1, max_length=100_000)
+    scope: str = Field(min_length=1, max_length=200)
+
+
+class CredentialSecretRequest(_ContractModel):
+    secret: str = Field(min_length=1, max_length=100_000)
+
+
 @dataclass
 class ProviderApiState:
     registry: ProviderRegistry
@@ -66,6 +84,16 @@ class ProviderApiState:
     policies: dict[tuple[str, str], ProviderPolicyV1] = field(default_factory=dict)
     usage_minor: dict[tuple[str, str], int] = field(default_factory=dict)
     health: dict[tuple[str, str], object] = field(default_factory=dict)
+    broker: ProviderBroker | None = None
+    credential_store: CredentialStore | None = None
+
+    def __post_init__(self) -> None:
+        if self.broker is None:
+            self.broker = ProviderBroker(self.registry, self.adapters)
+        if self.credential_store is None:
+            from .credentials import InMemoryCredentialStore
+
+            self.credential_store = InMemoryCredentialStore()
 
 
 def create_provider_router(state: ProviderApiState) -> APIRouter:
@@ -123,6 +151,42 @@ def create_provider_router(state: ProviderApiState) -> APIRouter:
     async def list_health() -> list[object]:
         return list(state.health.values())
 
+    @router.get("/credentials", response_model=list[CredentialMetadataV1])
+    async def list_credentials() -> list[CredentialMetadataV1]:
+        assert state.credential_store is not None
+        return state.credential_store.list_metadata()
+
+    @router.post("/credentials", response_model=CredentialMetadataV1, status_code=201)
+    async def put_credential(request: CredentialPutRequest) -> CredentialMetadataV1:
+        assert state.credential_store is not None
+        try:
+            return state.credential_store.put(
+                request.credential_ref,
+                request.provider_id,
+                request.secret,
+                request.scope,
+            )
+        except CredentialStoreError as error:
+            raise HTTPException(status_code=409, detail="credential_store_rejected") from error
+
+    @router.post("/credentials/{credential_ref}/rotate", response_model=CredentialMetadataV1)
+    async def rotate_credential(
+        credential_ref: str, request: CredentialSecretRequest
+    ) -> CredentialMetadataV1:
+        assert state.credential_store is not None
+        try:
+            return state.credential_store.rotate(credential_ref, request.secret)
+        except CredentialStoreError as error:
+            raise HTTPException(status_code=404, detail="credential_not_found") from error
+
+    @router.delete("/credentials/{credential_ref}", response_model=CredentialMetadataV1)
+    async def revoke_credential(credential_ref: str) -> CredentialMetadataV1:
+        assert state.credential_store is not None
+        try:
+            return state.credential_store.revoke(credential_ref)
+        except CredentialStoreError as error:
+            raise HTTPException(status_code=404, detail="credential_not_found") from error
+
     @router.post("/{provider_id}/invoke")
     async def invoke_provider(
         provider_id: str, request: ProviderInvokeRequest
@@ -132,24 +196,30 @@ def create_provider_router(state: ProviderApiState) -> APIRouter:
         if adapter is None or descriptor is None:
             raise HTTPException(status_code=404, detail="provider_not_found")
         context = _context(request.tenant_id, "provider.invoke", request.timeout_ms)
-        from .models import ProviderInvocationV1
-
-        invocation = ProviderInvocationV1(
-            operation=context,
-            provider_id=provider_id,
-            capability_id=request.capability_id,
-            model=request.model,
-            input_refs=request.input_refs,
-            parameters=request.parameters,
-            expected_output_schema=request.expected_output_schema,
-        )
+        assert state.broker is not None
         try:
-            return await adapter.invoke(invocation)
-        except Exception as error:
-            normalized = adapter.normalize_error(error, invocation)
+            routed = await state.broker.invoke(
+                RouteRequest(
+                    context=context,
+                    kind=descriptor.kind,
+                    capability_id=request.capability_id,
+                    model=request.model,
+                    input_refs=request.input_refs,
+                    parameters=request.parameters,
+                    expected_output_schema=request.expected_output_schema,
+                    candidate_provider_ids=[provider_id],
+                    fixed_provider_id=provider_id,
+                    region=request.region,
+                    data_classification=request.data_classification,
+                    max_cost_minor=request.max_cost_minor,
+                    allow_failover=request.allow_failover,
+                )
+            )
+            return routed.result
+        except ProviderBrokerError as error:
             raise HTTPException(
                 status_code=502,
-                detail=normalized.model_dump(mode="json"),
+                detail=error.error.model_dump(mode="json"),
             ) from error
 
     @router.post("/{provider_id}/cancel")

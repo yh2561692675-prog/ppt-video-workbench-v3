@@ -51,6 +51,15 @@ export function ProjectCenter() {
           <Link className="secondary settings-link" to="/settings/heygen">
             HeyGen 声音设置
           </Link>
+          <Link className="secondary settings-link" to="/settings/providers">
+            Provider 平台
+          </Link>
+          <Link className="secondary settings-link" to="/settings/platform">
+            跨平台能力
+          </Link>
+          <Link className="secondary settings-link" to="/settings/cloud">
+            云端同步
+          </Link>
           <span className="muted">
             {disk.data ? `可用磁盘 ${formatBytes(disk.data.free)}` : '磁盘检测中'}
           </span>

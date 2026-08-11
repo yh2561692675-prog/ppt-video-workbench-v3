@@ -149,6 +149,26 @@ def test_provider_api_never_returns_credential_value() -> None:
         )
         assert policy.status_code == 200
         assert "secret" not in policy.text.lower()
+        stored = client.post(
+            "/api/providers/credentials",
+            json={
+                "credential_ref": "fake.main",
+                "provider_id": "fake-a",
+                "secret": "top-secret",
+                "scope": "tenant:test",
+            },
+        )
+        assert stored.status_code == 201
+        assert "top-secret" not in stored.text
+        assert client.get("/api/providers/credentials").json()[0]["credential_ref"] == "fake.main"
+        rotated = client.post(
+            "/api/providers/credentials/fake.main/rotate",
+            json={"secret": "rotated-secret"},
+        )
+        assert rotated.status_code == 200
+        revoked = client.delete("/api/providers/credentials/fake.main")
+        assert revoked.status_code == 200
+        assert revoked.json()["status"] == "revoked"
         invoked = client.post(
             "/api/providers/fake-a/invoke",
             json={

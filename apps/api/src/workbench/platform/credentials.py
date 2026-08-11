@@ -63,6 +63,30 @@ class UnavailableCredentialBackend:
         raise CredentialStoreError("system credential service unavailable")
 
 
+class WindowsCredentialBackend(UnavailableCredentialBackend):
+    name = "windows-credential-manager"
+
+
+class MacOSKeychainBackend(UnavailableCredentialBackend):
+    name = "macos-keychain"
+
+
+class LinuxSecretServiceBackend(UnavailableCredentialBackend):
+    name = "linux-secret-service"
+
+
+def system_credential_backend(platform_name: str) -> CredentialBackend:
+    """Select the OS boundary; real bindings are installed separately."""
+
+    if platform_name == "windows":
+        return WindowsCredentialBackend()
+    if platform_name == "macos":
+        return MacOSKeychainBackend()
+    if platform_name == "linux":
+        return LinuxSecretServiceBackend()
+    raise ValueError("unsupported platform credential backend")
+
+
 class PlatformCredentialStore:
     def __init__(self, backend: CredentialBackend) -> None:
         self.backend = backend

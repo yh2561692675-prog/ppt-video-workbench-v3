@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
 from threading import RLock
-from typing import Any
+from typing import Any, Protocol
 
 
 @dataclass(frozen=True)
@@ -18,6 +19,29 @@ class SyncClientState:
     accepted: int
     failed: int
     last_cursor: str | None
+
+
+class SyncTransportError(RuntimeError):
+    def __init__(
+        self, message: str, *, retryable: bool = True, conflict_id: str | None = None
+    ) -> None:
+        super().__init__(message)
+        self.retryable = retryable
+        self.conflict_id = conflict_id
+
+
+class SyncTransport(Protocol):
+    def append_operation(self, operation_id: str, payload: dict[str, Any]) -> dict[str, Any]: ...
+
+    def download_object(self, object_id: str) -> bytes: ...
+
+
+@dataclass(frozen=True)
+class SyncBatchResult:
+    accepted: int
+    retryable: int
+    conflict: int
+    failed: int
 
 
 class SyncClient:
@@ -53,6 +77,7 @@ class SyncClient:
 
     def enqueue(self, operation_id: str, payload: dict[str, Any]) -> bool:
         self._require_enabled()
+        _assert_sync_payload(payload)
         with self._lock, self._connect() as db:
             cursor = db.execute(
                 "INSERT OR IGNORE INTO outbox(operation_id, payload_json, status, updated_at) "
@@ -146,9 +171,51 @@ class SyncClient:
         with self._connect() as db:
             db.execute(
                 "INSERT OR REPLACE INTO inbox VALUES (?, ?, ?, ?)",
-                (object_id, str(target), object_id, _now()),
+                (object_id, expected, object_id, _now()),
             )
         return target
+
+    def flush(self, transport: SyncTransport, *, limit: int = 20) -> SyncBatchResult:
+        """Submit an outbox batch without deleting unacknowledged operations."""
+
+        self._require_enabled()
+        counts = {"accepted": 0, "retryable": 0, "conflict": 0, "failed": 0}
+        for item in self.next_batch(limit):
+            operation_id = str(item["operation_id"])
+            try:
+                result = transport.append_operation(operation_id, item["payload"])
+            except SyncTransportError as error:
+                if error.conflict_id:
+                    self.mark_conflict(operation_id, error.conflict_id)
+                    counts["conflict"] += 1
+                elif error.retryable:
+                    self.mark_retryable(operation_id, str(error))
+                    counts["retryable"] += 1
+                else:
+                    self.mark_failed(operation_id, str(error))
+                    counts["failed"] += 1
+                continue
+            status = str(result.get("status", "failed"))
+            if status == "accepted":
+                self.mark_accepted(operation_id, str(result.get("cursor", operation_id)))
+                counts["accepted"] += 1
+            elif status == "conflict":
+                self.mark_conflict(operation_id, str(result.get("conflict_id", "conflict")))
+                counts["conflict"] += 1
+            elif status == "retryable":
+                self.mark_retryable(operation_id, str(result.get("error", "retryable")))
+                counts["retryable"] += 1
+            else:
+                self.mark_failed(operation_id, str(result.get("error", "sync failed")))
+                counts["failed"] += 1
+        return SyncBatchResult(**counts)
+
+    def download_and_stage(
+        self, transport: SyncTransport, object_id: str, staging_root: Path
+    ) -> Path:
+        """Download into staging and publish only after content-address validation."""
+
+        return self.stage_object(object_id, transport.download_object(object_id), staging_root)
 
     def _require_enabled(self) -> None:
         if not self.enabled:
@@ -157,3 +224,30 @@ class SyncClient:
 
 def _now() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+
+def _assert_sync_payload(value: object, *, field: str = "payload") -> None:
+    """Keep the local outbox portable and free of credential-bearing values."""
+
+    if isinstance(value, dict):
+        for key, item in value.items():
+            normalized = str(key).lower()
+            if any(
+                marker in normalized
+                for marker in ("api_key", "authorization", "password", "secret")
+            ):
+                raise ValueError("sensitive sync field rejected")
+            _assert_sync_payload(item, field=f"{field}.{key}")
+        return
+    if isinstance(value, list):
+        for index, item in enumerate(value):
+            _assert_sync_payload(item, field=f"{field}[{index}]")
+        return
+    if not isinstance(value, str):
+        return
+    normalized_field = field.lower()
+    if normalized_field.endswith(("path", "_path", "file", "_file", "directory", "_dir")):
+        if value.startswith(("/", "\\")) or re.match(r"^[A-Za-z]:[\\/]", value):
+            raise ValueError("absolute sync path rejected")
+        if value.startswith(("../", "..\\")) or value == "..":
+            raise ValueError("sync path escape rejected")

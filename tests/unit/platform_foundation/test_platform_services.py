@@ -44,6 +44,11 @@ def test_process_service_uses_argument_array_and_enforces_timeout(tmp_path: Path
     timed = runner.run([sys.executable, "-c", "import time; time.sleep(2)"], timeout_ms=50)
     assert timed.timed_out is True
     assert timed.return_code != 0
+    bounded = runner.run(
+        [sys.executable, "-c", "print('x' * 10000)"], max_output_bytes=32
+    )
+    assert bounded.output_truncated is True
+    assert len(bounded.stdout) <= 32
 
 
 def test_composition_root_returns_capability_snapshot(tmp_path: Path) -> None:

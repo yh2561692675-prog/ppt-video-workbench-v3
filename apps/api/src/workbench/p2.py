@@ -15,6 +15,7 @@ from pathlib import Path
 from fastapi import FastAPI
 
 from workbench.platform.composition import create_platform_services
+from workbench.platform.credentials import PlatformCredentialStore, UnavailableCredentialBackend
 from workbench.platform.local import LocalPlatformServices
 from workbench.providers.adapter import ProviderAdapterError
 from workbench.providers.api import ProviderApiState, create_provider_router
@@ -104,6 +105,11 @@ class P2Composition:
                     )
                     for descriptor in builtin_descriptors()
                 },
+                credential_store=(
+                    platform.credentials
+                    if platform is not None
+                    else PlatformCredentialStore(UnavailableCredentialBackend())
+                ),
             )
             if configured.provider_platform_enabled
             else None

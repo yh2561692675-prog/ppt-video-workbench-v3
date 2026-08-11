@@ -14,9 +14,11 @@ This file records evidence for the isolated integration branch
 | Production cloud fail-closed gate | `CloudProductionEvidence` and production-auth tests | pass (missing external evidence blocks traffic) |
 | Desktop outbox/inbox/conflict | `tests/unit/sync` and stale-base cloud test | pass |
 | Opt-in composition and diagnostics | `tests/unit/test_p2_composition.py`, `tests/integration/test_p2_opt_in.py` | pass |
+| P2 settings UI panels | three focused Vitest suites under `apps/web/src/features/{providers,settings/platform,cloud}` | pass |
+| Full web UI regression | Vitest 28 files / 47 tests + TypeScript `--noEmit` | pass with bundled web dependencies |
 | Static quality | Ruff + mypy on 24 P2 source files | pass |
-| Focused P2 regression | 52 tests across contracts/providers/platform/sync/cloud/integration | pass |
-| Full recovery snapshot | existing acceptance/OpenAPI/crash-recovery/effect fixtures | pending unrelated baseline fixes |
+| Focused P2 regression | 60 tests across contracts/providers/platform/sync/cloud/integration | pass |
+| Full recovery snapshot | `pytest --import-mode=importlib -q --maxfail=12` | pending: stale OpenAPI snapshot, 10 crash-recovery status mismatches, M5 render status mismatch |
 | Real macOS/Linux media and signed installers | three-OS CI/tag evidence | pending runner artifacts |
 | Production cloud | OIDC, PostgreSQL PITR, object retention, security scans | pending production environment |
 

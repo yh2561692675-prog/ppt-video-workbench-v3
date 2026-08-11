@@ -596,6 +596,89 @@ input:focus {
   font-size: 13px;
 }
 
+.status-pill.success {
+  color: #47e6d0;
+  border-color: #247768;
+}
+
+.status-pill.warning {
+  color: #ffd080;
+  border-color: #9b6d29;
+}
+
+.p2-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.p2-section-heading,
+.p2-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.p2-card-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.p2-card {
+  padding: 14px 16px;
+  border: 1px solid #173f56;
+  border-radius: 12px;
+  background: rgb(5 19 32 / 55%);
+}
+
+.p2-card > div:first-child,
+.p2-card > span:last-child {
+  display: grid;
+  gap: 4px;
+}
+
+.p2-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.p2-chip {
+  padding: 4px 8px;
+  color: #b7d5e5;
+  border: 1px solid #24506a;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.p2-definition-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.p2-definition-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #173f56;
+}
+
+.p2-definition-list dt {
+  color: #8ca6ba;
+}
+
+.p2-definition-list dd {
+  margin: 0;
+  color: #e8f1ff;
+  text-align: right;
+}
+
 .error {
   margin-top: 12px;
   color: #ff9d9d;

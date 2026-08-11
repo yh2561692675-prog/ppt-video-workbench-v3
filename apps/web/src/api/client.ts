@@ -967,6 +967,74 @@ export interface DiagnosticPackage {
   size_bytes: number;
 }
 
+export type P2ProviderKind = 'llm' | 'tts' | 'asr' | 'ocr' | 'avatar' | 'renderer';
+
+export interface P2ProviderCapability {
+  capability_id: string;
+  modalities: string[];
+  supports_cancellation: boolean;
+  supports_cost_estimate: boolean;
+}
+
+export interface P2ProviderDescriptor {
+  provider_id: string;
+  display_name: string;
+  kind: P2ProviderKind;
+  adapter_version: string;
+  execution_mode: string;
+  capabilities: P2ProviderCapability[];
+  enabled: boolean;
+  trust: string;
+}
+
+export type P2CapabilityStatus =
+  | 'supported'
+  | 'missing'
+  | 'misconfigured'
+  | 'temporarily_unavailable'
+  | 'unsupported';
+
+export interface P2CapabilityState {
+  capability_id: string;
+  status: P2CapabilityStatus;
+  detail: string | null;
+}
+
+export interface P2Diagnostics {
+  schema_version: number;
+  generated_at: string;
+  flags: Record<string, boolean>;
+  platform: {
+    info: { platform: string; architecture: string; runtime_version: string; app_version: string };
+    capabilities: string[];
+    capability_states: P2CapabilityState[];
+    tools: Array<{
+      name: string;
+      available: boolean;
+      executable_ref: string | null;
+      version: string | null;
+      source: string;
+      capabilities: string[];
+    }>;
+    fingerprint: string;
+  } | null;
+  platform_details: {
+    media: Record<string, unknown>;
+    office: Record<string, unknown>;
+  } | null;
+  providers: P2ProviderDescriptor[];
+  sync: Record<string, unknown> | null;
+}
+
+export interface P2CredentialMetadata {
+  credential_ref: string;
+  provider_id: string;
+  scope: string;
+  status: 'active' | 'revoked' | 'degraded';
+  created_at: string;
+  updated_at: string;
+}
+
 interface Envelope<T> {
   data: T;
   error: null | { code: string; message: string; action?: string };
@@ -1023,7 +1091,31 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body.data;
 }
 
+async function rawRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, {
+    ...init,
+    headers: { 'Content-Type': 'application/json', ...init?.headers },
+  });
+  if (!response.ok) {
+    throw new ApiRequestError(
+      'request_failed',
+      `HTTP ${response.status}`,
+      '请稍后重试',
+      response.status,
+    );
+  }
+  return (await response.json()) as T;
+}
+
 export const api = {
+  p2Providers: () => rawRequest<P2ProviderDescriptor[]>('/api/providers'),
+  p2Diagnostics: () => rawRequest<P2Diagnostics>('/api/p2/diagnostics'),
+  p2Credentials: () => rawRequest<P2CredentialMetadata[]>('/api/providers/credentials'),
+  p2RevokeCredential: (credentialRef: string) =>
+    rawRequest<P2CredentialMetadata>(
+      `/api/providers/credentials/${encodeURIComponent(credentialRef)}`,
+      { method: 'DELETE' },
+    ),
   listProjects: () => request<Project[]>('/api/projects'),
   getProject: (id: string) => request<Project>(`/api/projects/${id}`),
   createProject: (name: string) =>

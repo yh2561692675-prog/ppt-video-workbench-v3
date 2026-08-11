@@ -6,6 +6,9 @@ import { WorkflowShell } from '../features/workflow/WorkflowShell';
 import { LlmSettings } from '../features/settings/llm/LlmSettings';
 import { HeyGenSettings } from '../features/settings/heygen/HeyGenSettings';
 import { UpdatePanel } from '../features/settings/update/UpdatePanel';
+import { ProviderSettingsPanel } from '../features/providers/ProviderSettingsPanel';
+import { PlatformSettingsPanel } from '../features/settings/platform/PlatformSettingsPanel';
+import { CloudSyncStatusPanel } from '../features/cloud/CloudSyncStatusPanel';
 
 export function AppRouter() {
   return (
@@ -37,6 +40,33 @@ export function AppRouter() {
           <main className="page">
             <h1>更新与恢复</h1>
             <UpdatePanel />
+          </main>
+        }
+      />
+      <Route
+        path="/settings/providers"
+        element={
+          <main className="page">
+            <h1>Provider 平台</h1>
+            <ProviderSettingsPanel />
+          </main>
+        }
+      />
+      <Route
+        path="/settings/platform"
+        element={
+          <main className="page">
+            <h1>跨平台能力</h1>
+            <PlatformSettingsPanel />
+          </main>
+        }
+      />
+      <Route
+        path="/settings/cloud"
+        element={
+          <main className="page">
+            <h1>云端同步</h1>
+            <CloudSyncStatusPanel />
           </main>
         }
       />

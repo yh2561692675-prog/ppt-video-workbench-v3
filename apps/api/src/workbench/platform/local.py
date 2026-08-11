@@ -20,7 +20,7 @@ from urllib.parse import urlparse
 
 from workbench.contracts.p2_platform import canonical_sha256, normalize_logical_path
 
-from .credentials import InMemoryCredentialBackend, PlatformCredentialStore
+from .credentials import PlatformCredentialStore, system_credential_backend
 from .models import (
     CapabilityStateV1,
     PlatformCapabilitySnapshotV1,
@@ -127,45 +127,51 @@ class LocalProcessService:
                 "invalid_limits", "timeout and output limits must be positive"
             )
         started = time.monotonic()
-        try:
-            if os.name == "nt":
-                process = subprocess.Popen(
-                    list(argv),
-                    cwd=cwd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    stdin=subprocess.DEVNULL,
-                    shell=False,
-                    text=False,
-                    creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
-                )
-            else:
-                process = subprocess.Popen(
-                    list(argv),
-                    cwd=cwd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    stdin=subprocess.DEVNULL,
-                    shell=False,
-                    text=False,
-                    start_new_session=True,
-                )
-        except OSError as error:
-            raise ProcessServiceError(
-                "process_start_failed", "Unable to start requested process"
-            ) from error
         timed_out = False
         cancelled = False
-        try:
-            stdout, stderr = process.communicate(timeout=timeout_ms / 1000)
-        except subprocess.TimeoutExpired:
-            timed_out = True
-            self._terminate(process)
-            stdout, stderr = process.communicate()
-        except KeyboardInterrupt:
-            cancelled = True
-            self._terminate(process)
-            stdout, stderr = process.communicate()
+        with tempfile.TemporaryFile() as stdout_file, tempfile.TemporaryFile() as stderr_file:
+            try:
+                if os.name == "nt":
+                    process = subprocess.Popen(
+                        list(argv),
+                        cwd=cwd,
+                        stdout=stdout_file,
+                        stderr=stderr_file,
+                        stdin=subprocess.DEVNULL,
+                        shell=False,
+                        text=False,
+                        creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
+                    )
+                else:
+                    process = subprocess.Popen(
+                        list(argv),
+                        cwd=cwd,
+                        stdout=stdout_file,
+                        stderr=stderr_file,
+                        stdin=subprocess.DEVNULL,
+                        shell=False,
+                        text=False,
+                        start_new_session=True,
+                    )
+            except OSError as error:
+                raise ProcessServiceError(
+                    "process_start_failed", "Unable to start requested process"
+                ) from error
+            try:
+                process.communicate(timeout=timeout_ms / 1000)
+            except subprocess.TimeoutExpired:
+                timed_out = True
+                self._terminate(process)
+                process.communicate()
+            except KeyboardInterrupt:
+                cancelled = True
+                self._terminate(process)
+                process.communicate()
+            stdout_file.seek(0)
+            stderr_file.seek(0)
+            stdout = stdout_file.read(max_output_bytes + 1)
+            stderr = stderr_file.read(max_output_bytes + 1)
+        output_truncated = len(stdout) > max_output_bytes or len(stderr) > max_output_bytes
         duration = int((time.monotonic() - started) * 1000)
         return ProcessResultV1(
             argv=list(argv),
@@ -174,6 +180,7 @@ class LocalProcessService:
             stderr=stderr[:max_output_bytes].decode("utf-8", errors="replace"),
             timed_out=timed_out,
             cancelled=cancelled,
+            output_truncated=output_truncated,
             duration_ms=duration,
         )
 
@@ -364,7 +371,7 @@ class LocalPlatformServices:
         self.paths = LocalPathService(base_dir)
         self.files = LocalAtomicFileService(self.paths)
         self.processes = LocalProcessService()
-        self.credentials = PlatformCredentialStore(InMemoryCredentialBackend())
+        self.credentials = PlatformCredentialStore(system_credential_backend(platform))
         self.tools = LocalToolDiscoveryService(bundled_root=self.paths.directory("runtime"))
         self.browser = LocalBrowserService()
         self.media = LocalMediaRuntimeService(self.tools)
@@ -382,6 +389,18 @@ class LocalPlatformServices:
         capability_states = [
             CapabilityStateV1(capability_id=item, status="supported") for item in capabilities
         ]
+        if not self.credentials.backend.available:
+            capability_states = [
+                state
+                for state in capability_states
+                if state.capability_id != "credentials"
+            ] + [
+                CapabilityStateV1(
+                    capability_id="credentials",
+                    status="misconfigured",
+                    detail=f"{self.credentials.backend.name} binding is not installed",
+                )
+            ]
         if not tools[0].available or not tools[1].available:
             capability_states.append(
                 CapabilityStateV1(

@@ -12,6 +12,7 @@ from workbench.contracts.p2_platform import ErrorCategory, OperationContextV1, S
 from .adapter import ProviderAdapter, ProviderAdapterError
 from .cache import ProviderCache, cache_identity
 from .models import ProviderDescriptorV1, ProviderInvocationResultV1, ProviderInvocationV1
+from .policy import DataClassification, ProviderPolicyEvaluator, ProviderPolicyV1
 from .registry import ProviderRegistry
 
 
@@ -35,6 +36,8 @@ class RouteRequest:
     runtime_fingerprint: str | None = None
     font_fingerprint: str | None = None
     cloud_revision_id: str | None = None
+    policy: ProviderPolicyV1 | None = None
+    data_classification: DataClassification = "sensitive"
 
 
 @dataclass(frozen=True)
@@ -107,7 +110,10 @@ class ProviderBroker:
                 parameters=request.parameters,
                 expected_output_schema=request.expected_output_schema,
             )
-            estimate_error = await self._check_budget(adapter, invocation, request.max_cost_minor)
+            max_cost_minor = request.max_cost_minor
+            if max_cost_minor is None and request.policy is not None:
+                max_cost_minor = request.policy.max_cost_minor
+            estimate_error = await self._check_budget(adapter, invocation, max_cost_minor)
             if estimate_error is not None:
                 attempts.append(
                     BrokerAttempt(
@@ -181,6 +187,7 @@ class ProviderBroker:
             if (
                 request.fixed_provider_id
                 or not request.allow_failover
+                or (request.policy is not None and not request.policy.allow_failover)
                 or not (last_error and last_error.failover_allowed)
             ):
                 break
@@ -212,6 +219,12 @@ class ProviderBroker:
             descriptors = [
                 item for item in descriptors if item.provider_id == request.fixed_provider_id
             ]
+        if request.policy is not None:
+            descriptors = ProviderPolicyEvaluator(request.policy).filter(
+                descriptors,
+                data_classification=request.data_classification,
+                region=request.region,
+            )
         result = []
         for descriptor in descriptors:
             if descriptor.provider_id not in self.adapters:

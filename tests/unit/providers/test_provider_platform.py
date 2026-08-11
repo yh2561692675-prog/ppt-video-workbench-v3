@@ -10,6 +10,7 @@ from workbench.providers.adapter import DeterministicFakeProvider, FakeProviderB
 from workbench.providers.broker import ProviderBroker, ProviderBrokerError, RouteRequest
 from workbench.providers.cache import ProviderCache, cache_identity
 from workbench.providers.models import ProviderCapabilityV1, ProviderDescriptorV1
+from workbench.providers.policy import ProviderPolicyV1
 from workbench.providers.registry import ProviderRegistry, ProviderRegistryError
 
 
@@ -132,6 +133,22 @@ async def test_budget_gate_rejects_unknown_cost_before_invoke() -> None:
     with pytest.raises(ProviderBrokerError) as raised:
         await broker.invoke(request(context(), max_cost_minor=10))
     assert raised.value.error.code == "provider.cost_unknown"
+    assert fake.calls == []
+
+
+@pytest.mark.asyncio
+async def test_broker_applies_project_policy_before_provider_invoke() -> None:
+    fake = DeterministicFakeProvider(descriptor("fake-a"))
+    broker = ProviderBroker(ProviderRegistry([fake.descriptor]), {"fake-a": fake})
+    with pytest.raises(ProviderBrokerError) as raised:
+        await broker.invoke(
+            request(
+                context(),
+                region="US",
+                policy=ProviderPolicyV1(allowed_regions=["CN"]),
+            )
+        )
+    assert raised.value.error.code == "provider.no_candidate"
     assert fake.calls == []
 
 

@@ -332,7 +332,9 @@ def test_cloud_executor_result_is_hash_checked_and_idempotent(tmp_path: Path) ->
         assert completed.json()["status"] == "completed"
         repeated = client.post(result_url, json=report, headers=headers)
         assert repeated.status_code == 200
-        assert client.get(
+        job_after = client.get(
             f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}/jobs/{job['job_id']}",
             headers=headers,
-        ).json()["result"]["result_sha256"] == report["result_sha256"]
+        ).json()
+        assert job_after["result"]["result_sha256"] == report["result_sha256"]
+        assert job_after["result"]["output_refs"] == report["output_refs"]
