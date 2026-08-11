@@ -4,15 +4,21 @@
   "title": "ProviderInvocationV1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "operation", "provider_id", "capability_id", "expected_output_schema"],
+  "required": [
+    "schema_version",
+    "operation",
+    "provider_id",
+    "capability_id",
+    "expected_output_schema"
+  ],
   "properties": {
-    "schema_version": {"const": 1},
-    "operation": {"$ref": "operation-context-v1.schema.json"},
-    "provider_id": {"type": "string"},
-    "capability_id": {"type": "string"},
-    "model": {"type": ["string", "null"], "maxLength": 200},
-    "input_refs": {"type": "array", "maxItems": 10000, "items": {"type": "string"}},
-    "parameters": {"type": "object", "maxProperties": 128},
-    "expected_output_schema": {"type": "string", "minLength": 1, "maxLength": 200}
+    "schema_version": { "const": 1 },
+    "operation": { "$ref": "operation-context-v1.schema.json" },
+    "provider_id": { "type": "string" },
+    "capability_id": { "type": "string" },
+    "model": { "type": ["string", "null"], "maxLength": 200 },
+    "input_refs": { "type": "array", "maxItems": 10000, "items": { "type": "string" } },
+    "parameters": { "type": "object", "maxProperties": 128 },
+    "expected_output_schema": { "type": "string", "minLength": 1, "maxLength": 200 }
   }
 }

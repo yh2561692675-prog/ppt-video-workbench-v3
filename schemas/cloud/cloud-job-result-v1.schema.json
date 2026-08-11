@@ -4,7 +4,17 @@
   "title": "CloudJobResultV1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["attempt_id", "executor_id", "status", "result_schema_version", "result", "result_sha256", "output_refs", "output_media_types", "fingerprints"],
+  "required": [
+    "attempt_id",
+    "executor_id",
+    "status",
+    "result_schema_version",
+    "result",
+    "result_sha256",
+    "output_refs",
+    "output_media_types",
+    "fingerprints"
+  ],
   "properties": {
     "attempt_id": { "type": "string", "format": "uuid" },
     "executor_id": { "type": "string", "format": "uuid" },

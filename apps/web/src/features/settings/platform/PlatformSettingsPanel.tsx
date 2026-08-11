@@ -42,7 +42,9 @@ export function PlatformSettingsPanel() {
         {platform.capability_states.map((capability) => (
           <article className="p2-card" key={capability.capability_id}>
             <strong>{capability.capability_id}</strong>
-            <span className={`status-pill ${capability.status === 'supported' ? 'success' : 'warning'}`}>
+            <span
+              className={`status-pill ${capability.status === 'supported' ? 'success' : 'warning'}`}
+            >
               {STATUS_LABEL[capability.status]}
             </span>
             {capability.detail ? <span className="muted">{capability.detail}</span> : null}

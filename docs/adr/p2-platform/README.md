@@ -2,17 +2,16 @@
 
 ??????????????????????????????????????? `Accepted` ? ADR ?????????????? ADR ??? `Supersedes` ????????????????
 
-| ADR                                                           | ??                                 | ??     |
-| ------------------------------------------------------------- | ------------------------------------ | -------- |
-| [ADR-001](ADR-001-local-first-cloud-optional.md)              | ?????????                   | Accepted |
+| ADR                                                           | ??                               | ??       |
+| ------------------------------------------------------------- | -------------------------------- | -------- |
+| [ADR-001](ADR-001-local-first-cloud-optional.md)              | ?????????                        | Accepted |
 | [ADR-002](ADR-002-provider-adapter-trust.md)                  | Provider adapter ????            | Accepted |
 | [ADR-003](ADR-003-operation-id-idempotency-attempt.md)        | operation?idempotency?attempt ?? | Accepted |
-| [ADR-004](ADR-004-canonical-json-versioning.md)               | ??? JSON????????          | Accepted |
-| [ADR-005](ADR-005-content-addressed-objects-logical-paths.md) | ?????????                   | Accepted |
-| [ADR-006](ADR-006-cloud-operation-log-immutable-revisions.md) | ??????????                 | Accepted |
-| [ADR-007](ADR-007-platform-services-composition-root.md)      | PlatformServices ???              | Accepted |
+| [ADR-004](ADR-004-canonical-json-versioning.md)               | ??? JSON????????                 | Accepted |
+| [ADR-005](ADR-005-content-addressed-objects-logical-paths.md) | ?????????                        | Accepted |
+| [ADR-006](ADR-006-cloud-operation-log-immutable-revisions.md) | ??????????                       | Accepted |
+| [ADR-007](ADR-007-platform-services-composition-root.md)      | PlatformServices ???             | Accepted |
 
 ## ?????
 
 ?? ADR ???? `Status`?`Date`?`Supersedes`?`Context`?`Decision`?`Consequences`?`Compatibility` ? `Verification`?`Supersedes` ??????? `None`?
-

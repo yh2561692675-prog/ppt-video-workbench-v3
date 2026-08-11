@@ -6,13 +6,13 @@ touching the active recovery window or claiming parity from a fake platform.
 
 ## Source and isolation
 
-| Item | Evidence |
-| --- | --- |
-| Integration worktree | `F:/ppt-video-workbench-v3/.worktrees/p2-platform-integration` |
-| Branch | `codex/p2-platform-integration` |
-| Existing root window | preserved; no reset/clean/merge performed |
-| Default behavior | all three P2 flags are disabled |
-| Network behavior | provider and cloud clients are not created when their flags are disabled |
+| Item                 | Evidence                                                                 |
+| -------------------- | ------------------------------------------------------------------------ |
+| Integration worktree | `F:/ppt-video-workbench-v3/.worktrees/p2-platform-integration`           |
+| Branch               | `codex/p2-platform-integration`                                          |
+| Existing root window | preserved; no reset/clean/merge performed                                |
+| Default behavior     | all three P2 flags are disabled                                          |
+| Network behavior     | provider and cloud clients are not created when their flags are disabled |
 
 ## Reproducible checks
 

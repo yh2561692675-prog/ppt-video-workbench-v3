@@ -8,16 +8,21 @@ describe('CloudSyncStatusPanel', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('keeps the local-first state visible when sync is disabled', async () => {
-    vi.stubGlobal('fetch', async () =>
-      new Response(JSON.stringify({
-        schema_version: 1,
-        generated_at: '2026-08-11T00:00:00Z',
-        flags: { cloud_sync_enabled: false },
-        platform: null,
-        platform_details: null,
-        providers: [],
-        sync: null,
-      }), { headers: { 'Content-Type': 'application/json' } }),
+    vi.stubGlobal(
+      'fetch',
+      async () =>
+        new Response(
+          JSON.stringify({
+            schema_version: 1,
+            generated_at: '2026-08-11T00:00:00Z',
+            flags: { cloud_sync_enabled: false },
+            platform: null,
+            platform_details: null,
+            providers: [],
+            sync: null,
+          }),
+          { headers: { 'Content-Type': 'application/json' } },
+        ),
     );
 
     render(

@@ -31,7 +31,7 @@ paths:
       summary: Report prototype mode and production-gate state
       security: []
       responses:
-        "200":
+        '200':
           description: Cloud control-plane health
           content:
             application/json:
@@ -58,454 +58,454 @@ paths:
       operationId: getCurrentUser
       summary: Return the current user and effective workspace memberships
       responses:
-        "200":
+        '200':
           description: Current identity
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CurrentUser"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
+                $ref: '#/components/schemas/CurrentUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /organizations:
     get:
       tags: [Identity]
       operationId: listOrganizations
       summary: List organizations visible through ownership or workspace membership
       parameters:
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
       responses:
-        "200":
+        '200':
           description: Organization page
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrganizationPage"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
+                $ref: '#/components/schemas/OrganizationPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       tags: [Identity]
       operationId: createOrganization
       summary: Create an organization owned by the current user
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateOrganizationRequest"
+              $ref: '#/components/schemas/CreateOrganizationRequest'
       responses:
-        "201":
+        '201':
           description: Organization created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Organization"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
+                $ref: '#/components/schemas/Organization'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /devices:
     get:
       tags: [Identity]
       operationId: listDevices
       summary: List devices owned by the current user
       parameters:
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
       responses:
-        "200":
+        '200':
           description: Device page
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DevicePage"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
+                $ref: '#/components/schemas/DevicePage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       tags: [Identity]
       operationId: registerDevice
       summary: Register or refresh one current-user device
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RegisterDeviceRequest"
+              $ref: '#/components/schemas/RegisterDeviceRequest'
       responses:
-        "201":
+        '201':
           description: Registered device
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Device"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
+                $ref: '#/components/schemas/Device'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /devices/{deviceId}:
     parameters:
       - name: deviceId
         in: path
         required: true
         schema:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
     delete:
       tags: [Identity]
       operationId: revokeDevice
       summary: Revoke a current-user device
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
-        "200":
+        '200':
           description: Revoked device
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Device"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                $ref: '#/components/schemas/Device'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /workspaces:
     get:
       tags: [Workspaces]
       operationId: listWorkspaces
       summary: List workspaces visible to the current user
       parameters:
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
       responses:
-        "200":
+        '200':
           description: Workspace page
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkspacePage"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
+                $ref: '#/components/schemas/WorkspacePage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       tags: [Workspaces]
       operationId: createWorkspace
       summary: Create a workspace owned by the current user
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateWorkspaceRequest"
+              $ref: '#/components/schemas/CreateWorkspaceRequest'
       responses:
-        "201":
+        '201':
           description: Workspace created
           headers:
             Operation-Id:
-              $ref: "#/components/headers/OperationId"
+              $ref: '#/components/headers/OperationId'
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Workspace"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
+                $ref: '#/components/schemas/Workspace'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /workspaces/{workspaceId}/members:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
+      - $ref: '#/components/parameters/WorkspaceId'
     get:
       tags: [Workspaces]
       operationId: listWorkspaceMembers
       summary: List workspace members
       parameters:
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
       responses:
-        "200":
+        '200':
           description: Member page
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MemberPage"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                $ref: '#/components/schemas/MemberPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       tags: [Workspaces]
       operationId: addWorkspaceMember
       summary: Add or replace a member role
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpsertMemberRequest"
+              $ref: '#/components/schemas/UpsertMemberRequest'
       responses:
-        "201":
+        '201':
           description: Effective membership
           headers:
             Operation-Id:
-              $ref: "#/components/headers/OperationId"
+              $ref: '#/components/headers/OperationId'
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Membership"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
+                $ref: '#/components/schemas/Membership'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /workspaces/{workspaceId}/projects:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
+      - $ref: '#/components/parameters/WorkspaceId'
     get:
       tags: [Projects]
       operationId: listProjects
       summary: List projects authorized for the current user
       parameters:
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
       responses:
-        "200":
+        '200':
           description: Project page
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProjectPage"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                $ref: '#/components/schemas/ProjectPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       tags: [Projects]
       operationId: createProject
       summary: Create an empty project or register a genesis revision
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateProjectRequest"
+              $ref: '#/components/schemas/CreateProjectRequest'
       responses:
-        "201":
+        '201':
           description: Project created
           headers:
             Operation-Id:
-              $ref: "#/components/headers/OperationId"
+              $ref: '#/components/headers/OperationId'
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Project"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
+                $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /workspaces/{workspaceId}/projects/{projectId}:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
     get:
       tags: [Projects]
       operationId: getProject
       summary: Get a project and its current head
       responses:
-        "200":
+        '200':
           description: Project
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Project"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /workspaces/{workspaceId}/projects/{projectId}/revisions:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
     get:
       tags: [Projects]
       operationId: listProjectRevisions
       summary: List immutable revisions newest first
       parameters:
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
       responses:
-        "200":
+        '200':
           description: Revision page
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RevisionPage"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                $ref: '#/components/schemas/RevisionPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /workspaces/{workspaceId}/projects/{projectId}/revisions/{revisionId}:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
-      - $ref: "#/components/parameters/RevisionId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/RevisionId'
     get:
       tags: [Projects]
       operationId: getProjectRevision
       summary: Get one immutable revision
       responses:
-        "200":
+        '200':
           description: Revision
           headers:
             ETag:
               description: Revision content hash
               schema:
-                $ref: "#/components/schemas/Sha256"
+                $ref: '#/components/schemas/Sha256'
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProjectRevision"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                $ref: '#/components/schemas/ProjectRevision'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /workspaces/{workspaceId}/projects/{projectId}/operations:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
     get:
       tags: [Sync]
       operationId: listSyncOperations
       summary: Read operations after an opaque cursor
       parameters:
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
-        - $ref: "#/components/parameters/DeviceId"
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/DeviceId'
       responses:
-        "200":
+        '200':
           description: Operation page
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OperationPage"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                $ref: '#/components/schemas/OperationPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       tags: [Sync]
       operationId: appendSyncOperation
       summary: Append an idempotent operation and advance project head
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
-        - $ref: "#/components/parameters/DeviceId"
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/DeviceId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SyncOperation"
+              $ref: '#/components/schemas/SyncOperation'
       responses:
-        "201":
+        '201':
           description: Operation accepted and revision created
           headers:
             Operation-Id:
-              $ref: "#/components/headers/OperationId"
+              $ref: '#/components/headers/OperationId'
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OperationResult"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
-        "429":
-          $ref: "#/components/responses/RateLimited"
+                $ref: '#/components/schemas/OperationResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /workspaces/{workspaceId}/projects/{projectId}/conflicts:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
     get:
       tags: [Sync]
       operationId: listSyncConflicts
       summary: List structured offline-edit conflicts for manual resolution
       parameters:
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
-        - $ref: "#/components/parameters/DeviceId"
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/DeviceId'
       responses:
-        "200":
+        '200':
           description: Conflict page
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SyncConflictPage"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                $ref: '#/components/schemas/SyncConflictPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /workspaces/{workspaceId}/projects/{projectId}/conflicts/{conflictId}/resolve:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
       - name: conflictId
         in: path
         required: true
         schema:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
     post:
       tags: [Sync]
       operationId: resolveSyncConflict
       summary: Resolve a structured conflict against the expected current head
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
-        - $ref: "#/components/parameters/DeviceId"
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/DeviceId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ResolveSyncConflictRequest"
+              $ref: '#/components/schemas/ResolveSyncConflictRequest'
       responses:
-        "200":
+        '200':
           description: Resolved conflict
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SyncConflict"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
+                $ref: '#/components/schemas/SyncConflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /workspaces/{workspaceId}/members/{actorId}:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
+      - $ref: '#/components/parameters/WorkspaceId'
       - name: actorId
         in: path
         required: true
@@ -518,187 +518,187 @@ paths:
       operationId: revokeWorkspaceMember
       summary: Revoke a non-owner workspace membership
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
-        "200":
+        '200':
           description: Revoked membership generation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MemberRevocation"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
+                $ref: '#/components/schemas/MemberRevocation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /workspaces/{workspaceId}/projects/{projectId}/objects/uploads:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
     post:
       tags: [Objects]
       operationId: initiateObjectUpload
       summary: Validate an object declaration and create a short-lived upload session
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/InitiateUploadRequest"
+              $ref: '#/components/schemas/InitiateUploadRequest'
       responses:
-        "201":
+        '201':
           description: Upload session
           headers:
             Operation-Id:
-              $ref: "#/components/headers/OperationId"
+              $ref: '#/components/headers/OperationId'
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UploadSession"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "413":
-          $ref: "#/components/responses/PayloadTooLarge"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
-        "429":
-          $ref: "#/components/responses/RateLimited"
+                $ref: '#/components/schemas/UploadSession'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /workspaces/{workspaceId}/projects/{projectId}/objects/uploads/{uploadId}/complete:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
       - name: uploadId
         in: path
         required: true
         schema:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
     post:
       tags: [Objects]
       operationId: completeObjectUpload
       summary: Verify uploaded bytes and create a project-scoped object reference
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CompleteUploadRequest"
+              $ref: '#/components/schemas/CompleteUploadRequest'
       responses:
-        "201":
+        '201':
           description: Verified object reference
           headers:
             Operation-Id:
-              $ref: "#/components/headers/OperationId"
+              $ref: '#/components/headers/OperationId'
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ObjectRef"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
+                $ref: '#/components/schemas/ObjectRef'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /workspaces/{workspaceId}/service-accounts:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
+      - $ref: '#/components/parameters/WorkspaceId'
     get:
       tags: [Identity]
       operationId: listServiceAccounts
       summary: List workspace service accounts as an owner or administrator
       parameters:
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
       responses:
-        "200":
+        '200':
           description: Service account page
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ServiceAccountPage"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                $ref: '#/components/schemas/ServiceAccountPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       tags: [Identity]
       operationId: createServiceAccount
       summary: Create a workspace-scoped service account
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateServiceAccountRequest"
+              $ref: '#/components/schemas/CreateServiceAccountRequest'
       responses:
-        "201":
+        '201':
           description: Service account created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ServiceAccount"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
+                $ref: '#/components/schemas/ServiceAccount'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /workspaces/{workspaceId}/service-accounts/{serviceAccountId}:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
+      - $ref: '#/components/parameters/WorkspaceId'
       - name: serviceAccountId
         in: path
         required: true
         schema:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
     delete:
       tags: [Identity]
       operationId: disableServiceAccount
       summary: Disable a workspace service account
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
-        "200":
+        '200':
           description: Disabled service account
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ServiceAccount"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                $ref: '#/components/schemas/ServiceAccount'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /workspaces/{workspaceId}/projects/{projectId}/objects/uploads/{uploadId}/parts/{partNumber}:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
       - name: uploadId
         in: path
         required: true
         schema:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
       - name: partNumber
         in: path
         required: true
@@ -711,7 +711,7 @@ paths:
       operationId: uploadObjectPart
       summary: Stage one bounded upload part
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -720,226 +720,226 @@ paths:
               type: string
               format: binary
       responses:
-        "200":
+        '200':
           description: Staged part digest
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UploadedPart"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "413":
-          $ref: "#/components/responses/PayloadTooLarge"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
+                $ref: '#/components/schemas/UploadedPart'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /workspaces/{workspaceId}/projects/{projectId}/objects/{objectId}/download:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
       - name: objectId
         in: path
         required: true
         schema:
-          $ref: "#/components/schemas/Sha256"
+          $ref: '#/components/schemas/Sha256'
     post:
       tags: [Objects]
       operationId: authorizeObjectDownload
       summary: Create a short-lived download authorization
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
-        "200":
+        '200':
           description: Download authorization
           headers:
             Operation-Id:
-              $ref: "#/components/headers/OperationId"
+              $ref: '#/components/headers/OperationId'
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DownloadAuthorization"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "429":
-          $ref: "#/components/responses/RateLimited"
+                $ref: '#/components/schemas/DownloadAuthorization'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /workspaces/{workspaceId}/projects/{projectId}/objects/{objectId}/content:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
       - name: objectId
         in: path
         required: true
         schema:
-          $ref: "#/components/schemas/Sha256"
+          $ref: '#/components/schemas/Sha256'
     get:
       tags: [Objects]
       operationId: downloadObjectContent
       summary: Stream verified project-scoped object bytes
       responses:
-        "200":
+        '200':
           description: Object content
           headers:
             ETag:
               schema:
-                $ref: "#/components/schemas/Sha256"
+                $ref: '#/components/schemas/Sha256'
           content:
             application/octet-stream:
               schema:
                 type: string
                 format: binary
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/ServerError"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /workspaces/{workspaceId}/projects/{projectId}/comments:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
     get:
       tags: [Collaboration]
       operationId: listComments
       summary: List comments visible on the project
       parameters:
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
       responses:
-        "200":
+        '200':
           description: Comment page
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CommentPage"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                $ref: '#/components/schemas/CommentPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       tags: [Collaboration]
       operationId: createComment
       summary: Create a plain-text comment anchored to a revision
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateCommentRequest"
+              $ref: '#/components/schemas/CreateCommentRequest'
       responses:
-        "201":
+        '201':
           description: Comment created
           headers:
             Operation-Id:
-              $ref: "#/components/headers/OperationId"
+              $ref: '#/components/headers/OperationId'
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Comment"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
+                $ref: '#/components/schemas/Comment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /workspaces/{workspaceId}/projects/{projectId}/reviews:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
     get:
       tags: [Collaboration]
       operationId: listReviews
       summary: List current and expired reviews for the project
       parameters:
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
       responses:
-        "200":
+        '200':
           description: Review page
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ReviewPage"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                $ref: '#/components/schemas/ReviewPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       tags: [Collaboration]
       operationId: submitReview
       summary: Record an approval or requested changes for one revision
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SubmitReviewRequest"
+              $ref: '#/components/schemas/SubmitReviewRequest'
       responses:
-        "201":
+        '201':
           description: Review recorded
           headers:
             Operation-Id:
-              $ref: "#/components/headers/OperationId"
+              $ref: '#/components/headers/OperationId'
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Review"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
+                $ref: '#/components/schemas/Review'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /workspaces/{workspaceId}/projects/{projectId}/lease:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
     put:
       tags: [Collaboration]
       operationId: acquireOrRenewProjectLease
       summary: Acquire or renew a bounded advisory editing lease
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LeaseRequest"
+              $ref: '#/components/schemas/LeaseRequest'
       responses:
-        "200":
+        '200':
           description: Active lease
           headers:
             Operation-Id:
-              $ref: "#/components/headers/OperationId"
+              $ref: '#/components/headers/OperationId'
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Lease"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
+                $ref: '#/components/schemas/Lease'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
     delete:
       tags: [Collaboration]
       operationId: releaseProjectLease
       summary: Release a lease or force release it with an audited administrator reason
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
         - name: reason
           in: query
           required: false
@@ -948,29 +948,29 @@ paths:
             minLength: 1
             maxLength: 500
       responses:
-        "200":
+        '200':
           description: Lease release audit record
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LeaseRelease"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
+                $ref: '#/components/schemas/LeaseRelease'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /workspaces/{workspaceId}/executors:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
+      - $ref: '#/components/parameters/WorkspaceId'
     get:
       tags: [Jobs]
       operationId: listExecutors
       summary: List workspace-scoped executor registrations
       responses:
-        "200":
+        '200':
           description: Executor registrations
           content:
             application/json:
@@ -983,257 +983,257 @@ paths:
                     type: array
                     maxItems: 1000
                     items:
-                      $ref: "#/components/schemas/ExecutorRegistration"
+                      $ref: '#/components/schemas/ExecutorRegistration'
                   next_cursor:
                     oneOf:
                       - type: string
                         minLength: 1
                         maxLength: 2048
-                      - type: "null"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                      - type: 'null'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       tags: [Jobs]
       operationId: registerExecutor
       summary: Register a bounded built-in executor capability snapshot
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ExecutorRegisterRequest"
+              $ref: '#/components/schemas/ExecutorRegisterRequest'
       responses:
-        "201":
+        '201':
           description: Executor registration
           headers:
             Operation-Id:
-              $ref: "#/components/headers/OperationId"
+              $ref: '#/components/headers/OperationId'
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ExecutorRegistration"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
+                $ref: '#/components/schemas/ExecutorRegistration'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /workspaces/{workspaceId}/projects/{projectId}/jobs:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
     get:
       tags: [Jobs]
       operationId: listRemoteJobs
       summary: List remote jobs for the project
       parameters:
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
       responses:
-        "200":
+        '200':
           description: Job page
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/JobPage"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                $ref: '#/components/schemas/JobPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       tags: [Jobs]
       operationId: createRemoteJob
       summary: Create a remote job against an immutable revision
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateJobRequest"
+              $ref: '#/components/schemas/CreateJobRequest'
       responses:
-        "202":
+        '202':
           description: Job queued
           headers:
             Operation-Id:
-              $ref: "#/components/headers/OperationId"
+              $ref: '#/components/headers/OperationId'
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RemoteJob"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
-        "429":
-          $ref: "#/components/responses/RateLimited"
+                $ref: '#/components/schemas/RemoteJob'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
       - name: jobId
         in: path
         required: true
         schema:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
     get:
       tags: [Jobs]
       operationId: getRemoteJob
       summary: Get remote job state and normalized output references
       responses:
-        "200":
+        '200':
           description: Remote job
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RemoteJob"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                $ref: '#/components/schemas/RemoteJob'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     delete:
       tags: [Jobs]
       operationId: cancelRemoteJob
       summary: Request cancellation of a queued or running job
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
-        "202":
+        '202':
           description: Cancellation requested
           headers:
             Operation-Id:
-              $ref: "#/components/headers/OperationId"
+              $ref: '#/components/headers/OperationId'
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RemoteJob"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
+                $ref: '#/components/schemas/RemoteJob'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}/claim:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
       - name: jobId
         in: path
         required: true
         schema:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
     post:
       tags: [Jobs]
       operationId: claimRemoteJobAttempt
       summary: Claim a queued or expired built-in job with a bounded executor lease
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ClaimJobRequest"
+              $ref: '#/components/schemas/ClaimJobRequest'
       responses:
-        "200":
+        '200':
           description: Attempt lease and one short-lived capability token
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RemoteJob"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
+                $ref: '#/components/schemas/RemoteJob'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}/attempts/{attemptId}/input:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
       - name: jobId
         in: path
         required: true
         schema:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
       - name: attemptId
         in: path
         required: true
         schema:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
     get:
       tags: [Jobs]
       operationId: getRemoteJobAttemptInput
       summary: Read immutable input using the current attempt capability token
       parameters:
-        - $ref: "#/components/parameters/AttemptToken"
+        - $ref: '#/components/parameters/AttemptToken'
       responses:
-        "200":
+        '200':
           description: Immutable attempt input
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/JobAttemptInput"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
+                $ref: '#/components/schemas/JobAttemptInput'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}/result:
     parameters:
-      - $ref: "#/components/parameters/WorkspaceId"
-      - $ref: "#/components/parameters/ProjectId"
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
       - name: jobId
         in: path
         required: true
         schema:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
     post:
       tags: [Jobs]
       operationId: reportRemoteJobResult
       summary: Verify and publish one executor result attempt
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
-        - $ref: "#/components/parameters/AttemptToken"
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/AttemptToken'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/JobResultReport"
+              $ref: '#/components/schemas/JobResultReport'
       responses:
-        "200":
+        '200':
           description: Job result accepted
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RemoteJob"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationFailed"
+                $ref: '#/components/schemas/RemoteJob'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
 components:
   securitySchemes:
     oauth2:
@@ -1250,33 +1250,33 @@ components:
       description: Stable identifier for the end-to-end user intent
       required: true
       schema:
-        $ref: "#/components/schemas/Uuid"
+        $ref: '#/components/schemas/Uuid'
   parameters:
     WorkspaceId:
       name: workspaceId
       in: path
       required: true
       schema:
-        $ref: "#/components/schemas/Uuid"
+        $ref: '#/components/schemas/Uuid'
     ProjectId:
       name: projectId
       in: path
       required: true
       schema:
-        $ref: "#/components/schemas/Uuid"
+        $ref: '#/components/schemas/Uuid'
     RevisionId:
       name: revisionId
       in: path
       required: true
       schema:
-        $ref: "#/components/schemas/Uuid"
+        $ref: '#/components/schemas/Uuid'
     IdempotencyKey:
       name: Idempotency-Key
       in: header
       required: true
       description: UUID scoped to tenant and operation kind; reused only for the same semantic side effect.
       schema:
-        $ref: "#/components/schemas/Uuid"
+        $ref: '#/components/schemas/Uuid'
     AttemptToken:
       name: X-Attempt-Token
       in: header
@@ -1292,7 +1292,7 @@ components:
       required: false
       description: Registered desktop device identity; revoked devices are rejected when supplied.
       schema:
-        $ref: "#/components/schemas/Uuid"
+        $ref: '#/components/schemas/Uuid'
     Cursor:
       name: cursor
       in: query
@@ -1317,43 +1317,43 @@ components:
       content:
         application/problem+json:
           schema:
-            $ref: "#/components/schemas/Problem"
+            $ref: '#/components/schemas/Problem'
     Forbidden:
       description: The authenticated principal is not allowed to perform this action
       content:
         application/problem+json:
           schema:
-            $ref: "#/components/schemas/Problem"
+            $ref: '#/components/schemas/Problem'
     NotFound:
       description: Resource does not exist or is not visible to the current principal
       content:
         application/problem+json:
           schema:
-            $ref: "#/components/schemas/Problem"
+            $ref: '#/components/schemas/Problem'
     Conflict:
       description: Idempotency conflict, stale base revision, active lease, or invalid state transition
       content:
         application/problem+json:
           schema:
-            $ref: "#/components/schemas/Problem"
+            $ref: '#/components/schemas/Problem'
     ValidationFailed:
       description: Request failed schema or semantic validation
       content:
         application/problem+json:
           schema:
-            $ref: "#/components/schemas/Problem"
+            $ref: '#/components/schemas/Problem'
     PayloadTooLarge:
       description: Declared or received content exceeds policy
       content:
         application/problem+json:
           schema:
-            $ref: "#/components/schemas/Problem"
+            $ref: '#/components/schemas/Problem'
     ServerError:
       description: An unexpected integrity or service failure occurred
       content:
         application/problem+json:
           schema:
-            $ref: "#/components/schemas/Problem"
+            $ref: '#/components/schemas/Problem'
     RateLimited:
       description: Tenant, principal, or operation quota exceeded
       headers:
@@ -1365,19 +1365,19 @@ components:
       content:
         application/problem+json:
           schema:
-            $ref: "#/components/schemas/Problem"
+            $ref: '#/components/schemas/Problem'
   schemas:
     Uuid:
       type: string
       format: uuid
-      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
     Timestamp:
       type: string
       format: date-time
-      pattern: "Z$"
+      pattern: 'Z$'
     Sha256:
       type: string
-      pattern: "^sha256:[0-9a-f]{64}$"
+      pattern: '^sha256:[0-9a-f]{64}$'
     Role:
       type: string
       enum: [owner, admin, editor, reviewer, viewer]
@@ -1398,9 +1398,9 @@ components:
           maximum: 599
         code:
           type: string
-          pattern: "^[a-z][a-z0-9_.-]{0,99}$"
+          pattern: '^[a-z][a-z0-9_.-]{0,99}$'
         operation_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         retryable:
           type: boolean
         user_action:
@@ -1412,7 +1412,7 @@ components:
       required: [user_id, display_name, memberships]
       properties:
         user_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         display_name:
           type: string
           minLength: 1
@@ -1421,27 +1421,27 @@ components:
           type: array
           maxItems: 1000
           items:
-            $ref: "#/components/schemas/Membership"
+            $ref: '#/components/schemas/Membership'
         devices:
           type: array
           maxItems: 100
           items:
-            $ref: "#/components/schemas/Device"
+            $ref: '#/components/schemas/Device'
     Organization:
       type: object
       additionalProperties: false
       required: [organization_id, name, created_at, created_by]
       properties:
         organization_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         name:
           type: string
           minLength: 1
           maxLength: 200
         created_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
         created_by:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
     CreateOrganizationRequest:
       type: object
       additionalProperties: false
@@ -1457,9 +1457,9 @@ components:
       required: [device_id, user_id, name, platform, status, registered_at, last_seen_at]
       properties:
         device_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         user_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         name:
           type: string
           minLength: 1
@@ -1471,16 +1471,16 @@ components:
           type: string
           enum: [active, revoked]
         registered_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
         last_seen_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
     RegisterDeviceRequest:
       type: object
       additionalProperties: false
       required: [name, platform]
       properties:
         device_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         name:
           type: string
           minLength: 1
@@ -1494,9 +1494,9 @@ components:
       required: [service_account_id, workspace_id, name, status, created_at, created_by]
       properties:
         service_account_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         workspace_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         name:
           type: string
           minLength: 1
@@ -1505,9 +1505,9 @@ components:
           type: string
           enum: [active, disabled]
         created_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
         created_by:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
     CreateServiceAccountRequest:
       type: object
       additionalProperties: false
@@ -1520,12 +1520,13 @@ components:
     Executor:
       type: object
       additionalProperties: false
-      required: [executor_id, workspace_id, name, status, capabilities, runtime_fingerprint, last_seen_at]
+      required:
+        [executor_id, workspace_id, name, status, capabilities, runtime_fingerprint, last_seen_at]
       properties:
         executor_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         workspace_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         name:
           type: string
           minLength: 1
@@ -1539,18 +1540,18 @@ components:
           uniqueItems: true
           items:
             type: string
-            pattern: "^[a-z][a-z0-9_.-]{0,99}$"
+            pattern: '^[a-z][a-z0-9_.-]{0,99}$'
         runtime_fingerprint:
-          $ref: "#/components/schemas/Sha256"
+          $ref: '#/components/schemas/Sha256'
         last_seen_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
     ExecutorRegisterRequest:
       type: object
       additionalProperties: false
       required: [platform, capabilities, region]
       properties:
         executor_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         platform:
           type: string
           enum: [windows, macos, linux]
@@ -1561,7 +1562,7 @@ components:
           uniqueItems: true
           items:
             type: string
-            pattern: "^[a-z][a-z0-9_.-]{0,99}$"
+            pattern: '^[a-z][a-z0-9_.-]{0,99}$'
         region:
           type: string
           minLength: 1
@@ -1598,9 +1599,9 @@ components:
         - capability_snapshot
       properties:
         executor_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         workspace_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         platform:
           type: string
           enum: [windows, macos, linux]
@@ -1611,7 +1612,7 @@ components:
           uniqueItems: true
           items:
             type: string
-            pattern: "^[a-z][a-z0-9_.-]{0,99}$"
+            pattern: '^[a-z][a-z0-9_.-]{0,99}$'
         region:
           type: string
           minLength: 1
@@ -1621,7 +1622,7 @@ components:
             - type: string
               minLength: 1
               maxLength: 128
-            - type: "null"
+            - type: 'null'
         office_capability:
           type: string
           enum: [microsoft_office, libreoffice, none]
@@ -1629,7 +1630,7 @@ components:
           type: string
           enum: [active, expired]
         expires_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
         capability_snapshot:
           type: object
           maxProperties: 128
@@ -1640,35 +1641,35 @@ components:
       required: [workspace_id, user_id, role, membership_version, created_at]
       properties:
         workspace_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         user_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         role:
-          $ref: "#/components/schemas/Role"
+          $ref: '#/components/schemas/Role'
         membership_version:
           type: integer
           minimum: 1
         created_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
     Workspace:
       type: object
       additionalProperties: false
       required: [workspace_id, organization_id, name, created_at, created_by]
       properties:
         workspace_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         organization_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         name:
           type: string
           minLength: 1
           maxLength: 200
         created_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
         created_by:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         role:
-          $ref: "#/components/schemas/Role"
+          $ref: '#/components/schemas/Role'
     CreateWorkspaceRequest:
       type: object
       additionalProperties: false
@@ -1679,25 +1680,25 @@ components:
           minLength: 1
           maxLength: 200
         organization_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
     UpsertMemberRequest:
       type: object
       additionalProperties: false
       required: [user_id, role]
       properties:
         user_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         role:
-          $ref: "#/components/schemas/Role"
+          $ref: '#/components/schemas/Role'
     MemberRevocation:
       type: object
       additionalProperties: false
       required: [workspace_id, user_id, status, membership_version]
       properties:
         workspace_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         user_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         status:
           const: revoked
         membership_version:
@@ -1709,21 +1710,21 @@ components:
       required: [project_id, workspace_id, name, head_revision_id, created_at, updated_at]
       properties:
         project_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         workspace_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         name:
           type: string
           minLength: 1
           maxLength: 300
         head_revision_id:
           oneOf:
-            - $ref: "#/components/schemas/Uuid"
-            - type: "null"
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
         created_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
         updated_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
     CreateProjectRequest:
       type: object
       additionalProperties: false
@@ -1734,32 +1735,32 @@ components:
           minLength: 1
           maxLength: 300
         genesis_revision:
-          $ref: "#/components/schemas/ProjectRevision"
+          $ref: '#/components/schemas/ProjectRevision'
     ObjectRef:
-      $ref: "./cloud-object-ref-v1.schema.json"
+      $ref: './cloud-object-ref-v1.schema.json'
     ProjectRevision:
-      $ref: "./cloud-project-revision-v1.schema.json"
+      $ref: './cloud-project-revision-v1.schema.json'
     SyncOperation:
-      $ref: "./cloud-sync-operation-v1.schema.json"
+      $ref: './cloud-sync-operation-v1.schema.json'
     OperationResult:
       type: object
       additionalProperties: false
       required: [operation_id, accepted_attempt_id, revision, cursor, conflict]
       properties:
         operation_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         accepted_attempt_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         revision:
-          $ref: "#/components/schemas/ProjectRevision"
+          $ref: '#/components/schemas/ProjectRevision'
         cursor:
           type: string
           minLength: 1
           maxLength: 2048
         conflict:
           oneOf:
-            - $ref: "#/components/schemas/SyncConflict"
-            - type: "null"
+            - $ref: '#/components/schemas/SyncConflict'
+            - type: 'null'
     SyncConflict:
       type: object
       additionalProperties: false
@@ -1775,15 +1776,15 @@ components:
         - created_at
       properties:
         conflict_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         project_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         operation_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         base_revision_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         head_revision_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         kind:
           type: string
           enum: [same_field, delete_modify, page_order, incompatible_schema]
@@ -1800,24 +1801,24 @@ components:
           oneOf:
             - type: object
               additionalProperties: true
-            - type: "null"
+            - type: 'null'
         resolved_revision_id:
           oneOf:
-            - $ref: "#/components/schemas/Uuid"
-            - type: "null"
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
         created_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
         resolved_at:
           oneOf:
-            - $ref: "#/components/schemas/Timestamp"
-            - type: "null"
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
     ResolveSyncConflictRequest:
       type: object
       additionalProperties: false
       required: [expected_head_revision_id, strategy, reason]
       properties:
         expected_head_revision_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         strategy:
           type: string
           enum: [keep_remote, apply_local, merged]
@@ -1835,7 +1836,7 @@ components:
       required: [object]
       properties:
         object:
-          $ref: "#/components/schemas/ObjectRef"
+          $ref: '#/components/schemas/ObjectRef'
     UploadPart:
       type: object
       additionalProperties: false
@@ -1851,16 +1852,16 @@ components:
         url:
           type: string
           format: uri
-          pattern: "^https://"
+          pattern: '^https://'
         expires_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
     UploadedPart:
       type: object
       additionalProperties: false
       required: [upload_id, part_number, size_bytes, etag]
       properties:
         upload_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         part_number:
           type: integer
           minimum: 1
@@ -1870,24 +1871,24 @@ components:
           minimum: 0
           maximum: 67108864
         etag:
-          $ref: "#/components/schemas/Sha256"
+          $ref: '#/components/schemas/Sha256'
     UploadSession:
       type: object
       additionalProperties: false
       required: [upload_id, object_id, parts, expires_at]
       properties:
         upload_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         object_id:
-          $ref: "#/components/schemas/Sha256"
+          $ref: '#/components/schemas/Sha256'
         parts:
           type: array
           minItems: 1
           maxItems: 10000
           items:
-            $ref: "#/components/schemas/UploadPart"
+            $ref: '#/components/schemas/UploadPart'
         expires_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
     CompletedPart:
       type: object
       additionalProperties: false
@@ -1911,7 +1912,7 @@ components:
           minItems: 1
           maxItems: 10000
           items:
-            $ref: "#/components/schemas/CompletedPart"
+            $ref: '#/components/schemas/CompletedPart'
     DownloadAuthorization:
       type: object
       additionalProperties: false
@@ -1923,30 +1924,30 @@ components:
         url:
           type: string
           format: uri
-          pattern: "^https://"
+          pattern: '^https://'
         object_id:
-          $ref: "#/components/schemas/Sha256"
+          $ref: '#/components/schemas/Sha256'
         size_bytes:
           type: integer
           minimum: 0
           maximum: 1099511627776
         expires_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
     CommentAnchor:
       type: object
       additionalProperties: false
       required: [revision_id]
       properties:
         revision_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         logical_path:
           type: string
           minLength: 1
           maxLength: 1024
         page_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         clip_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         time_ms:
           type: integer
           minimum: 0
@@ -1954,27 +1955,27 @@ components:
           type: integer
           minimum: 0
         evidence_object_id:
-          $ref: "#/components/schemas/Sha256"
+          $ref: '#/components/schemas/Sha256'
     Comment:
       type: object
       additionalProperties: false
       required: [comment_id, project_id, author_id, body, anchor, created_at, resolved]
       properties:
         comment_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         project_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         author_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         body:
           type: string
           minLength: 1
           maxLength: 10000
           description: Plain text; clients must not interpret it as HTML.
         anchor:
-          $ref: "#/components/schemas/CommentAnchor"
+          $ref: '#/components/schemas/CommentAnchor'
         created_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
         resolved:
           type: boolean
     CreateCommentRequest:
@@ -1987,22 +1988,32 @@ components:
           minLength: 1
           maxLength: 10000
         anchor:
-          $ref: "#/components/schemas/CommentAnchor"
+          $ref: '#/components/schemas/CommentAnchor'
     Review:
       type: object
       additionalProperties: false
-      required: [review_id, project_id, revision_id, content_sha256, reviewer_id, decision, created_at, status]
+      required:
+        [
+          review_id,
+          project_id,
+          revision_id,
+          content_sha256,
+          reviewer_id,
+          decision,
+          created_at,
+          status,
+        ]
       properties:
         review_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         project_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         revision_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         content_sha256:
-          $ref: "#/components/schemas/Sha256"
+          $ref: '#/components/schemas/Sha256'
         reviewer_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         decision:
           type: string
           enum: [approved, changes_requested]
@@ -2010,7 +2021,7 @@ components:
           type: string
           maxLength: 10000
         created_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
         status:
           type: string
           enum: [current, expired]
@@ -2020,9 +2031,9 @@ components:
       required: [revision_id, content_sha256, decision]
       properties:
         revision_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         content_sha256:
-          $ref: "#/components/schemas/Sha256"
+          $ref: '#/components/schemas/Sha256'
         decision:
           type: string
           enum: [approved, changes_requested]
@@ -2035,15 +2046,15 @@ components:
       required: [client_id, base_revision_id, requested_ttl_seconds]
       properties:
         client_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         base_revision_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         scope:
           type: string
           enum: [project_edit, timeline_edit, review]
           default: project_edit
         lease_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         requested_ttl_seconds:
           type: integer
           minimum: 30
@@ -2051,36 +2062,46 @@ components:
     Lease:
       type: object
       additionalProperties: false
-      required: [lease_id, project_id, holder_user_id, client_id, scope, base_revision_id, acquired_at, expires_at]
+      required:
+        [
+          lease_id,
+          project_id,
+          holder_user_id,
+          client_id,
+          scope,
+          base_revision_id,
+          acquired_at,
+          expires_at,
+        ]
       properties:
         lease_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         project_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         holder_user_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         client_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         scope:
           type: string
           enum: [project_edit, timeline_edit, review]
         base_revision_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         acquired_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
         expires_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
     LeaseRelease:
       type: object
       additionalProperties: false
       required: [lease_id, project_id, released_by, action, audit_event_id, occurred_at]
       properties:
         lease_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         project_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         released_by:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         action:
           type: string
           enum: [released, force_released]
@@ -2089,11 +2110,11 @@ components:
             - type: string
               minLength: 1
               maxLength: 500
-            - type: "null"
+            - type: 'null'
         audit_event_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         occurred_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
     JobKind:
       type: string
       enum: [render, transcribe, export]
@@ -2113,11 +2134,11 @@ components:
         core_contract_set_sha256:
           const: de55cc1090e49b0ab4d7fb6375b4509cb878d5888e8bef54fd00407a34fbebf6
         job_schema_version:
-          const: "1.0"
+          const: '1.0'
         asset_schema_version:
-          const: "1.0"
+          const: '1.0'
         error_mapping_version:
-          const: "1.0"
+          const: '1.0'
         version_conversion:
           const: none
     ProviderExecutionBudget:
@@ -2166,21 +2187,21 @@ components:
         - fingerprints
       properties:
         revision_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         kind:
-          $ref: "#/components/schemas/JobKind"
+          $ref: '#/components/schemas/JobKind'
         core_contracts:
-          $ref: "#/components/schemas/CoreContractCompatibility"
+          $ref: '#/components/schemas/CoreContractCompatibility'
         provider_policy_sha256:
-          $ref: "#/components/schemas/Sha256"
+          $ref: '#/components/schemas/Sha256'
         provider_budget:
-          $ref: "#/components/schemas/ProviderExecutionBudget"
+          $ref: '#/components/schemas/ProviderExecutionBudget'
         provider_cost_estimate_minor:
           type: integer
           minimum: 0
           maximum: 10000000000
         runtime_image_sha256:
-          $ref: "#/components/schemas/Sha256"
+          $ref: '#/components/schemas/Sha256'
         required_capabilities:
           type: array
           maxItems: 100
@@ -2202,29 +2223,29 @@ components:
           maxProperties: 16
           properties:
             provider_policy:
-              $ref: "#/components/schemas/Sha256"
+              $ref: '#/components/schemas/Sha256'
             runtime:
-              $ref: "#/components/schemas/Sha256"
+              $ref: '#/components/schemas/Sha256'
             platform:
-              $ref: "#/components/schemas/Sha256"
+              $ref: '#/components/schemas/Sha256'
             input:
-              $ref: "#/components/schemas/Sha256"
+              $ref: '#/components/schemas/Sha256'
           additionalProperties:
-            $ref: "#/components/schemas/Sha256"
+            $ref: '#/components/schemas/Sha256'
     ClaimJobRequest:
       type: object
       additionalProperties: false
       required: [executor_id]
       properties:
         executor_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         requested_ttl_seconds:
           type: integer
           minimum: 30
           maximum: 900
           default: 120
     JobResultReport:
-      $ref: "./cloud-job-result-v1.schema.json"
+      $ref: './cloud-job-result-v1.schema.json'
     RemoteJob:
       type: object
       additionalProperties: false
@@ -2246,15 +2267,15 @@ components:
         - created_at
       properties:
         job_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         project_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         revision_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         kind:
-          $ref: "#/components/schemas/JobKind"
+          $ref: '#/components/schemas/JobKind'
         core_contracts:
-          $ref: "#/components/schemas/CoreContractCompatibility"
+          $ref: '#/components/schemas/CoreContractCompatibility'
         status:
           type: string
           enum: [queued, dispatched, completed, failed, cancelled]
@@ -2263,34 +2284,34 @@ components:
           additionalProperties: true
         executor_id:
           oneOf:
-            - $ref: "#/components/schemas/Uuid"
-            - type: "null"
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
         attempt_id:
           oneOf:
-            - $ref: "#/components/schemas/Uuid"
-            - type: "null"
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
         lease_id:
           oneOf:
-            - $ref: "#/components/schemas/Uuid"
-            - type: "null"
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
         lease_expires_at:
           oneOf:
-            - $ref: "#/components/schemas/Timestamp"
-            - type: "null"
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
         attempt_count:
           type: integer
           minimum: 0
           maximum: 100
         provider_policy_sha256:
-          $ref: "#/components/schemas/Sha256"
+          $ref: '#/components/schemas/Sha256'
         provider_budget:
-          $ref: "#/components/schemas/ProviderExecutionBudget"
+          $ref: '#/components/schemas/ProviderExecutionBudget'
         provider_cost_estimate_minor:
           type: integer
           minimum: 0
           maximum: 10000000000
         runtime_image_sha256:
-          $ref: "#/components/schemas/Sha256"
+          $ref: '#/components/schemas/Sha256'
         required_capabilities:
           type: array
           maxItems: 100
@@ -2302,31 +2323,31 @@ components:
             - type: string
               minLength: 1
               maxLength: 64
-            - type: "null"
+            - type: 'null'
         fingerprints:
           type: object
           required: [provider_policy, runtime, platform, input]
           maxProperties: 16
           properties:
             provider_policy:
-              $ref: "#/components/schemas/Sha256"
+              $ref: '#/components/schemas/Sha256'
             runtime:
-              $ref: "#/components/schemas/Sha256"
+              $ref: '#/components/schemas/Sha256'
             platform:
-              $ref: "#/components/schemas/Sha256"
+              $ref: '#/components/schemas/Sha256'
             input:
-              $ref: "#/components/schemas/Sha256"
+              $ref: '#/components/schemas/Sha256'
           additionalProperties:
-            $ref: "#/components/schemas/Sha256"
+            $ref: '#/components/schemas/Sha256'
         created_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
         attempt_access_token:
           type: string
           writeOnly: true
           minLength: 32
           maxLength: 256
         attempt_token_expires_at:
-          $ref: "#/components/schemas/Timestamp"
+          $ref: '#/components/schemas/Timestamp'
         result:
           type: object
           additionalProperties: true
@@ -2349,30 +2370,30 @@ components:
         - fingerprints
       properties:
         job_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         attempt_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         project_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         revision_id:
-          $ref: "#/components/schemas/Uuid"
+          $ref: '#/components/schemas/Uuid'
         kind:
-          $ref: "#/components/schemas/JobKind"
+          $ref: '#/components/schemas/JobKind'
         core_contracts:
-          $ref: "#/components/schemas/CoreContractCompatibility"
+          $ref: '#/components/schemas/CoreContractCompatibility'
         parameters:
           type: object
           additionalProperties: true
         provider_policy_sha256:
-          $ref: "#/components/schemas/Sha256"
+          $ref: '#/components/schemas/Sha256'
         provider_budget:
-          $ref: "#/components/schemas/ProviderExecutionBudget"
+          $ref: '#/components/schemas/ProviderExecutionBudget'
         provider_cost_estimate_minor:
           type: integer
           minimum: 0
           maximum: 10000000000
         runtime_image_sha256:
-          $ref: "#/components/schemas/Sha256"
+          $ref: '#/components/schemas/Sha256'
         required_capabilities:
           type: array
           maxItems: 100
@@ -2382,22 +2403,22 @@ components:
         required_region:
           oneOf:
             - type: string
-            - type: "null"
+            - type: 'null'
         fingerprints:
           type: object
           required: [provider_policy, runtime, platform, input]
           maxProperties: 16
           properties:
             provider_policy:
-              $ref: "#/components/schemas/Sha256"
+              $ref: '#/components/schemas/Sha256'
             runtime:
-              $ref: "#/components/schemas/Sha256"
+              $ref: '#/components/schemas/Sha256'
             platform:
-              $ref: "#/components/schemas/Sha256"
+              $ref: '#/components/schemas/Sha256'
             input:
-              $ref: "#/components/schemas/Sha256"
+              $ref: '#/components/schemas/Sha256'
           additionalProperties:
-            $ref: "#/components/schemas/Sha256"
+            $ref: '#/components/schemas/Sha256'
     PageMeta:
       type: object
       required: [next_cursor]
@@ -2407,137 +2428,136 @@ components:
             - type: string
               minLength: 1
               maxLength: 2048
-            - type: "null"
+            - type: 'null'
     OrganizationPage:
       unevaluatedProperties: false
       allOf:
-        - $ref: "#/components/schemas/PageMeta"
+        - $ref: '#/components/schemas/PageMeta'
         - type: object
           required: [items]
           properties:
             items:
               type: array
               items:
-                $ref: "#/components/schemas/Organization"
+                $ref: '#/components/schemas/Organization'
     DevicePage:
       unevaluatedProperties: false
       allOf:
-        - $ref: "#/components/schemas/PageMeta"
+        - $ref: '#/components/schemas/PageMeta'
         - type: object
           required: [items]
           properties:
             items:
               type: array
               items:
-                $ref: "#/components/schemas/Device"
+                $ref: '#/components/schemas/Device'
     ServiceAccountPage:
       unevaluatedProperties: false
       allOf:
-        - $ref: "#/components/schemas/PageMeta"
+        - $ref: '#/components/schemas/PageMeta'
         - type: object
           required: [items]
           properties:
             items:
               type: array
               items:
-                $ref: "#/components/schemas/ServiceAccount"
+                $ref: '#/components/schemas/ServiceAccount'
     WorkspacePage:
       unevaluatedProperties: false
       allOf:
-        - $ref: "#/components/schemas/PageMeta"
+        - $ref: '#/components/schemas/PageMeta'
         - type: object
           required: [items]
           properties:
             items:
               type: array
               items:
-                $ref: "#/components/schemas/Workspace"
+                $ref: '#/components/schemas/Workspace'
     MemberPage:
       unevaluatedProperties: false
       allOf:
-        - $ref: "#/components/schemas/PageMeta"
+        - $ref: '#/components/schemas/PageMeta'
         - type: object
           required: [items]
           properties:
             items:
               type: array
               items:
-                $ref: "#/components/schemas/Membership"
+                $ref: '#/components/schemas/Membership'
     ProjectPage:
       unevaluatedProperties: false
       allOf:
-        - $ref: "#/components/schemas/PageMeta"
+        - $ref: '#/components/schemas/PageMeta'
         - type: object
           required: [items]
           properties:
             items:
               type: array
               items:
-                $ref: "#/components/schemas/Project"
+                $ref: '#/components/schemas/Project'
     RevisionPage:
       unevaluatedProperties: false
       allOf:
-        - $ref: "#/components/schemas/PageMeta"
+        - $ref: '#/components/schemas/PageMeta'
         - type: object
           required: [items]
           properties:
             items:
               type: array
               items:
-                $ref: "#/components/schemas/ProjectRevision"
+                $ref: '#/components/schemas/ProjectRevision'
     OperationPage:
       unevaluatedProperties: false
       allOf:
-        - $ref: "#/components/schemas/PageMeta"
+        - $ref: '#/components/schemas/PageMeta'
         - type: object
           required: [items]
           properties:
             items:
               type: array
               items:
-                $ref: "#/components/schemas/SyncOperation"
+                $ref: '#/components/schemas/SyncOperation'
     SyncConflictPage:
       unevaluatedProperties: false
       allOf:
-        - $ref: "#/components/schemas/PageMeta"
+        - $ref: '#/components/schemas/PageMeta'
         - type: object
           required: [items]
           properties:
             items:
               type: array
               items:
-                $ref: "#/components/schemas/SyncConflict"
+                $ref: '#/components/schemas/SyncConflict'
     CommentPage:
       unevaluatedProperties: false
       allOf:
-        - $ref: "#/components/schemas/PageMeta"
+        - $ref: '#/components/schemas/PageMeta'
         - type: object
           required: [items]
           properties:
             items:
               type: array
               items:
-                $ref: "#/components/schemas/Comment"
+                $ref: '#/components/schemas/Comment'
     ReviewPage:
       unevaluatedProperties: false
       allOf:
-        - $ref: "#/components/schemas/PageMeta"
+        - $ref: '#/components/schemas/PageMeta'
         - type: object
           required: [items]
           properties:
             items:
               type: array
               items:
-                $ref: "#/components/schemas/Review"
+                $ref: '#/components/schemas/Review'
     JobPage:
       unevaluatedProperties: false
       allOf:
-        - $ref: "#/components/schemas/PageMeta"
+        - $ref: '#/components/schemas/PageMeta'
         - type: object
           required: [items]
           properties:
             items:
               type: array
               items:
-                $ref: "#/components/schemas/RemoteJob"
-
+                $ref: '#/components/schemas/RemoteJob'

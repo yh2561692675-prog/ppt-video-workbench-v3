@@ -2,8 +2,18 @@
   "schema_version": "1.0",
   "candidate_id": "v1-rc-abc1234-20260811T193000Z",
   "generated_at": "2026-08-11T19:30:00Z",
-  "source": {"commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "branch": "codex/program-core-workbench", "dirty": false},
-  "files": [{"path": "candidate-payload.txt", "size": 24, "sha256": "cb73cd337f9620c5749525f5c78dd6af91ab5027b8440b02595ca9dd4173dd7d"}],
-  "runtime": {"python": "3.12"},
-  "features": {"v2": false}
+  "source": {
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "branch": "codex/program-core-workbench",
+    "dirty": false
+  },
+  "files": [
+    {
+      "path": "candidate-payload.txt",
+      "size": 24,
+      "sha256": "cb73cd337f9620c5749525f5c78dd6af91ab5027b8440b02595ca9dd4173dd7d"
+    }
+  ],
+  "runtime": { "python": "3.12" },
+  "features": { "v2": false }
 }

@@ -16,12 +16,24 @@
     "scenario registry and machine-readable CLI"
   ],
   "verification": [
-    {"command": "python -m ruff check scripts/debug_program tests/debug_program", "result": "pass"},
-    {"command": "python -m mypy --strict scripts/debug_program", "result": "pass"},
-    {"command": "python -m pytest -q tests/debug_program", "result": "5 passed"},
-    {"command": "parse five debug schema files and validate candidate-golden.json", "result": "pass"},
-    {"command": "python -m scripts.debug_program list-scenarios --matrix local-e2e", "result": "safe scenario returned"},
-    {"command": "python -m scripts.debug_program run --matrix release without authorization", "result": "blocked_external_authorization"}
+    {
+      "command": "python -m ruff check scripts/debug_program tests/debug_program",
+      "result": "pass"
+    },
+    { "command": "python -m mypy --strict scripts/debug_program", "result": "pass" },
+    { "command": "python -m pytest -q tests/debug_program", "result": "5 passed" },
+    {
+      "command": "parse five debug schema files and validate candidate-golden.json",
+      "result": "pass"
+    },
+    {
+      "command": "python -m scripts.debug_program list-scenarios --matrix local-e2e",
+      "result": "safe scenario returned"
+    },
+    {
+      "command": "python -m scripts.debug_program run --matrix release without authorization",
+      "result": "blocked_external_authorization"
+    }
   ],
   "append_only_guarantees": [
     "run and attempt files use O_EXCL create semantics",

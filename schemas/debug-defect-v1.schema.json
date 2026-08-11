@@ -1,14 +1,30 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ppt-video-workbench.dev/schemas/debug-defect-v1.schema.json",
-  "title": "DebugDefectV1", "type": "object", "additionalProperties": false,
-  "required": ["schema_version", "defect_id", "severity", "owner", "title", "reproduction", "status", "candidate_id"],
+  "title": "DebugDefectV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "defect_id",
+    "severity",
+    "owner",
+    "title",
+    "reproduction",
+    "status",
+    "candidate_id"
+  ],
   "properties": {
-    "schema_version": {"const": "1.0"}, "defect_id": {"type": "string", "pattern": "^DEF-[a-z0-9-]+-[0-9]{3}$"},
-    "severity": {"enum": ["P0", "P1", "P2", "P3"]}, "owner": {"type": "string", "minLength": 1},
-    "title": {"type": "string", "minLength": 1}, "reproduction": {"type": "string", "minLength": 1},
-    "fix_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}, "status": {"enum": ["open", "fixed", "verified", "waived", "blocked"]},
-    "candidate_id": {"type": "string", "pattern": "^v1-rc-[a-z0-9]+-[0-9]{8}T[0-9]{6}Z$"},
-    "closed_at": {"type": "string", "format": "date-time"}, "waiver": {"type": "object"}
+    "schema_version": { "const": "1.0" },
+    "defect_id": { "type": "string", "pattern": "^DEF-[a-z0-9-]+-[0-9]{3}$" },
+    "severity": { "enum": ["P0", "P1", "P2", "P3"] },
+    "owner": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "reproduction": { "type": "string", "minLength": 1 },
+    "fix_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "status": { "enum": ["open", "fixed", "verified", "waived", "blocked"] },
+    "candidate_id": { "type": "string", "pattern": "^v1-rc-[a-z0-9]+-[0-9]{8}T[0-9]{6}Z$" },
+    "closed_at": { "type": "string", "format": "date-time" },
+    "waiver": { "type": "object" }
   }
 }

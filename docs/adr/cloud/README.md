@@ -7,5 +7,3 @@
 - [ProjectRevision JSON Schema](../../../schemas/cloud/cloud-project-revision-v1.schema.json)
 - [SyncOperation JSON Schema](../../../schemas/cloud/cloud-sync-operation-v1.schema.json)
 - [ObjectRef JSON Schema](../../../schemas/cloud/cloud-object-ref-v1.schema.json)
-
-

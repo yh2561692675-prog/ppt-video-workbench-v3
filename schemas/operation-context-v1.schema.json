@@ -4,44 +4,72 @@
   "title": "OperationContextV1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "operation_id", "idempotency_key", "attempt_id", "tenant_id", "request_kind", "started_at", "budget"],
+  "required": [
+    "schema_version",
+    "operation_id",
+    "idempotency_key",
+    "attempt_id",
+    "tenant_id",
+    "request_kind",
+    "started_at",
+    "budget"
+  ],
   "properties": {
-    "schema_version": {"const": 1},
-    "operation_id": {"$ref": "#/$defs/uuid"},
-    "idempotency_key": {"$ref": "#/$defs/uuid"},
-    "attempt_id": {"$ref": "#/$defs/uuid"},
-    "tenant_id": {"$ref": "#/$defs/uuid"},
-    "actor_id": {"$ref": "#/$defs/uuid"},
-    "request_kind": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,99}$"},
-    "started_at": {"$ref": "#/$defs/timestamp"},
-    "deadline_at": {"$ref": "#/$defs/timestamp"},
-    "budget": {"$ref": "#/$defs/budget"},
-    "resource": {"$ref": "#/$defs/resource"}
+    "schema_version": { "const": 1 },
+    "operation_id": { "$ref": "#/$defs/uuid" },
+    "idempotency_key": { "$ref": "#/$defs/uuid" },
+    "attempt_id": { "$ref": "#/$defs/uuid" },
+    "tenant_id": { "$ref": "#/$defs/uuid" },
+    "actor_id": { "$ref": "#/$defs/uuid" },
+    "request_kind": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,99}$" },
+    "started_at": { "$ref": "#/$defs/timestamp" },
+    "deadline_at": { "$ref": "#/$defs/timestamp" },
+    "budget": { "$ref": "#/$defs/budget" },
+    "resource": { "$ref": "#/$defs/resource" }
   },
   "$defs": {
-    "uuid": {"type": "string", "format": "uuid", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"},
-    "timestamp": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "timestamp": { "type": "string", "format": "date-time", "pattern": "Z$" },
     "budget": {
-      "type": "object", "additionalProperties": false,
-      "required": ["schema_version", "timeout_ms", "max_attempts", "max_input_bytes", "max_output_bytes"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "timeout_ms",
+        "max_attempts",
+        "max_input_bytes",
+        "max_output_bytes"
+      ],
       "properties": {
-        "schema_version": {"const": 1}, "timeout_ms": {"type": "integer", "minimum": 1, "maximum": 86400000},
-        "max_attempts": {"type": "integer", "minimum": 1, "maximum": 10},
-        "max_input_bytes": {"type": "integer", "minimum": 0, "maximum": 1099511627776},
-        "max_output_bytes": {"type": "integer", "minimum": 0, "maximum": 1099511627776},
-        "max_cost_minor": {"type": ["integer", "null"], "minimum": 0, "maximum": 10000000000}
+        "schema_version": { "const": 1 },
+        "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 86400000 },
+        "max_attempts": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "max_input_bytes": { "type": "integer", "minimum": 0, "maximum": 1099511627776 },
+        "max_output_bytes": { "type": "integer", "minimum": 0, "maximum": 1099511627776 },
+        "max_cost_minor": { "type": ["integer", "null"], "minimum": 0, "maximum": 10000000000 }
       }
     },
     "resource": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "required": ["schema_version", "tenant_id", "resource_type", "resource_id"],
       "properties": {
-        "schema_version": {"const": 1}, "tenant_id": {"$ref": "#/$defs/uuid"},
-        "resource_type": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,63}$"},
-        "resource_id": {"$ref": "#/$defs/uuid"}, "revision_id": {"$ref": "#/$defs/uuid"},
-        "logical_path": {"type": "string", "minLength": 1, "maxLength": 1024, "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)(?!.*\\u0000)[^/]+(?:/[^/]+)*$"}
+        "schema_version": { "const": 1 },
+        "tenant_id": { "$ref": "#/$defs/uuid" },
+        "resource_type": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,63}$" },
+        "resource_id": { "$ref": "#/$defs/uuid" },
+        "revision_id": { "$ref": "#/$defs/uuid" },
+        "logical_path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)(?!.*\\u0000)[^/]+(?:/[^/]+)*$"
+        }
       }
     }
   }
 }
-

@@ -33,7 +33,7 @@ export interface OperationContextV1 {
   resource?: LogicalResourceRefV1;
 }
 
-export type ErrorCategory = "provider" | "platform" | "sync" | "cloud" | "executor" | "validation";
+export type ErrorCategory = 'provider' | 'platform' | 'sync' | 'cloud' | 'executor' | 'validation';
 
 export interface StructuredErrorV1 {
   schema_version: 1;
@@ -52,7 +52,7 @@ export interface StructuredErrorV1 {
 export interface CloudJobResultV1 {
   attempt_id: UUID;
   executor_id: UUID;
-  status: "completed" | "failed";
+  status: 'completed' | 'failed';
   result: Record<string, unknown>;
   result_sha256: Sha256;
   output_refs: Array<`artifact://${Sha256}` | Sha256>;
@@ -64,15 +64,15 @@ export interface CloudJobResultV1 {
  */
 export interface CoreContractCompatibilityV1 {
   schema_version: 1;
-  core_contract_set_sha256: "de55cc1090e49b0ab4d7fb6375b4509cb878d5888e8bef54fd00407a34fbebf6";
-  job_schema_version: "1.0";
-  asset_schema_version: "1.0";
-  error_mapping_version: "1.0";
-  version_conversion: "none";
+  core_contract_set_sha256: 'de55cc1090e49b0ab4d7fb6375b4509cb878d5888e8bef54fd00407a34fbebf6';
+  job_schema_version: '1.0';
+  asset_schema_version: '1.0';
+  error_mapping_version: '1.0';
+  version_conversion: 'none';
 }
 
-export type ProviderKind = "llm" | "tts" | "asr" | "ocr" | "avatar" | "renderer";
-export type ExecutionMode = "in_process_builtin" | "local_process" | "remote_https";
+export type ProviderKind = 'llm' | 'tts' | 'asr' | 'ocr' | 'avatar' | 'renderer';
+export type ExecutionMode = 'in_process_builtin' | 'local_process' | 'remote_https';
 
 export interface ProviderCapabilityV1 {
   schema_version: 1;
@@ -101,7 +101,7 @@ export interface ProviderDescriptorV1 {
   credential_schema_id?: string | null;
   privacy_policy_ref?: string | null;
   enabled?: boolean;
-  trust?: "builtin_signed" | "builtin_local_process";
+  trust?: 'builtin_signed' | 'builtin_local_process';
 }
 
 export interface ProviderInvocationV1 {
@@ -121,7 +121,7 @@ export interface ProviderInvocationResultV1 {
   provider_id: string;
   capability_id: string;
   model_resolved?: string | null;
-  status: "succeeded" | "failed" | "cancelled" | "degraded";
+  status: 'succeeded' | 'failed' | 'cancelled' | 'degraded';
   output_refs?: string[];
   usage?: Record<string, number | string>;
   estimated_cost?: number | string | null;
@@ -134,7 +134,7 @@ export interface ProviderInvocationResultV1 {
 export interface ProviderHealthV1 {
   schema_version: 1;
   provider_id: string;
-  status: "unknown" | "available" | "degraded" | "disabled" | "incompatible";
+  status: 'unknown' | 'available' | 'degraded' | 'disabled' | 'incompatible';
   observed_at: string;
   expires_at: string;
   latency_ms_p50?: number | null;
@@ -150,7 +150,7 @@ export interface ProviderCostEstimateV1 {
   currency: string;
   estimated_cost_minor: number;
   price_book_version: string;
-  confidence: "exact" | "estimated" | "unknown";
+  confidence: 'exact' | 'estimated' | 'unknown';
   unit: string;
 }
 
@@ -162,7 +162,7 @@ export interface ProviderAuditEventV1 {
   project_id?: string | null;
   provider_id: string;
   capability_id: string;
-  event_kind: "invoke" | "cache_hit" | "failure";
+  event_kind: 'invoke' | 'cache_hit' | 'failure';
   status: string;
   billed_cost_minor: number;
   occurred_at: string;
@@ -171,7 +171,7 @@ export interface ProviderAuditEventV1 {
 
 export interface PlatformInfoV1 {
   schema_version: 1;
-  platform: "windows" | "macos" | "linux";
+  platform: 'windows' | 'macos' | 'linux';
   architecture: string;
   runtime_version: string;
   app_version: string;
@@ -181,9 +181,14 @@ export interface ToolInfoV1 {
   schema_version: 1;
   name: string;
   available: boolean;
-  executable_ref?: `runtime://${string}` | `system://${string}` | `unavailable://${string}` | `unknown://${string}` | null;
+  executable_ref?:
+    | `runtime://${string}`
+    | `system://${string}`
+    | `unavailable://${string}`
+    | `unknown://${string}`
+    | null;
   version?: string | null;
-  source: "bundled" | "supported_system" | "unavailable" | "unknown";
+  source: 'bundled' | 'supported_system' | 'unavailable' | 'unknown';
   sha256?: Sha256 | null;
   capabilities?: string[];
 }
@@ -191,7 +196,7 @@ export interface ToolInfoV1 {
 export interface CapabilityStateV1 {
   schema_version: 1;
   capability_id: string;
-  status: "supported" | "missing" | "misconfigured" | "temporarily_unavailable" | "unsupported";
+  status: 'supported' | 'missing' | 'misconfigured' | 'temporarily_unavailable' | 'unsupported';
   detail?: string | null;
 }
 
@@ -215,7 +220,7 @@ export interface CloudObjectRefV1 {
   logical_path: string;
   display_name?: string;
   etag?: string;
-  scan_status?: "pending" | "clean" | "rejected";
+  scan_status?: 'pending' | 'clean' | 'rejected';
 }
 
 export interface CloudProjectRevisionV1 {
@@ -233,15 +238,15 @@ export interface CloudProjectRevisionV1 {
 }
 
 export type CloudSyncOperationKind =
-  | "project.metadata.set"
-  | "material.add"
-  | "material.remove"
-  | "page.insert"
-  | "page.move"
-  | "page.replace"
-  | "page.remove"
-  | "timeline.patch"
-  | "revision.resolve_conflict";
+  | 'project.metadata.set'
+  | 'material.add'
+  | 'material.remove'
+  | 'page.insert'
+  | 'page.move'
+  | 'page.replace'
+  | 'page.remove'
+  | 'timeline.patch'
+  | 'revision.resolve_conflict';
 
 export interface CloudSyncOperationV1 {
   schema_version: 1;
@@ -259,5 +264,4 @@ export interface CloudSyncOperationV1 {
   created_at: string;
 }
 
-export * from "./cloud-client.generated";
-
+export * from './cloud-client.generated';

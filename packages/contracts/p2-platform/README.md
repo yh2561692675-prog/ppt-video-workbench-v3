@@ -19,4 +19,3 @@ OpenAPI operation IDs, methods and paths. Regenerate it with
   arbitrary executable extension dictionaries are forbidden.
 - `operation_id`, `idempotency_key` and `attempt_id` have distinct lifetimes as defined by
   `docs/adr/p2-platform/ADR-003-operation-id-idempotency-attempt.md` in the design source.
-

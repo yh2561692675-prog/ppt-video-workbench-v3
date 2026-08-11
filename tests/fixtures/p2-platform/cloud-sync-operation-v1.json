@@ -9,7 +9,7 @@
   "client_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
   "client_sequence": 1,
   "kind": "project.metadata.set",
-  "payload": {"title": "fixture"},
+  "payload": { "title": "fixture" },
   "payload_sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
   "created_at": "2026-08-11T00:00:00Z"
 }
