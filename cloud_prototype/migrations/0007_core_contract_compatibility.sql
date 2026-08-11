@@ -1,0 +1,1 @@
+ALTER TABLE jobs ADD COLUMN core_contracts_json TEXT NOT NULL DEFAULT '{"schema_version":1,"core_contract_set_sha256":"7c63aab737d6fe9281ce83cd8fec0e2ddf52f2148d51938f6be4f80ac55f5488","job_schema_version":"1.0","asset_schema_version":"1.0","error_mapping_version":"1.0","version_conversion":"none"}';

@@ -2097,6 +2097,29 @@ components:
     JobKind:
       type: string
       enum: [render, transcribe, export]
+    CoreContractCompatibility:
+      type: object
+      additionalProperties: false
+      required:
+        - schema_version
+        - core_contract_set_sha256
+        - job_schema_version
+        - asset_schema_version
+        - error_mapping_version
+        - version_conversion
+      properties:
+        schema_version:
+          const: 1
+        core_contract_set_sha256:
+          const: 7c63aab737d6fe9281ce83cd8fec0e2ddf52f2148d51938f6be4f80ac55f5488
+        job_schema_version:
+          const: "1.0"
+        asset_schema_version:
+          const: "1.0"
+        error_mapping_version:
+          const: "1.0"
+        version_conversion:
+          const: none
     ProviderExecutionBudget:
       type: object
       additionalProperties: false
@@ -2146,6 +2169,8 @@ components:
           $ref: "#/components/schemas/Uuid"
         kind:
           $ref: "#/components/schemas/JobKind"
+        core_contracts:
+          $ref: "#/components/schemas/CoreContractCompatibility"
         provider_policy_sha256:
           $ref: "#/components/schemas/Sha256"
         provider_budget:
@@ -2208,6 +2233,7 @@ components:
         - project_id
         - revision_id
         - kind
+        - core_contracts
         - parameters
         - status
         - attempt_count
@@ -2227,6 +2253,8 @@ components:
           $ref: "#/components/schemas/Uuid"
         kind:
           $ref: "#/components/schemas/JobKind"
+        core_contracts:
+          $ref: "#/components/schemas/CoreContractCompatibility"
         status:
           type: string
           enum: [queued, dispatched, completed, failed, cancelled]
@@ -2311,6 +2339,7 @@ components:
         - project_id
         - revision_id
         - kind
+        - core_contracts
         - parameters
         - provider_policy_sha256
         - provider_budget
@@ -2329,6 +2358,8 @@ components:
           $ref: "#/components/schemas/Uuid"
         kind:
           $ref: "#/components/schemas/JobKind"
+        core_contracts:
+          $ref: "#/components/schemas/CoreContractCompatibility"
         parameters:
           type: object
           additionalProperties: true

@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "a13_source_commit": "f73faf64bcc877fc6fd13684d4225be5d7d620aa",
+  "core_contract_set_sha256": "7c63aab737d6fe9281ce83cd8fec0e2ddf52f2148d51938f6be4f80ac55f5488",
+  "namespace_boundary": {
+    "p2_cloud_envelope_major": 1,
+    "core_wire_versions_are_independent": true,
+    "implicit_version_conversion": false
+  },
+  "core_versions": {
+    "project": 1,
+    "asset": "1.0",
+    "material": "1.0",
+    "timeline": "1.0",
+    "subtitle": 2,
+    "continuity": 1,
+    "render_graph": "2.0",
+    "job": "1.0",
+    "export": "1.0",
+    "quality": "1.0"
+  },
+  "compatibility": {
+    "unknown_fields": "reject",
+    "older_versions": "explicit_migration",
+    "invalid_enum": "reject"
+  },
+  "remote_job": {
+    "job_schema_version": "1.0",
+    "asset_schema_version": "1.0",
+    "error_mapping_version": "1.0",
+    "version_conversion": "none"
+  },
+  "error_mapping": {
+    "provider.no_candidate": "P2_PROVIDER_FAILURE",
+    "provider.timeout": "P2_PROVIDER_FAILURE",
+    "provider.invoke_failed": "P2_PROVIDER_FAILURE",
+    "provider.cost_unknown": "P2_PROVIDER_FAILURE",
+    "provider.budget_exceeded": "P2_PROVIDER_FAILURE",
+    "provider.adapter_error": "P2_PROVIDER_FAILURE",
+    "provider.scope_mismatch": "P2_PROVIDER_FAILURE",
+    "platform.unavailable": "P2_PLATFORM_FAILURE",
+    "sync.conflict": "P2_SYNC_FAILURE",
+    "cloud.rejected": "P2_CLOUD_FAILURE",
+    "executor.unavailable": "P2_EXECUTOR_FAILURE",
+    "validation.schema_mismatch": "P2_VALIDATION_FAILURE",
+    "unknown": "P2_UNMAPPED_ERROR"
+  },
+  "unknown_error_policy": "blocking_fail_closed"
+}

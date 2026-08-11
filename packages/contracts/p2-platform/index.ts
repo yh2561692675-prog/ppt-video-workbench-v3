@@ -58,6 +58,19 @@ export interface CloudJobResultV1 {
   output_refs: Array<`artifact://${Sha256}` | Sha256>;
 }
 
+/**
+ * Explicit bridge to A13. The integer P2 envelope and string core versions are
+ * independent namespaces; no client may normalize or coerce these values.
+ */
+export interface CoreContractCompatibilityV1 {
+  schema_version: 1;
+  core_contract_set_sha256: "7c63aab737d6fe9281ce83cd8fec0e2ddf52f2148d51938f6be4f80ac55f5488";
+  job_schema_version: "1.0";
+  asset_schema_version: "1.0";
+  error_mapping_version: "1.0";
+  version_conversion: "none";
+}
+
 export type ProviderKind = "llm" | "tts" | "asr" | "ocr" | "avatar" | "renderer";
 export type ExecutionMode = "in_process_builtin" | "local_process" | "remote_https";
 

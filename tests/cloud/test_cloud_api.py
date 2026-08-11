@@ -81,6 +81,7 @@ def test_cloud_database_migrations_are_versioned_and_idempotent(tmp_path: Path) 
         (4, "0004_remote_job_attempts"),
         (5, "0005_offline_sync_conflicts"),
         (6, "0006_remote_job_provider_budget"),
+        (7, "0007_core_contract_compatibility"),
     ]
     assert all(re.fullmatch(r"sha256:[0-9a-f]{64}", row[2]) for row in rows)
 
@@ -671,6 +672,14 @@ def test_cloud_executor_result_is_hash_checked_and_idempotent(tmp_path: Path) ->
             ),
             headers=_idempotent(headers),
         ).json()
+        assert job["core_contracts"]["job_schema_version"] == "1.0"
+        assert job["core_contracts"]["asset_schema_version"] == "1.0"
+        attempt_input = client.get(
+            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}"
+            f"/jobs/{job['job_id']}/attempts/{job['attempt_id']}/input",
+            headers={**headers, "X-Attempt-Token": job["attempt_access_token"]},
+        ).json()
+        assert attempt_input["core_contracts"] == job["core_contracts"]
         fingerprints = job["fingerprints"]
         result = {"media_type": "video/mp4", "duration_ms": 1000}
         output_content = b"output"

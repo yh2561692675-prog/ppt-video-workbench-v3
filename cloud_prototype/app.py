@@ -18,6 +18,7 @@ from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from fastapi import APIRouter, FastAPI, Header, HTTPException, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from workbench.contracts.core_compat import CoreCompatibilityEnvelopeV1
 from workbench.contracts.p2_platform import BudgetV1, canonical_sha256
 
 
@@ -341,6 +342,9 @@ class LeaseRequest(CloudModel):
 class JobCreate(CloudModel):
     revision_id: UUID
     kind: Literal["render", "transcribe", "export"]
+    core_contracts: CoreCompatibilityEnvelopeV1 = Field(
+        default_factory=CoreCompatibilityEnvelopeV1
+    )
     provider_policy_sha256: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     provider_budget: BudgetV1
     provider_cost_estimate_minor: int = Field(ge=0, le=10_000_000_000)
@@ -590,6 +594,16 @@ class CloudRepository:
                 "'{\"schema_version\":1,\"timeout_ms\":86400000,\"max_attempts\":1,"
                 "\"max_input_bytes\":1073741824,\"max_output_bytes\":4294967296,"
                 "\"max_cost_minor\":0}'"
+            ),
+            "core_contracts_json": (
+                "TEXT NOT NULL DEFAULT "
+                "'{\"schema_version\":1,"
+                "\"core_contract_set_sha256\":"
+                "\"7c63aab737d6fe9281ce83cd8fec0e2ddf52f2148d51938f6be4f80ac55f5488\","
+                "\"job_schema_version\":\"1.0\","
+                "\"asset_schema_version\":\"1.0\","
+                "\"error_mapping_version\":\"1.0\","
+                "\"version_conversion\":\"none\"}'"
             ),
             "provider_cost_estimate_minor": "INTEGER NOT NULL DEFAULT 0",
             "runtime_image_sha256": (
@@ -2012,6 +2026,7 @@ class CloudRepository:
             "attempt_count": row["attempt_count"],
             "provider_policy_sha256": row["provider_policy_sha256"],
             "provider_budget": json.loads(row["provider_budget_json"]),
+            "core_contracts": json.loads(row["core_contracts_json"]),
             "provider_cost_estimate_minor": row["provider_cost_estimate_minor"],
             "runtime_image_sha256": row["runtime_image_sha256"],
             "required_capabilities": json.loads(row["required_capabilities_json"]),
@@ -2028,6 +2043,7 @@ class CloudRepository:
                 "kind": request.kind,
                 "provider_policy_sha256": request.provider_policy_sha256,
                 "provider_budget": request.provider_budget.model_dump(mode="json"),
+                "core_contracts": request.core_contracts.model_dump(mode="json"),
                 "provider_cost_estimate_minor": request.provider_cost_estimate_minor,
                 "runtime_image_sha256": request.runtime_image_sha256,
                 "required_capabilities": request.required_capabilities,
@@ -2154,9 +2170,10 @@ class CloudRepository:
                 "INSERT INTO jobs "
                 "(id, project_id, revision_id, actor_id, kind, parameters_json, status, "
                 "executor_id, created_at, fingerprints_json, provider_policy_sha256, "
-                "provider_budget_json, provider_cost_estimate_minor, runtime_image_sha256, "
+                "provider_budget_json, core_contracts_json, provider_cost_estimate_minor, "
+                "runtime_image_sha256, "
                 "required_capabilities_json, required_region, idempotency_key, request_sha256) "
-                "VALUES (?, ?, ?, ?, ?, ?, 'queued', NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "VALUES (?, ?, ?, ?, ?, ?, 'queued', NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     job_id,
                     project_id,
@@ -2168,6 +2185,7 @@ class CloudRepository:
                     json.dumps(request.fingerprints, sort_keys=True),
                     request.provider_policy_sha256,
                     json.dumps(request.provider_budget.model_dump(mode="json"), sort_keys=True),
+                    json.dumps(request.core_contracts.model_dump(mode="json"), sort_keys=True),
                     request.provider_cost_estimate_minor,
                     request.runtime_image_sha256,
                     json.dumps(request.required_capabilities),
@@ -2300,6 +2318,7 @@ class CloudRepository:
             "project_id": project_id,
             "revision_id": job["revision_id"],
             "kind": job["kind"],
+            "core_contracts": json.loads(job["core_contracts_json"]),
             "parameters": json.loads(job["parameters_json"]),
             "provider_policy_sha256": job["provider_policy_sha256"],
             "provider_budget": json.loads(job["provider_budget_json"]),
