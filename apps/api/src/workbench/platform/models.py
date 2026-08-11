@@ -28,10 +28,20 @@ class ToolInfoV1(_ContractModel):
     capabilities: list[str] = Field(default_factory=list, max_length=100)
 
 
+class CapabilityStateV1(_ContractModel):
+    schema_version: Literal[1] = 1
+    capability_id: str = Field(pattern=r"^[a-z][a-z0-9_.-]{0,99}$")
+    status: Literal[
+        "supported", "missing", "misconfigured", "temporarily_unavailable", "unsupported"
+    ]
+    detail: str | None = Field(default=None, max_length=200)
+
+
 class PlatformCapabilitySnapshotV1(_ContractModel):
     schema_version: Literal[1] = 1
     info: PlatformInfoV1
     capabilities: list[str] = Field(default_factory=list, max_length=200)
+    capability_states: list[CapabilityStateV1] = Field(default_factory=list, max_length=200)
     tools: list[ToolInfoV1] = Field(default_factory=list, max_length=100)
     fingerprint: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     generated_at: str

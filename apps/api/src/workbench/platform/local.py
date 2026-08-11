@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -18,9 +19,10 @@ from typing import Literal
 from urllib.parse import urlparse
 
 from workbench.contracts.p2_platform import canonical_sha256, normalize_logical_path
-from workbench.providers.credentials import InMemoryCredentialStore
 
+from .credentials import InMemoryCredentialBackend, PlatformCredentialStore
 from .models import (
+    CapabilityStateV1,
     PlatformCapabilitySnapshotV1,
     PlatformInfoV1,
     PlatformPathError,
@@ -199,14 +201,31 @@ class LocalProcessService:
 
 
 class LocalToolDiscoveryService:
+    _NAME_RE = re.compile(r"^[a-z][a-z0-9_.-]{0,63}$")
+    _PROBES: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
+        "ffmpeg": (("-version",), ("media.decode", "media.encode")),
+        "ffprobe": (("-version",), ("media.inspect",)),
+        "soffice": (("--version",), ("office.render",)),
+        "libreoffice": (("--version",), ("office.render",)),
+    }
+
     def __init__(self, *, bundled_root: Path | None = None) -> None:
         self.bundled_root = bundled_root.resolve() if bundled_root else None
         self._cache: dict[str, ToolInfoV1] = {}
 
     def find(self, name: str) -> ToolInfoV1:
+        if not self._NAME_RE.fullmatch(name):
+            raise ValueError("tool name must be a simple executable name")
         if name in self._cache:
             return self._cache[name]
         bundled = (self.bundled_root / name) if self.bundled_root else None
+        if bundled is not None:
+            bundled = bundled.resolve()
+            assert self.bundled_root is not None
+            try:
+                bundled.relative_to(self.bundled_root)
+            except ValueError:
+                bundled = None
         executable = bundled if bundled and bundled.is_file() else Path(shutil.which(name) or "")
         if not executable or not executable.is_file():
             result = ToolInfoV1(name=name, available=False, source="unavailable")
@@ -214,20 +233,43 @@ class LocalToolDiscoveryService:
             source: Literal["bundled", "supported_system"] = (
                 "bundled" if bundled and executable == bundled else "supported_system"
             )
+            version, capabilities = self._probe(executable, name)
             result = ToolInfoV1(
                 name=name,
                 available=True,
                 executable_ref=str(executable),
                 source=source,
+                version=version,
                 sha256=self._hash_file(executable),
+                capabilities=list(capabilities),
             )
         self._cache[name] = result
         return result
 
+    def _probe(self, executable: Path, name: str) -> tuple[str | None, tuple[str, ...]]:
+        args, capabilities = self._PROBES.get(name, (("--version",), ()))
+        try:
+            completed = subprocess.run(
+                [str(executable), *args],
+                check=False,
+                capture_output=True,
+                timeout=2,
+                shell=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None, capabilities
+        output = (completed.stdout + completed.stderr)[:4096].decode("utf-8", errors="replace")
+        first_line = next((line.strip() for line in output.splitlines() if line.strip()), "")
+        return first_line[:100] or None, capabilities
+
     @staticmethod
     def _hash_file(path: Path) -> str | None:
         try:
-            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            digest_builder = hashlib.sha256()
+            with path.open("rb") as stream:
+                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest_builder.update(chunk)
+            digest = digest_builder.hexdigest()
         except OSError:
             return None
         return f"sha256:{digest}"
@@ -251,13 +293,42 @@ class LocalMediaRuntimeService:
     def ffprobe(self) -> ToolInfoV1:
         return self.tools.find("ffprobe")
 
+    def snapshot(self) -> dict[str, object]:
+        """Return deterministic media capability metadata without running user input."""
+
+        ffmpeg = self.ffmpeg()
+        ffprobe = self.ffprobe()
+        return {
+            "ffmpeg": ffmpeg.model_dump(mode="json"),
+            "ffprobe": ffprobe.model_dump(mode="json"),
+            "software_fallback": not (ffmpeg.available and ffprobe.available),
+            "capabilities": [
+                capability
+                for tool in (ffmpeg, ffprobe)
+                for capability in tool.capabilities
+            ],
+        }
+
 
 class LocalOfficeRenderService:
     def __init__(self, tools: LocalToolDiscoveryService) -> None:
         self.tools = tools
 
     def renderer(self) -> ToolInfoV1:
-        return self.tools.find("soffice")
+        soffice = self.tools.find("soffice")
+        if soffice.available:
+            return soffice
+        return self.tools.find("libreoffice")
+
+    def snapshot(self) -> dict[str, object]:
+        renderer = self.renderer()
+        native_office = self.tools.find("soffice").available
+        return {
+            "renderer": renderer.model_dump(mode="json"),
+            "powerpoint_compatibility": "native" if native_office else "degraded",
+            "network_access": False,
+            "macro_execution": False,
+        }
 
 
 class LocalUpdateService:
@@ -293,7 +364,7 @@ class LocalPlatformServices:
         self.paths = LocalPathService(base_dir)
         self.files = LocalAtomicFileService(self.paths)
         self.processes = LocalProcessService()
-        self.credentials = InMemoryCredentialStore()
+        self.credentials = PlatformCredentialStore(InMemoryCredentialBackend())
         self.tools = LocalToolDiscoveryService(bundled_root=self.paths.directory("runtime"))
         self.browser = LocalBrowserService()
         self.media = LocalMediaRuntimeService(self.tools)
@@ -308,6 +379,46 @@ class LocalPlatformServices:
             capabilities.append("media.ffmpeg")
         if tools[2].available:
             capabilities.append("office.libreoffice")
+        capability_states = [
+            CapabilityStateV1(capability_id=item, status="supported") for item in capabilities
+        ]
+        if not tools[0].available or not tools[1].available:
+            capability_states.append(
+                CapabilityStateV1(
+                    capability_id="media.ffmpeg",
+                    status="missing",
+                    detail="ffmpeg and ffprobe are required",
+                )
+            )
+        if not tools[2].available:
+            capability_states.append(
+                CapabilityStateV1(
+                    capability_id="office.libreoffice",
+                    status="missing",
+                    detail="LibreOffice is not installed",
+                )
+            )
+        native_office = self.tools.find("powerpnt")
+        if self.info.platform == "windows":
+            capability_states.append(
+                CapabilityStateV1(
+                    capability_id="office.powerpoint_native",
+                    status="supported" if native_office.available else "missing",
+                    detail=(
+                        None
+                        if native_office.available
+                        else "PowerPoint runtime is not installed"
+                    ),
+                )
+            )
+        else:
+            capability_states.append(
+                CapabilityStateV1(
+                    capability_id="office.powerpoint_native",
+                    status="unsupported",
+                    detail="PowerPoint COM is available only on Windows",
+                )
+            )
         fingerprint = canonical_sha256(
             {
                 "info": self.info.model_dump(mode="json"),
@@ -317,6 +428,7 @@ class LocalPlatformServices:
         return PlatformCapabilitySnapshotV1(
             info=self.info,
             capabilities=capabilities,
+            capability_states=capability_states,
             tools=tools,
             fingerprint=fingerprint,
             generated_at=datetime.now(UTC).isoformat().replace("+00:00", "Z"),

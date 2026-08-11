@@ -19,3 +19,13 @@ def test_platform_services_have_stable_capability_contract(
     assert "paths" in snapshot.capabilities
     assert "processes" in snapshot.capabilities
     assert snapshot.fingerprint.startswith("sha256:")
+    office_state = {
+        item.capability_id: item.status
+        for item in snapshot.capability_states
+        if item.capability_id == "office.powerpoint_native"
+    }
+    assert office_state["office.powerpoint_native"] in {
+        "supported",
+        "missing",
+        "unsupported",
+    }

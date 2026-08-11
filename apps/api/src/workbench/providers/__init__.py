@@ -18,6 +18,7 @@ from .models import (
 from .policy import ProviderPolicyV1
 from .probe import CapabilityProbeService
 from .registry import ProviderRegistry
+from .upstream import BUILTIN_PROVIDER_SPECS, BuiltinProviderAdapter, builtin_descriptors
 
 __all__ = [
     "ProviderBroker",
@@ -36,4 +37,7 @@ __all__ = [
     "InMemoryCredentialStore",
     "cache_identity",
     "create_provider_router",
+    "BuiltinProviderAdapter",
+    "BUILTIN_PROVIDER_SPECS",
+    "builtin_descriptors",
 ]

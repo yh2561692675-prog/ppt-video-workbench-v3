@@ -14,6 +14,7 @@ from typing import Any
 class SyncClientState:
     pending: int
     retryable: int
+    conflict: int
     accepted: int
     failed: int
     last_cursor: str | None
@@ -89,6 +90,11 @@ class SyncClient:
     def mark_failed(self, operation_id: str, error: str) -> None:
         self._set_status(operation_id, "failed", cursor=None, error=error[:500])
 
+    def mark_conflict(self, operation_id: str, conflict_id: str) -> None:
+        self._set_status(
+            operation_id, "conflict", cursor=conflict_id, error="manual_merge_required"
+        )
+
     def _set_status(
         self, operation_id: str, status: str, *, cursor: str | None, error: str | None
     ) -> None:
@@ -117,6 +123,7 @@ class SyncClient:
         return SyncClientState(
             pending=int(counts.get("pending", 0)),
             retryable=int(counts.get("retryable", 0)),
+            conflict=int(counts.get("conflict", 0)),
             accepted=int(counts.get("accepted", 0)),
             failed=int(counts.get("failed", 0)),
             last_cursor=str(row[0]) if row else None,

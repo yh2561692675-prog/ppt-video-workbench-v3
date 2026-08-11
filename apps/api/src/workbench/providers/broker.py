@@ -31,6 +31,10 @@ class RouteRequest:
     deterministic_seed: int | None = None
     max_cost_minor: int | None = None
     allow_failover: bool = True
+    platform_fingerprint: str | None = None
+    runtime_fingerprint: str | None = None
+    font_fingerprint: str | None = None
+    cloud_revision_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -159,6 +163,10 @@ class ProviderBroker:
                     region=request.region,
                     deterministic_seed=request.deterministic_seed,
                     tenant_scope=str(request.context.tenant_id),
+                    platform_fingerprint=request.platform_fingerprint,
+                    runtime_fingerprint=request.runtime_fingerprint,
+                    font_fingerprint=request.font_fingerprint,
+                    cloud_revision_id=request.cloud_revision_id,
                 )
                 result = result.model_copy(update={"cache_identity": identity})
                 attempts.append(

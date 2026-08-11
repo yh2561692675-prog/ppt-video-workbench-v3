@@ -150,6 +150,41 @@ def test_cache_identity_isolated_by_provider_and_tenant() -> None:
     assert len({left, right, other_tenant}) == 3
 
 
+def test_cache_identity_invalidates_platform_runtime_and_revision_changes() -> None:
+    base = dict(
+        provider_id="fake-a",
+        capability_id="synthesize.speech",
+        adapter_version="1.0.0",
+        model_resolved="voice-a",
+        parameters={"voice.id": "fake"},
+        input_fingerprints=["sha256:" + "a" * 64],
+        output_schema_version="audio-v1",
+        tenant_scope="tenant-a",
+    )
+    baseline = cache_identity(
+        **base,
+        platform_fingerprint="sha256:" + "1" * 64,
+        runtime_fingerprint="sha256:" + "2" * 64,
+        font_fingerprint="sha256:" + "3" * 64,
+        cloud_revision_id="revision-a",
+    )
+    changed = cache_identity(
+        **base,
+        platform_fingerprint="sha256:" + "9" * 64,
+        runtime_fingerprint="sha256:" + "2" * 64,
+        font_fingerprint="sha256:" + "3" * 64,
+        cloud_revision_id="revision-a",
+    )
+    changed_revision = cache_identity(
+        **base,
+        platform_fingerprint="sha256:" + "1" * 64,
+        runtime_fingerprint="sha256:" + "2" * 64,
+        font_fingerprint="sha256:" + "3" * 64,
+        cloud_revision_id="revision-b",
+    )
+    assert len({baseline, changed, changed_revision}) == 3
+
+
 def test_cache_expires_entries() -> None:
     cache = ProviderCache(default_ttl_seconds=1)
     assert cache.get("tenant", "sha256:" + "a" * 64) is None

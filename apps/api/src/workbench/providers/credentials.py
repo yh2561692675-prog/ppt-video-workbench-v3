@@ -38,6 +38,8 @@ class CredentialStore(Protocol):
 
     def metadata(self, credential_ref: str) -> CredentialMetadataV1: ...
 
+    def list_metadata(self) -> list[CredentialMetadataV1]: ...
+
     def rotate(self, credential_ref: str, secret: str) -> CredentialMetadataV1: ...
 
     def revoke(self, credential_ref: str) -> CredentialMetadataV1: ...
@@ -84,6 +86,9 @@ class InMemoryCredentialStore:
             return self._metadata[credential_ref]
         except KeyError as error:
             raise CredentialStoreError("credential not found") from error
+
+    def list_metadata(self) -> list[CredentialMetadataV1]:
+        return sorted(self._metadata.values(), key=lambda item: item.credential_ref)
 
     def rotate(self, credential_ref: str, secret: str) -> CredentialMetadataV1:
         if not secret:

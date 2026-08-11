@@ -18,4 +18,4 @@ def test_existing_app_can_opt_into_provider_diagnostics(tmp_path: Path) -> None:
     with TestClient(app) as client:
         response = client.get("/api/providers")
     assert response.status_code == 200
-    assert response.json() == []
+    assert len(response.json()) == 6

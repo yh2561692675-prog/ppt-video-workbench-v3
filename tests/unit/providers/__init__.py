@@ -1,2 +1,1 @@
 """Provider Kernel unit tests."""
-

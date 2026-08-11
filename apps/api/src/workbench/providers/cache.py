@@ -24,6 +24,10 @@ def cache_identity(
     region: str | None = None,
     deterministic_seed: int | None = None,
     tenant_scope: str | None = None,
+    platform_fingerprint: str | None = None,
+    runtime_fingerprint: str | None = None,
+    font_fingerprint: str | None = None,
+    cloud_revision_id: str | None = None,
 ) -> str:
     """Build a cache key that cannot cross providers, versions, or tenants."""
 
@@ -40,6 +44,10 @@ def cache_identity(
             "region": region,
             "deterministic_seed": deterministic_seed,
             "tenant_scope": tenant_scope,
+            "platform_fingerprint": platform_fingerprint,
+            "runtime_fingerprint": runtime_fingerprint,
+            "font_fingerprint": font_fingerprint,
+            "cloud_revision_id": cloud_revision_id,
         }
     )
 

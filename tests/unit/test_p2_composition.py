@@ -26,7 +26,25 @@ def test_enabled_composition_is_explicit_and_provider_routes_are_opt_in(tmp_path
     with TestClient(app) as client:
         response = client.get("/api/providers")
     assert response.status_code == 200
-    assert response.json() == []
+    assert {item["provider_id"] for item in response.json()} == {
+        "builtin-llm",
+        "builtin-asr",
+        "builtin-tts",
+        "builtin-avatar",
+        "builtin-ocr",
+        "builtin-renderer",
+    }
+    diagnostics = client.get("/api/p2/diagnostics")
+    assert diagnostics.status_code == 200
+    assert "secret" not in diagnostics.text.lower()
+    payload = diagnostics.json()
+    assert payload["platform_details"]["office"]["network_access"] is False
+    assert payload["platform_details"]["office"]["macro_execution"] is False
+    assert str(tmp_path) not in diagnostics.text
+    assert all(
+        not str(item.get("executable_ref", "")).startswith(("/", "\\"))
+        for item in payload["platform"]["tools"]
+    )
 
 
 def test_cloud_sync_flag_creates_only_the_opt_in_outbox(tmp_path: Path) -> None:

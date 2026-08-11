@@ -10,6 +10,7 @@
     "platform": {"type": "string", "enum": ["windows", "macos", "linux"]},
     "runtime_version": {"type": "string", "minLength": 1, "maxLength": 100},
     "capabilities": {"type": "array", "maxItems": 200, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,99}$"}},
+    "capability_states": {"type": "array", "maxItems": 200, "items": {"$ref": "#/$defs/capability_state"}},
     "tools": {"type": "array", "maxItems": 100, "items": {"$ref": "#/$defs/tool"}},
     "diagnostic_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
   },
@@ -21,6 +22,16 @@
         "name": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,63}$"},
         "available": {"type": "boolean"}, "version": {"type": ["string", "null"], "maxLength": 100},
         "capabilities": {"type": "array", "maxItems": 100, "uniqueItems": true, "items": {"type": "string"}}
+      }
+    },
+    "capability_state": {
+      "type": "object", "additionalProperties": false,
+      "required": ["capability_id", "status"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "capability_id": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,99}$"},
+        "status": {"type": "string", "enum": ["supported", "missing", "misconfigured", "temporarily_unavailable", "unsupported"]},
+        "detail": {"type": ["string", "null"], "maxLength": 200}
       }
     }
   }

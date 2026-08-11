@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import sqlite3
 from pathlib import Path
 from uuid import uuid4
 
@@ -67,6 +68,13 @@ def test_cloud_prototype_enforces_tenant_ownership_and_idempotent_revisions(tmp_
             headers=headers,
         )
         assert first.status_code == 201
+        stale = _operation(workspace_id, project_id, revision_id)
+        conflict = client.post(
+            f"/v1/workspaces/{workspace_id}/projects/{project_id}/operations",
+            json=stale,
+            headers=headers,
+        )
+        assert conflict.status_code == 409
         second = client.post(
             f"/v1/workspaces/{workspace_id}/projects/{project_id}/operations",
             json=operation,
@@ -112,6 +120,10 @@ def test_cloud_prototype_validates_objects_and_supports_review_lease_job(tmp_pat
             headers=headers,
         )
         assert completed.status_code == 201
+        with sqlite3.connect(tmp_path / "control.db") as db:
+            stored_path = db.execute("SELECT path FROM objects").fetchone()[0]
+        assert stored_path == f"{project_id}/{object_id.removeprefix('sha256:')}"
+        assert str(tmp_path) not in stored_path
         assert (
             client.post(
                 f"/v1/workspaces/{workspace_id}/projects/{project_id}/objects/{object_id}/download",
@@ -137,12 +149,30 @@ def test_cloud_prototype_validates_objects_and_supports_review_lease_job(tmp_pat
             headers=headers,
         )
         assert lease.status_code == 200
+        executor = client.post(
+            f"/v1/workspaces/{workspace_id}/executors",
+            json={
+                "platform": "windows",
+                "capabilities": ["render"],
+                "region": "local",
+            },
+            headers=headers,
+        )
+        assert executor.status_code == 201
+        assert (
+            client.get(f"/v1/workspaces/{workspace_id}/executors", headers=headers).json()["items"][
+                0
+            ]["status"]
+            == "active"
+        )
         job = client.post(
             f"/v1/workspaces/{workspace_id}/projects/{project_id}/jobs",
             json={"revision_id": revision_id, "kind": "render"},
             headers=headers,
         )
         assert job.status_code == 202
+        assert job.json()["status"] == "dispatched"
+        assert job.json()["executor_id"] == executor.json()["executor_id"]
         job_id = job.json()["job_id"]
         assert client.get(
             f"/v1/workspaces/{workspace_id}/projects/{project_id}/jobs", headers=headers
@@ -161,3 +191,48 @@ def test_cloud_prototype_validates_objects_and_supports_review_lease_job(tmp_pat
             ).json()["status"]
             == "cancelled"
         )
+
+
+def test_cloud_production_auth_mode_fails_closed_without_oidc(tmp_path: Path) -> None:
+    app = create_cloud_app(
+        tmp_path / "control.db",
+        tmp_path / "objects",
+        auth_mode="production",
+    )
+    with TestClient(app) as client:
+        assert client.get("/v1/health").json()["auth_mode"] == "production"
+        response = client.post("/v1/workspaces", json={"name": "Blocked"})
+        assert response.status_code == 503
+
+
+def test_cloud_object_declaration_rejects_invalid_hash_and_restricted_data(tmp_path: Path) -> None:
+    app = create_cloud_app(tmp_path / "control.db", tmp_path / "objects")
+    with TestClient(app) as client:
+        headers = {"X-Actor-ID": "alice"}
+        workspace_id = client.post("/v1/workspaces", json={"name": "Team"}, headers=headers).json()[
+            "workspace_id"
+        ]
+        project_id = client.post(
+            f"/v1/workspaces/{workspace_id}/projects",
+            json={"name": "Course"},
+            headers=headers,
+        ).json()["project_id"]
+        invalid = client.post(
+            f"/v1/workspaces/{workspace_id}/projects/{project_id}/objects/uploads",
+            json={"object": {"object_id": "sha256:../escape", "size_bytes": 1}},
+            headers=headers,
+        )
+        assert invalid.status_code == 422
+        restricted = client.post(
+            f"/v1/workspaces/{workspace_id}/projects/{project_id}/objects/uploads",
+            json={
+                "object": {
+                    "object_id": "sha256:" + "a" * 64,
+                    "size_bytes": 1,
+                    "media_type": "application/octet-stream",
+                    "classification": "restricted",
+                }
+            },
+            headers=headers,
+        )
+        assert restricted.status_code == 422

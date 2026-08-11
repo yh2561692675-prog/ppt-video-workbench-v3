@@ -25,6 +25,8 @@ def test_outbox_ack_retry_and_staging_are_restart_safe(tmp_path: Path) -> None:
     assert client.next_batch()[0]["operation_id"] == operation_id
     client.mark_retryable(operation_id, "offline")
     assert client.state().retryable == 1
+    client.mark_conflict(operation_id, "conflict-1")
+    assert client.state().conflict == 1
     client.mark_accepted(operation_id, "cursor-1")
     assert client.state().accepted == 1
     content = b"asset"

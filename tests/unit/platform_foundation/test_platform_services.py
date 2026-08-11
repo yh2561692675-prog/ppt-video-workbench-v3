@@ -5,7 +5,12 @@ from pathlib import Path
 
 import pytest
 from workbench.platform.composition import create_platform_services
-from workbench.platform.local import LocalAtomicFileService, LocalPathService, LocalProcessService
+from workbench.platform.local import (
+    LocalAtomicFileService,
+    LocalPathService,
+    LocalProcessService,
+    LocalToolDiscoveryService,
+)
 from workbench.platform.models import PlatformPathError
 
 
@@ -46,4 +51,26 @@ def test_composition_root_returns_capability_snapshot(tmp_path: Path) -> None:
     snapshot = services.capabilities()
     assert snapshot.info.platform in {"windows", "macos", "linux"}
     assert snapshot.fingerprint.startswith("sha256:")
+    statuses = {item.capability_id: item.status for item in snapshot.capability_states}
+    assert statuses["paths"] == "supported"
+    assert all("\\" not in (item.detail or "") for item in snapshot.capability_states)
     assert snapshot.info.platform == "windows" if sys.platform == "win32" else True
+
+
+def test_tool_discovery_rejects_path_injection_and_reports_safe_metadata(tmp_path: Path) -> None:
+    tools = LocalToolDiscoveryService(bundled_root=tmp_path / "runtime")
+    with pytest.raises(ValueError):
+        tools.find("../ffmpeg")
+    python_tool = tools.find(Path(sys.executable).name)
+    assert python_tool.available is True
+    assert python_tool.executable_ref
+    assert python_tool.sha256 and python_tool.sha256.startswith("sha256:")
+
+
+def test_media_and_office_snapshots_do_not_include_absolute_project_inputs(tmp_path: Path) -> None:
+    services = create_platform_services(tmp_path)
+    media = services.media.snapshot()  # type: ignore[attr-defined]
+    office = services.office.snapshot()  # type: ignore[attr-defined]
+    assert media["software_fallback"] in {True, False}
+    assert office["network_access"] is False
+    assert office["macro_execution"] is False

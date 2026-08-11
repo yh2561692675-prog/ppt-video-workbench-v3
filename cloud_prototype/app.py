@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import threading
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal
@@ -96,6 +98,25 @@ class JobCreate(CloudModel):
     parameters: dict[str, Any] = Field(default_factory=dict)
 
 
+class ExecutorRegister(CloudModel):
+    executor_id: UUID = Field(default_factory=uuid4)
+    platform: Literal["windows", "macos", "linux"]
+    capabilities: list[str] = Field(min_length=1, max_length=100)
+    region: str = Field(min_length=1, max_length=64)
+    ttl_seconds: int = Field(default=120, ge=30, le=900)
+
+
+@dataclass(frozen=True)
+class CloudAuthConfig:
+    mode: Literal["development", "production"] = "development"
+    oidc_issuer: str | None = None
+    oidc_audience: str | None = None
+
+    @property
+    def production_ready(self) -> bool:
+        return self.mode == "production" and bool(self.oidc_issuer and self.oidc_audience)
+
+
 class CloudRepository:
     """Small SQLite WAL repository with tenant checks in every project query."""
 
@@ -113,6 +134,24 @@ class CloudRepository:
         connection.execute("PRAGMA foreign_keys = ON")
         connection.execute("PRAGMA busy_timeout = 5000")
         return connection
+
+    def _object_path(self, project_id: str, object_id: str) -> Path:
+        """Resolve a content-addressed object only at the storage edge.
+
+        The database stores a logical storage key, never an absolute host path.
+        This keeps exports, logs and sync payloads portable across machines.
+        """
+
+        digest = object_id.removeprefix("sha256:")
+        if not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise HTTPException(status_code=422, detail="invalid_object_id")
+        root = self.object_root.resolve()
+        candidate = (root / project_id / digest).resolve()
+        try:
+            candidate.relative_to(root)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail="invalid_object_path") from error
+        return candidate
 
     def _init_db(self) -> None:
         with self._connect() as db:
@@ -171,10 +210,19 @@ class CloudRepository:
                 CREATE TABLE IF NOT EXISTS jobs (
                     id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id),
                     revision_id TEXT NOT NULL, actor_id TEXT NOT NULL, kind TEXT NOT NULL,
-                    parameters_json TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL
+                    parameters_json TEXT NOT NULL, status TEXT NOT NULL,
+                    executor_id TEXT, created_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS executors (
+                    id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL REFERENCES workspaces(id),
+                    actor_id TEXT NOT NULL, platform TEXT NOT NULL, capabilities_json TEXT NOT NULL,
+                    region TEXT NOT NULL, status TEXT NOT NULL, expires_at TEXT NOT NULL
                 );
                 """
             )
+            columns = {row["name"] for row in db.execute("PRAGMA table_info(jobs)")}
+            if "executor_id" not in columns:
+                db.execute("ALTER TABLE jobs ADD COLUMN executor_id TEXT")
 
     def create_workspace(self, actor_id: str, name: str) -> dict[str, Any]:
         workspace_id = str(uuid4())
@@ -433,7 +481,14 @@ class CloudRepository:
         size = int(declaration.get("size_bytes", -1))
         media_type = str(declaration.get("media_type", "application/octet-stream"))
         classification = str(declaration.get("classification", "internal"))
-        if not object_id.startswith("sha256:") or size < 0 or classification == "restricted":
+        if (
+            not re.fullmatch(r"sha256:[0-9a-f]{64}", object_id)
+            or size < 0
+            or size > 10 * 1024 * 1024 * 1024
+            or not re.fullmatch(r"[\w.+-]+/[\w.+-]+", media_type)
+            or classification not in {"public", "internal", "sensitive", "restricted"}
+            or classification == "restricted"
+        ):
             raise HTTPException(status_code=422, detail="invalid_or_restricted_object")
         upload_id, expires_at = str(uuid4()), _expires(900)
         with self._connect() as db:
@@ -476,9 +531,8 @@ class CloudRepository:
                 raise HTTPException(status_code=409, detail="upload_expired")
             if not parts:
                 raise HTTPException(status_code=422, detail="parts_required")
-            object_path = (
-                self.object_root / project_id / upload["object_id"].removeprefix("sha256:")
-            )
+            object_path = self._object_path(project_id, upload["object_id"])
+            storage_key = f"{project_id}/{upload['object_id'].removeprefix('sha256:')}"
             object_path.parent.mkdir(parents=True, exist_ok=True)
             object_path.touch(exist_ok=True)
             db.execute("UPDATE uploads SET status='complete' WHERE id=?", (upload_id,))
@@ -490,7 +544,7 @@ class CloudRepository:
                     upload["size_bytes"],
                     upload["media_type"],
                     upload["classification"],
-                    str(object_path),
+                    storage_key,
                     _now(),
                 ),
             )
@@ -631,6 +685,74 @@ class CloudRepository:
             "expires_at": expires_at,
         }
 
+    def register_executor(
+        self, workspace_id: str, actor_id: str, request: ExecutorRegister
+    ) -> dict[str, Any]:
+        with self._connect() as db:
+            self._workspace_access(db, workspace_id, actor_id)
+            expires_at = _expires(request.ttl_seconds)
+            db.execute(
+                "INSERT OR REPLACE INTO executors VALUES (?, ?, ?, ?, ?, ?, 'active', ?)",
+                (
+                    str(request.executor_id),
+                    workspace_id,
+                    actor_id,
+                    request.platform,
+                    json.dumps(sorted(set(request.capabilities))),
+                    request.region,
+                    expires_at,
+                ),
+            )
+        return {
+            "executor_id": str(request.executor_id),
+            "workspace_id": workspace_id,
+            "platform": request.platform,
+            "capabilities": sorted(set(request.capabilities)),
+            "region": request.region,
+            "status": "active",
+            "expires_at": expires_at,
+        }
+
+    def executors(self, workspace_id: str, actor_id: str) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            self._workspace_access(db, workspace_id, actor_id)
+            rows = db.execute(
+                "SELECT * FROM executors WHERE workspace_id=? ORDER BY id", (workspace_id,)
+            ).fetchall()
+        now = datetime.now(UTC)
+        return [
+            {
+                "executor_id": row["id"],
+                "workspace_id": workspace_id,
+                "platform": row["platform"],
+                "capabilities": json.loads(row["capabilities_json"]),
+                "region": row["region"],
+                "status": (
+                    row["status"]
+                    if datetime.fromisoformat(row["expires_at"].replace("Z", "+00:00")) > now
+                    else "expired"
+                ),
+                "expires_at": row["expires_at"],
+            }
+            for row in rows
+        ]
+
+    @staticmethod
+    def _select_executor(db: sqlite3.Connection, workspace_id: str, kind: str) -> str | None:
+        rows = db.execute(
+            "SELECT id, capabilities_json, expires_at FROM executors "
+            "WHERE workspace_id=? AND status='active' ORDER BY id",
+            (workspace_id,),
+        ).fetchall()
+        now = datetime.now(UTC)
+        for row in rows:
+            if datetime.fromisoformat(row["expires_at"].replace("Z", "+00:00")) <= now:
+                continue
+            capabilities = set(json.loads(row["capabilities_json"]))
+            if kind in capabilities or "*" in capabilities:
+                return str(row["id"])
+        return None
+
     def job(
         self, workspace_id: str, project_id: str, actor_id: str, request: JobCreate
     ) -> dict[str, Any]:
@@ -639,8 +761,9 @@ class CloudRepository:
             raise HTTPException(status_code=409, detail="job_revision_is_not_head")
         job_id, created_at = str(uuid4()), _now()
         with self._connect() as db:
+            executor_id = self._select_executor(db, project["workspace_id"], request.kind)
             db.execute(
-                "INSERT INTO jobs VALUES (?, ?, ?, ?, ?, ?, 'queued', ?)",
+                "INSERT INTO jobs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     job_id,
                     project_id,
@@ -648,6 +771,8 @@ class CloudRepository:
                     actor_id,
                     request.kind,
                     json.dumps(request.parameters),
+                    "dispatched" if executor_id else "queued",
+                    executor_id,
                     created_at,
                 ),
             )
@@ -656,7 +781,8 @@ class CloudRepository:
             "project_id": project_id,
             "revision_id": str(request.revision_id),
             "kind": request.kind,
-            "status": "queued",
+            "status": "dispatched" if executor_id else "queued",
+            "executor_id": executor_id,
             "created_at": created_at,
         }
 
@@ -664,7 +790,8 @@ class CloudRepository:
         self.project(workspace_id, project_id, actor_id)
         with self._connect() as db:
             rows = db.execute(
-                "SELECT id, project_id, revision_id, kind, status, created_at FROM jobs "
+                "SELECT id, project_id, revision_id, kind, status, executor_id, "
+                "created_at FROM jobs "
                 "WHERE project_id=? ORDER BY created_at, id",
                 (project_id,),
             ).fetchall()
@@ -676,7 +803,8 @@ class CloudRepository:
         self.project(workspace_id, project_id, actor_id)
         with self._connect() as db:
             row = db.execute(
-                "SELECT id, project_id, revision_id, kind, status, created_at FROM jobs "
+                "SELECT id, project_id, revision_id, kind, status, executor_id, "
+                "created_at FROM jobs "
                 "WHERE id=? AND project_id=?",
                 (job_id, project_id),
             ).fetchone()
@@ -696,21 +824,35 @@ class CloudRepository:
         return job
 
 
-def create_cloud_app(db_path: Path | None = None, object_root: Path | None = None) -> FastAPI:
+def create_cloud_app(
+    db_path: Path | None = None,
+    object_root: Path | None = None,
+    *,
+    auth_mode: Literal["development", "production"] = "development",
+    oidc_issuer: str | None = None,
+    oidc_audience: str | None = None,
+) -> FastAPI:
     repository = CloudRepository(
         db_path or Path("cloud-prototype/data/control-plane.db"),
         object_root or Path("cloud-prototype/data/objects"),
     )
     app = FastAPI(title="PPT Video Workbench Cloud Prototype", version="0.1.0")
     app.state.cloud_repository = repository
+    app.state.cloud_auth = CloudAuthConfig(auth_mode, oidc_issuer, oidc_audience)
     router = APIRouter(prefix="/v1")
 
     def actor(x_actor_id: str | None) -> str:
+        auth: CloudAuthConfig = app.state.cloud_auth
+        if auth.mode == "production":
+            if not auth.production_ready:
+                raise HTTPException(status_code=503, detail="oidc_not_configured")
+            raise HTTPException(status_code=501, detail="oidc_validation_adapter_required")
         return x_actor_id or "dev-user"
 
     @router.get("/health")
     def health() -> dict[str, str]:
-        return {"status": "ok", "mode": "prototype"}
+        auth: CloudAuthConfig = app.state.cloud_auth
+        return {"status": "ok", "mode": "prototype", "auth_mode": auth.mode}
 
     @router.get("/me")
     def me(x_actor_id: str | None = Header(default=None)) -> dict[str, str]:
@@ -881,6 +1023,20 @@ def create_cloud_app(db_path: Path | None = None, object_root: Path | None = Non
         return repository.lease(
             workspace_id(request), project_id(request), actor(x_actor_id), payload
         )
+
+    @router.post("/workspaces/{workspaceId}/executors", status_code=201)
+    def register_executor(
+        request: Request,
+        payload: ExecutorRegister,
+        x_actor_id: str | None = Header(default=None),
+    ) -> dict[str, Any]:
+        return repository.register_executor(workspace_id(request), actor(x_actor_id), payload)
+
+    @router.get("/workspaces/{workspaceId}/executors")
+    def list_executors(
+        request: Request, x_actor_id: str | None = Header(default=None)
+    ) -> dict[str, Any]:
+        return {"items": repository.executors(workspace_id(request), actor(x_actor_id))}
 
     @router.post("/workspaces/{workspaceId}/projects/{projectId}/jobs", status_code=202)
     def create_job(
