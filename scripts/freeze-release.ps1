@@ -1,7 +1,10 @@
 [CmdletBinding()]
 param(
     [string]$Root = (Resolve-Path (Join-Path $PSScriptRoot "..")),
-    [string]$WindowsAcceptanceReport = ""
+    [Parameter(Mandatory = $true)]
+    [string]$WindowsAcceptanceReport,
+    [Parameter(Mandatory = $true)]
+    [string]$ReleaseArtifactManifest
 )
 
 $ErrorActionPreference = "Stop"
@@ -9,18 +12,43 @@ $manifestPath = Join-Path $Root "tests/acceptance/results/RC1/evidence-manifest.
 $signoffPath = Join-Path $Root "docs/acceptance-signoff-v1.0.md"
 $releaseNotesPath = Join-Path $Root "docs/release-notes-v1.0.md"
 
-if (-not [string]::IsNullOrWhiteSpace($WindowsAcceptanceReport)) {
-    if (-not (Test-Path -LiteralPath $WindowsAcceptanceReport -PathType Leaf)) {
-        throw "Release blocked: P01 Windows acceptance report is missing: $WindowsAcceptanceReport"
+if (-not (Test-Path -LiteralPath $WindowsAcceptanceReport -PathType Leaf)) {
+    throw "Release blocked: Windows full-chain acceptance report is missing: $WindowsAcceptanceReport"
+}
+if (-not (Test-Path -LiteralPath $ReleaseArtifactManifest -PathType Leaf)) {
+    throw "Release blocked: release artifact manifest is missing: $ReleaseArtifactManifest"
+}
+$windowsAcceptance = Get-Content -LiteralPath $WindowsAcceptanceReport -Raw | ConvertFrom-Json
+$releaseArtifacts = Get-Content -LiteralPath $ReleaseArtifactManifest -Raw | ConvertFrom-Json
+$acceptanceEvidenceManifest = Join-Path (Split-Path -Parent $WindowsAcceptanceReport) "evidence-manifest.json"
+if (
+    $windowsAcceptance.schema_version -ne "2.0" -or
+    $windowsAcceptance.decision -ne "pass" -or
+    @($windowsAcceptance.blocking_failures).Count -ne 0 -or
+    -not $windowsAcceptance.evidence -or
+    -not $windowsAcceptance.evidence.release -or
+    $windowsAcceptance.evidence.release.execution_mode -ne "physical_windows" -or
+    $windowsAcceptance.evidence.release.candidate_id -ne $releaseArtifacts.candidate_id
+) {
+    throw "Release blocked: P01 Windows acceptance is not passed; a physical schema 2.0 full-chain report is required for this candidate."
+}
+if (-not (Test-Path -LiteralPath $acceptanceEvidenceManifest -PathType Leaf)) {
+    throw "Release blocked: Windows acceptance evidence manifest is missing."
+}
+$requiredPhaseNames = @(
+    "artifact_resolution", "clean_install", "first_launch", "legacy_project",
+    "interruption_recovery", "full_preflight", "play_from_start", "final_export",
+    "uninstall_reinstall", "version_rollback", "process_cleanup", "workspace_retention"
+)
+foreach ($phaseName in $requiredPhaseNames) {
+    $phase = $windowsAcceptance.evidence.phases.$phaseName
+    if ($null -eq $phase -or $phase.result -ne "passed" -or @($phase.evidence_refs).Count -eq 0) {
+        throw "Release blocked: Windows acceptance phase '$phaseName' is incomplete."
     }
-    $windowsAcceptance = Get-Content -LiteralPath $WindowsAcceptanceReport -Raw | ConvertFrom-Json
-    if (
-        $windowsAcceptance.schema_version -ne "1.0" -or
-        $windowsAcceptance.decision -ne "pass" -or
-        @($windowsAcceptance.blocking_failures).Count -ne 0
-    ) {
-        throw "Release blocked: P01 Windows acceptance is not passed."
-    }
+}
+$finishedAt = [DateTimeOffset]::Parse([string]$windowsAcceptance.evidence.phases.full_preflight.finished_at)
+if ($finishedAt -lt [DateTimeOffset]::UtcNow.AddDays(-7)) {
+    throw "Release blocked: Windows acceptance report is older than seven days."
 }
 
 if (-not (Test-Path $manifestPath)) {

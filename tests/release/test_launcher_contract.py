@@ -55,11 +55,14 @@ def test_inno_setup_is_non_admin_and_preserves_user_data() -> None:
     assert "OutputBaseFilename" in source
     assert "{autoprograms}" in source
     assert "{autodesktop}" in source
-    assert "launcher.ps1" in source
+    assert "workbench-launcher.exe" in source
+    assert "WindowsPowerShell" not in source
     assert "workspace-data" in source
     assert "{localappdata}" in source
     assert "UninstallDelete" in source
     assert "workspace-data" not in source.split("[UninstallDelete]", 1)[1]
+    assert "[UninstallRun]" in source
+    assert "shutdown" in source
 
 
 def test_install_smoke_covers_windows_installation_matrix() -> None:
@@ -90,6 +93,8 @@ def test_windows_acceptance_runner_proves_start_restart_and_retention() -> None:
         "workspace_retention",
         "P01_WINDOWS_ACCEPTANCE=PASS",
         "P01_WINDOWS_ACCEPTANCE=BLOCK",
+        "ArtifactManifest",
+        "release_artifacts.py",
         "F:\\Video",
     ):
         assert required in source
@@ -172,4 +177,5 @@ def test_p01_v4_runner_uses_a_fresh_installer_output_directory() -> None:
     assert "InstallerOutputDirectory" in source
     assert "release-p01-" in source
     assert "-InstallerOutputDirectory $installerOutputDirectory" in source
-    assert "$installer = Join-Path $installerOutputDirectory" in source
+    assert "$artifactManifest = Join-Path $installerOutputDirectory" in source
+    assert "-ArtifactManifest $artifactManifest" in source

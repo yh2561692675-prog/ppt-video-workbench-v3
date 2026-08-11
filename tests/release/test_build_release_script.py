@@ -320,3 +320,23 @@ def test_release_freeze_requires_a_passing_p01_report_when_one_is_supplied() -> 
     assert "WindowsAcceptanceReport" in source
     assert 'decision -ne "pass"' in source
     assert "P01 Windows acceptance is not passed" in source
+
+
+def test_build_release_writes_and_verifies_the_artifact_manifest() -> None:
+    repository_root = Path(__file__).parents[2]
+    source = (repository_root / "scripts" / "build-release.ps1").read_text(encoding="ascii")
+
+    assert 'Join-Path $repoRoot "scripts/release_artifacts.py"' in source
+    assert 'Join-Path $installerOutputRoot "release-artifacts.json"' in source
+    assert "--output $artifactManifestPath" in source
+    assert "--verify $artifactManifestPath" in source
+    assert "WINDOWS_RELEASE_BUILD=PASS" in source
+
+
+def test_build_release_packages_the_no_console_desktop_launcher() -> None:
+    repository_root = Path(__file__).parents[2]
+    source = (repository_root / "scripts" / "build-release.ps1").read_text(encoding="ascii")
+
+    assert 'Join-Path $repoRoot "apps/api/workbench-launcher.spec"' in source
+    assert 'Join-Path $stageRoot "launcher"' in source
+    assert '"launcher\\workbench-launcher.exe"' in source

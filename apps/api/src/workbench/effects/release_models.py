@@ -42,14 +42,16 @@ class GateResult:
 class ReleaseCandidate:
     rc_id: str
     installer_sha256: str
+    installer_relative_path: str
     assets: Mapping[str, str]
     v2_enabled: bool = False
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> ReleaseCandidate:
-        _keys(data, {"rc_id", "installer_sha256", "assets", "v2_enabled"})
+        _keys(data, {"rc_id", "installer_sha256", "installer_relative_path", "assets", "v2_enabled"})
         rc_id = data.get("rc_id")
         digest = data.get("installer_sha256")
+        installer_relative_path = data.get("installer_relative_path")
         assets = data.get("assets")
         enabled = data.get("v2_enabled", False)
         if not isinstance(rc_id, str) or not rc_id:
@@ -60,13 +62,20 @@ class ReleaseCandidate:
             or any(c not in "0123456789abcdef" for c in digest)
         ):
             raise ValidationError("invalid_installer_sha256")
+        if (
+            not isinstance(installer_relative_path, str)
+            or not installer_relative_path
+            or installer_relative_path.startswith("/")
+            or ".." in installer_relative_path.replace("\\", "/").split("/")
+        ):
+            raise ValidationError("invalid_installer_relative_path")
         if not isinstance(assets, dict) or not all(
             isinstance(k, str) and isinstance(v, str) and len(v) == 64 for k, v in assets.items()
         ):
             raise ValidationError("invalid_asset_hashes")
         if type(enabled) is not bool:
             raise ValidationError("v2_enabled_must_be_boolean")
-        return cls(rc_id, digest, dict(assets), enabled)
+        return cls(rc_id, digest, installer_relative_path, dict(assets), enabled)
 
 
 @dataclass(frozen=True)

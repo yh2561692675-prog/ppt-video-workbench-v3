@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
+import sys
+import tempfile
 from pathlib import Path
 
 import fitz  # type: ignore[import-untyped]
@@ -27,10 +30,12 @@ class MissingFontError(OfficeRendererError):
 def ensure_fonts_available(required_fonts: set[str]) -> None:
     matcher = shutil.which("fc-match")
     if not matcher:
-        if required_fonts:
-            raise MissingFontError(
-                "\u7f3a\u5c11\u5b57\u4f53\uff1a" + ", ".join(sorted(required_fonts))
-            )
+        missing = sorted(required_fonts)
+        if sys.platform == "win32":
+            labels = _windows_font_labels()
+            missing = [font for font in missing if not _windows_font_label_matches(font, labels)]
+        if missing:
+            raise MissingFontError("缺少字体：" + ", ".join(missing))
         return
     missing: list[str] = []
     for font in sorted(required_fonts):
@@ -44,6 +49,43 @@ def ensure_fonts_available(required_fonts: set[str]) -> None:
         raise MissingFontError(f"缺少字体：{', '.join(missing)}")
 
 
+def _windows_font_labels() -> set[str]:
+    """Return font family labels registered for the Windows machine and user."""
+
+    import winreg
+
+    labels: set[str] = set()
+    keys = (
+        (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"),
+        (winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"),
+        (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Fonts"),
+    )
+    for hive, path in keys:
+        try:
+            with winreg.OpenKey(hive, path) as key:
+                index = 0
+                while True:
+                    try:
+                        label, _, _ = winreg.EnumValue(key, index)
+                    except OSError:
+                        break
+                    labels.add(label)
+                    index += 1
+        except OSError:
+            continue
+    return labels
+
+
+def _windows_font_label_matches(required: str, labels: set[str]) -> bool:
+    needle = _normalized_font_label(required)
+    return any(needle in _normalized_font_label(label) for label in labels)
+
+
+def _normalized_font_label(value: str) -> str:
+    without_type = re.sub(r"\s*\([^)]*\)\s*$", "", value)
+    return re.sub(r"[\s_-]+", "", without_type.casefold())
+
+
 def render_office_to_pdf(path: Path, out: Path, *, executable: Path | None = None) -> Path:
     binary = executable or _office_binary()
     if not binary.exists():
@@ -51,25 +93,39 @@ def render_office_to_pdf(path: Path, out: Path, *, executable: Path | None = Non
     out.mkdir(parents=True, exist_ok=True)
     target = out / f"{path.stem}.pdf"
     target.unlink(missing_ok=True)
-    profile = out / ".libreoffice-profile"
-    profile.mkdir(exist_ok=True)
-    command = [
-        str(binary),
-        "--headless",
-        f"-env:UserInstallation={profile.resolve().as_uri()}",
-        "--convert-to",
-        "pdf",
-        "--outdir",
-        str(out),
-        str(path),
-    ]
     try:
-        result = subprocess.run(command, capture_output=True, text=True, timeout=120, check=False)
+        with tempfile.TemporaryDirectory(prefix="ppt-video-workbench-office-") as temporary:
+            scratch = Path(temporary)
+            source = scratch / f"input{path.suffix.lower()}"
+            export_dir = scratch / "output"
+            profile = scratch / "profile"
+            export_dir.mkdir()
+            profile.mkdir()
+            shutil.copy2(path, source)
+            command = [
+                str(binary),
+                "--headless",
+                "--nologo",
+                "--nodefault",
+                "--nolockcheck",
+                "--norestore",
+                f"-env:UserInstallation={profile.resolve().as_uri()}",
+                "--convert-to",
+                "pdf",
+                "--outdir",
+                str(export_dir),
+                str(source),
+            ]
+            result = subprocess.run(
+                command, capture_output=True, text=True, timeout=120, check=False
+            )
+            converted = export_dir / "input.pdf"
+            if result.returncode != 0 or not converted.exists() or converted.stat().st_size == 0:
+                detail = (result.stderr or result.stdout).strip()
+                raise OfficeRendererError(f"LibreOffice 转换失败：{detail or '未生成 PDF'}")
+            shutil.copy2(converted, target)
     except (OSError, subprocess.TimeoutExpired) as error:
         raise OfficeRendererError("LibreOffice 转换失败：未生成 PDF") from error
-    if result.returncode != 0 or not target.exists() or target.stat().st_size == 0:
-        detail = (result.stderr or result.stdout).strip()
-        raise OfficeRendererError(f"LibreOffice 转换失败：{detail or '未生成 PDF'}")
     return target
 
 

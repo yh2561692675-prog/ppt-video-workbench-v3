@@ -31,4 +31,10 @@ def test_freeze_script_requires_signed_rc1_and_blocks_current_evidence() -> None
     assert '"P0"' in script
     assert '"P1"' in script
     assert "v1.0.0" in script
+    assert "Mandatory = $true" in script
+    assert 'schema_version -ne "2.0"' in script
+    assert "physical_windows" in script
+    assert "ReleaseArtifactManifest" in script
+    assert "full_preflight" in script
+    assert "AddDays(-7)" in script
     assert "git tag" not in script.lower()

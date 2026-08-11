@@ -25,8 +25,12 @@ def load_rc_manifest(path: Path) -> ReleaseCandidate:
 
 def verify_rc_manifest(path: Path, root: Path) -> dict[str, Any]:
     candidate = load_rc_manifest(path)
-    installer = root / "release" / "ppt-video-workbench-setup.exe"
+    resolved_root = root.resolve()
+    installer = (resolved_root / candidate.installer_relative_path).resolve()
     reasons: list[str] = []
+    if not installer.is_relative_to(resolved_root):
+        reasons.append("installer_path_outside_repository")
+        return {"valid": False, "rc_id": candidate.rc_id, "reason_codes": reasons}
     if installer.exists() and sha256_file(installer) != candidate.installer_sha256:
         reasons.append("installer_sha256_mismatch")
     if not installer.exists():

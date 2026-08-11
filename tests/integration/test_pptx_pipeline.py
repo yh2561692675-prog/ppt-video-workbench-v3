@@ -13,6 +13,7 @@ from workbench.renderers.office_renderer import (
     MissingFontError,
     OfficeRendererError,
     OfficeRendererUnavailable,
+    _windows_font_label_matches,
     build_pptx_previews,
     ensure_fonts_available,
     render_office_to_pdf,
@@ -87,6 +88,17 @@ def test_office_render_fails_closed_without_engine_or_required_font(tmp_path: Pa
     deck.save(path)
     with pytest.raises(MissingFontError, match="缺少字体"):
         build_pptx_previews(path, tmp_path / "missing-font-preview")
+
+
+def test_windows_font_registry_labels_match_family_names() -> None:
+    labels = {
+        "Microsoft YaHei & Microsoft YaHei UI (TrueType)",
+        "Segoe UI (TrueType)",
+    }
+
+    assert _windows_font_label_matches("Microsoft YaHei", labels)
+    assert _windows_font_label_matches("Segoe UI", labels)
+    assert not _windows_font_label_matches("Definitely Missing Chinese Font", labels)
 
 
 def test_office_render_never_accepts_stale_pdf_after_failed_conversion(tmp_path: Path) -> None:

@@ -20,10 +20,13 @@ if (-not [string]::IsNullOrWhiteSpace($InstallerOutputDirectory)) {
 }
 $installerOutputRoot = [System.IO.Path]::GetFullPath($installerOutputRoot)
 $apiRoot = Join-Path $stageRoot "api"
+$launcherRoot = Join-Path $stageRoot "launcher"
 $pyInstallerDistRoot = Join-Path $stageRoot "_pyinstaller-dist"
 $pyInstallerWorkRoot = Join-Path $stageRoot "_pyinstaller-work"
 $pyInstallerBundleRoot = Join-Path $pyInstallerDistRoot "workbench"
+$pyInstallerLauncherExecutable = Join-Path $pyInstallerDistRoot "workbench-launcher.exe"
 $stagePyInstallerBundle = Join-Path $repoRoot "scripts/stage_pyinstaller_onedir.py"
+$releaseArtifactsScript = Join-Path $repoRoot "scripts/release_artifacts.py"
 $webRoot = Join-Path $stageRoot "web"
 $runtimeRoot = Join-Path $stageRoot "runtime"
 $runtimeAssetsRoot = Join-Path $repoRoot "runtime-assets"
@@ -146,6 +149,7 @@ $releasePayloadDrive = $null
 try {
     if ($Verify) {
         Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "api\workbench.exe" -Description "API runtime"
+        Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "launcher\workbench-launcher.exe" -Description "desktop launcher"
         Assert-RequiredApiRuntime -StageRoot $stageRoot
         Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "web\index.html" -Description "Web entry"
         Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "runtime\node\node.exe" -Description "Node runtime"
@@ -169,7 +173,7 @@ try {
     if (Test-Path -LiteralPath $stageRoot) {
         Remove-Item -LiteralPath $stageRoot -Recurse -Force
     }
-    New-Item -ItemType Directory -Path $apiRoot, $webRoot, $licenseRoot, $sbomRoot, $installerOutputRoot -Force | Out-Null
+    New-Item -ItemType Directory -Path $apiRoot, $launcherRoot, $webRoot, $licenseRoot, $sbomRoot, $installerOutputRoot -Force | Out-Null
 
     if ($includePeripheral) {
         if (-not (Test-Path -LiteralPath $peripheralBuildScript -PathType Leaf)) {
@@ -225,6 +229,17 @@ try {
         }
     }
 
+    uv run --with "pyinstaller==6.16.0" pyinstaller --noconfirm --clean --distpath $pyInstallerDistRoot --workpath (Join-Path $pyInstallerWorkRoot "launcher") (Join-Path $repoRoot "apps/api/workbench-launcher.spec")
+    if ($LASTEXITCODE -ne 0) {
+        throw "PyInstaller launcher build failed with exit code $LASTEXITCODE."
+    }
+    if (-not (Test-Path -LiteralPath $pyInstallerLauncherExecutable -PathType Leaf)) {
+        throw "PyInstaller did not produce the desktop launcher: $pyInstallerLauncherExecutable"
+    }
+    Copy-Item -LiteralPath $pyInstallerLauncherExecutable -Destination $launcherRoot -Force
+    Remove-Item -LiteralPath $pyInstallerWorkRoot -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $pyInstallerDistRoot -Recurse -Force -ErrorAction SilentlyContinue
+
     if (-not (Test-Path -LiteralPath (Join-Path $apiRoot "workbench.exe") -PathType Leaf)) {
         throw "PyInstaller did not produce the API runtime: $(Join-Path $apiRoot 'workbench.exe')"
     }
@@ -262,6 +277,7 @@ try {
     }
 
     Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "api\workbench.exe" -Description "API runtime"
+    Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "launcher\workbench-launcher.exe" -Description "desktop launcher"
     Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "web\index.html" -Description "Web entry"
     Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "runtime\node\node.exe" -Description "Node runtime"
     Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "runtime\ffmpeg\ffmpeg.exe" -Description "FFmpeg runtime"
@@ -288,7 +304,16 @@ try {
     if (-not (Test-Path -LiteralPath $installerPath -PathType Leaf)) {
         throw "Inno Setup did not create the installer: $installerPath"
     }
-    Write-Output "Windows installer created: $installerPath"
+    $artifactManifestPath = Join-Path $installerOutputRoot "release-artifacts.json"
+    uv run python $releaseArtifactsScript --repository-root $repoRoot --output $artifactManifestPath --installer $installerPath --payload-manifest (Join-Path $stageRoot "runtime-manifest.json") --version "0.1.0"
+    if ($LASTEXITCODE -ne 0) {
+        throw "Release artifact manifest generation failed with exit code $LASTEXITCODE."
+    }
+    uv run python $releaseArtifactsScript --repository-root $repoRoot --verify $artifactManifestPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Release artifact manifest verification failed with exit code $LASTEXITCODE."
+    }
+    Write-Output "WINDOWS_RELEASE_BUILD=PASS manifest=$artifactManifestPath"
 }
 finally {
     if ($null -ne $releasePayloadDrive) {

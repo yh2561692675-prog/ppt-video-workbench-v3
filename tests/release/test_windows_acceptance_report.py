@@ -13,11 +13,28 @@ def test_report_passes_only_when_every_required_phase_passes() -> None:
 
     report = build_report(
         {
-            "release": {"installer_sha256": "a" * 64},
-            "phases": {name: {"result": "passed"} for name in REQUIRED_PHASES},
+            "schema_version": "2.0",
+            "release": {
+                "candidate_id": "rc-abc1234-20260811T000000Z",
+                "installer_sha256": "a" * 64,
+            },
+            "phases": {
+                name: {
+                    "result": "passed",
+                    "started_at": "2026-08-11T00:00:00Z",
+                    "finished_at": "2026-08-11T00:00:01Z",
+                    "duration_ms": 1000,
+                    "attempt": 1,
+                    "reason_codes": [],
+                    "evidence_refs": [],
+                    "metrics": {},
+                }
+                for name in REQUIRED_PHASES
+            },
         }
     )
 
+    assert report["schema_version"] == "2.0"
     assert report["decision"] == "pass"
     assert report["blocking_failures"] == []
 
@@ -27,8 +44,12 @@ def test_report_blocks_and_redacts_user_paths_and_tokens() -> None:
 
     report = build_report(
         {
+            "schema_version": "2.0",
             "token": "Bearer secret-value",
-            "release": {"installer_path": "C:\\Users\\HanYu\\setup.exe"},
+            "release": {
+                "candidate_id": "rc-abc1234-20260811T000000Z",
+                "installer_path": "C:\\Users\\HanYu\\setup.exe",
+            },
             "phases": {},
         }
     )
@@ -41,13 +62,80 @@ def test_report_blocks_and_redacts_user_paths_and_tokens() -> None:
     assert "secret-value" not in serialized
 
 
-def test_write_report_accepts_utf8_bom_evidence_from_powershell(tmp_path: Path) -> None:
+def test_write_report_accepts_utf8_bom_evidence_and_writes_manifest(tmp_path: Path) -> None:
     from scripts.windows_acceptance_report import REQUIRED_PHASES, write_report
 
     evidence_path = tmp_path / "evidence.json"
     evidence_path.write_text(
-        json.dumps({"phases": {name: {"result": "passed"} for name in REQUIRED_PHASES}}),
+        json.dumps(
+            {
+                "schema_version": "2.0",
+                "release": {
+                    "candidate_id": "rc-abc1234-20260811T000000Z",
+                    "installer_sha256": "a" * 64,
+                },
+                "phases": {
+                    name: {
+                        "result": "passed",
+                        "started_at": "2026-08-11T00:00:00Z",
+                        "finished_at": "2026-08-11T00:00:01Z",
+                        "duration_ms": 1000,
+                        "attempt": 1,
+                        "reason_codes": [],
+                        "evidence_refs": [],
+                        "metrics": {},
+                    }
+                    for name in REQUIRED_PHASES
+                },
+            }
+        ),
         encoding="utf-8-sig",
     )
 
     assert write_report(evidence_path, tmp_path / "report") == 0
+    assert (tmp_path / "report" / "evidence-manifest.json").is_file()
+
+
+def test_report_blocks_when_a_v2_phase_lacks_required_audit_fields() -> None:
+    from scripts.windows_acceptance_report import REQUIRED_PHASES, build_report
+
+    report = build_report(
+        {
+            "schema_version": "2.0",
+            "release": {"candidate_id": "rc-abc1234-20260811T000000Z"},
+            "phases": {name: {"result": "passed"} for name in REQUIRED_PHASES},
+        }
+    )
+
+    assert report["decision"] == "block"
+    assert "full_preflight" in report["blocking_failures"]
+
+
+def test_report_blocks_when_referenced_evidence_is_missing(tmp_path: Path) -> None:
+    from scripts.windows_acceptance_report import REQUIRED_PHASES, write_report
+
+    evidence_path = tmp_path / "evidence.json"
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "2.0",
+                "release": {"candidate_id": "rc-abc1234-20260811T000000Z"},
+                "phases": {
+                    name: {
+                        "result": "passed",
+                        "started_at": "2026-08-11T00:00:00Z",
+                        "finished_at": "2026-08-11T00:00:01Z",
+                        "duration_ms": 1000,
+                        "attempt": 1,
+                        "reason_codes": [],
+                        "evidence_refs": ["missing.json"] if name == "clean_install" else [],
+                        "metrics": {},
+                    }
+                    for name in REQUIRED_PHASES
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert write_report(evidence_path, tmp_path / "report") == 1

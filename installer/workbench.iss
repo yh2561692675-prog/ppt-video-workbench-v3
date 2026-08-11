@@ -25,18 +25,22 @@ WizardStyle=modern
 UninstallDisplayName={#MyAppName}
 
 [Files]
-Source: "{#ReleaseRoot}\*"; DestDir: "{app}\release"; Flags: recursesubdirs ignoreversion
-Source: "..\scripts\launcher.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "{#ReleaseRoot}\*"; DestDir: "{app}\releases\{#MyAppVersion}\release"; Excludes: "launcher\*"; Flags: recursesubdirs ignoreversion
+Source: "{#ReleaseRoot}\launcher\workbench-launcher.exe"; DestDir: "{app}\launcher"; Flags: ignoreversion
 
 [Dirs]
 Name: "{localappdata}\PPTVideoWorkbench\workspace-data"
 
 [Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\launcher.ps1"" -InstallRoot ""{app}\release"""; WorkingDir: "{app}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\launcher.ps1"" -InstallRoot ""{app}\release"""; WorkingDir: "{app}"
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\launcher\workbench-launcher.exe"; Parameters: "--app-root ""{app}"" start"; WorkingDir: "{app}"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\launcher\workbench-launcher.exe"; Parameters: "--app-root ""{app}"" start"; WorkingDir: "{app}"
 
 [Run]
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\launcher.ps1"" -InstallRoot ""{app}\release"""; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\launcher\workbench-launcher.exe"; Parameters: "--app-root ""{app}"" activate --version ""{#MyAppVersion}"" --release-root ""{app}\releases\{#MyAppVersion}\release"""; WorkingDir: "{app}"; Flags: runhidden waituntilterminated
+Filename: "{app}\launcher\workbench-launcher.exe"; Parameters: "--app-root ""{app}"" start"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
+
+[UninstallRun]
+Filename: "{app}\launcher\workbench-launcher.exe"; Parameters: "--app-root ""{app}"" shutdown"; WorkingDir: "{app}"; Flags: runhidden waituntilterminated skipifdoesntexist
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"

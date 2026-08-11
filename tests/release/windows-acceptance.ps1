@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [string]$InstallerPath,
+    [string]$ArtifactManifest,
     [string]$InstallRoot = (Join-Path $env:TEMP "PPTVideoWorkbench-P01"),
     [string]$ReportDirectory = (Join-Path $env:TEMP "PPTVideoWorkbench-P01-Report"),
     [string]$WorkspaceRoot = "F:\Video",
@@ -10,6 +10,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repositoryRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
+$artifactScript = Join-Path $repositoryRoot "scripts\release_artifacts.py"
 $stateRoot = Join-Path $env:TEMP ("PPTVideoWorkbench-P01-State-" + [guid]::NewGuid().ToString("N"))
 $diagnosticRoot = Join-Path $ReportDirectory "launch-diagnostics"
 $endpointPath = Join-Path $stateRoot "endpoint.json"
@@ -25,7 +26,9 @@ $previousLogRoot = $env:WORKBENCH_LOG_ROOT
 $evidence = [ordered]@{
     schema_version = "1.0"
     release = [ordered]@{
-        installer_path = $InstallerPath
+        artifact_manifest = $ArtifactManifest
+        candidate_id = ""
+        installer_path = ""
         installer_sha256 = ""
         installer_log = $installerLog
     }
@@ -122,7 +125,7 @@ function Wait-ForEndpointRemoval {
 }
 
 function Invoke-LaunchPhase {
-    param([string]$Name, [string]$LauncherPath, [string]$ReleaseRoot)
+    param([string]$Name, [string]$LauncherPath)
 
     $launcherStdout = Join-Path $diagnosticRoot ("$Name.launcher.stdout.log")
     $launcherStderr = Join-Path $diagnosticRoot ("$Name.launcher.stderr.log")
@@ -131,20 +134,16 @@ function Invoke-LaunchPhase {
         if (Test-Path -LiteralPath $endpointPath -PathType Leaf) {
             throw "An existing PPT Video Workbench endpoint is active; P01 will not interfere with it."
         }
-        $env:WORKBENCH_WORKSPACE = $WorkspaceRoot
+        $env:WORKBENCH_WORKSPACE = $workspaceDataRoot
         $env:WORKBENCH_STATE_ROOT = $stateRoot
         $env:WORKBENCH_LOG_ROOT = $diagnosticRoot
         $script:launcherProcess = Start-Process `
-            -FilePath "powershell.exe" `
+            -FilePath $LauncherPath `
             -ArgumentList @(
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                $LauncherPath,
-                "-InstallRoot",
-                $ReleaseRoot,
-                "-NoBrowser"
+                "--app-root",
+                $InstallRoot,
+                "start",
+                "--no-browser"
             ) `
             -RedirectStandardOutput $launcherStdout `
             -RedirectStandardError $launcherStderr `
@@ -167,6 +166,28 @@ function Invoke-LaunchPhase {
 
 try {
     New-Item -ItemType Directory -Path $ReportDirectory, $workspaceDataRoot -Force | Out-Null
+    if (-not (Test-Path -LiteralPath $ArtifactManifest -PathType Leaf)) {
+        throw "Release artifact manifest was not found: $ArtifactManifest"
+    }
+    & uv run python $artifactScript --repository-root $repositoryRoot --verify $ArtifactManifest
+    if ($LASTEXITCODE -ne 0) {
+        throw "Release artifact manifest verification failed: $ArtifactManifest"
+    }
+    $artifact = Get-Content -LiteralPath $ArtifactManifest -Raw | ConvertFrom-Json
+    $candidateId = [string]$artifact.candidate_id
+    $installerRelativePath = [string]$artifact.artifacts.installer.relative_path
+    if ([string]::IsNullOrWhiteSpace($candidateId) -or [string]::IsNullOrWhiteSpace($installerRelativePath)) {
+        throw "Release artifact manifest is missing candidate_id or installer relative path."
+    }
+    $installerCandidate = [System.IO.Path]::GetFullPath((Join-Path $repositoryRoot $installerRelativePath))
+    $repositoryCandidateRoot = [System.IO.Path]::GetFullPath($repositoryRoot)
+    if (-not $installerCandidate.StartsWith($repositoryCandidateRoot + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Release artifact installer path escapes repository root."
+    }
+    $InstallerPath = $installerCandidate
+    $evidence.release.candidate_id = $candidateId
+    $evidence.release.installer_path = $InstallerPath
+    Set-PhaseResult -Name "artifact_resolution" -Result "passed" -Detail "Verified candidate $candidateId."
     if (-not (Test-Path -LiteralPath $InstallerPath -PathType Leaf)) {
         throw "Installer was not found: $InstallerPath"
     }
@@ -195,16 +216,40 @@ try {
         Set-PhaseResult -Name "install" -Result "failed" -Detail $_.Exception.Message
     }
 
-    $launcherPath = Join-Path $InstallRoot "scripts\launcher.ps1"
-    $releaseRoot = Join-Path $InstallRoot "release"
+    $launcherPath = Join-Path $InstallRoot "launcher\workbench-launcher.exe"
     if ($evidence.phases.install.result -eq "passed" -and -not (Test-Path -LiteralPath $launcherPath -PathType Leaf)) {
-        Set-PhaseResult -Name "install" -Result "failed" -Detail "Installed launcher.ps1 was not found."
+        Set-PhaseResult -Name "install" -Result "failed" -Detail "Installed GUI launcher was not found."
+    }
+    if ($evidence.phases.install.result -eq "passed") {
+        try {
+            $installedVersions = @(Get-ChildItem -LiteralPath (Join-Path $InstallRoot "releases") -Directory)
+            if ($installedVersions.Count -ne 1) {
+                throw "Expected exactly one installed release slot."
+            }
+            $installedVersion = $installedVersions[0].Name
+            $installedRelease = Join-Path $installedVersions[0].FullName "release"
+            $activation = Start-Process `
+                -FilePath $launcherPath `
+                -ArgumentList @(
+                    "--app-root", $InstallRoot, "activate", "--version", $installedVersion,
+                    "--release-root", $installedRelease
+                ) `
+                -Wait `
+                -PassThru `
+                -WindowStyle Hidden
+            if ($activation.ExitCode -ne 0) {
+                throw "Installed launcher could not activate the release slot."
+            }
+        }
+        catch {
+            Set-PhaseResult -Name "install" -Result "failed" -Detail $_.Exception.Message
+        }
     }
 
     if ($evidence.phases.install.result -eq "passed") {
-        $firstLaunchPassed = Invoke-LaunchPhase -Name "first_launch" -LauncherPath $launcherPath -ReleaseRoot $releaseRoot
+        $firstLaunchPassed = Invoke-LaunchPhase -Name "first_launch" -LauncherPath $launcherPath
         if ($firstLaunchPassed) {
-            Invoke-LaunchPhase -Name "restart" -LauncherPath $launcherPath -ReleaseRoot $releaseRoot | Out-Null
+            Invoke-LaunchPhase -Name "restart" -LauncherPath $launcherPath | Out-Null
         }
     }
 
@@ -244,6 +289,9 @@ try {
     }
 }
 catch {
+    if (-not $evidence.phases.Contains("artifact_resolution")) {
+        Set-PhaseResult -Name "artifact_resolution" -Result "failed" -Detail $_.Exception.Message
+    }
     Set-PhaseResult -Name "install" -Result "failed" -Detail $_.Exception.Message
 }
 finally {

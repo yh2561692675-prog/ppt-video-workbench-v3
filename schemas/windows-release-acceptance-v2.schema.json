@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "windows-release-acceptance-v2.schema.json",
+  "title": "Windows full-chain acceptance evidence",
+  "type": "object",
+  "required": ["schema_version", "release", "phases"],
+  "properties": {
+    "schema_version": { "const": "2.0" },
+    "release": {
+      "type": "object",
+      "required": ["candidate_id"],
+      "properties": { "candidate_id": { "type": "string", "minLength": 1 } }
+    },
+    "phases": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "result",
+          "started_at",
+          "finished_at",
+          "duration_ms",
+          "attempt",
+          "reason_codes",
+          "evidence_refs",
+          "metrics"
+        ],
+        "properties": {
+          "result": { "enum": ["passed", "failed", "blocked", "cancelled"] },
+          "started_at": { "type": "string", "minLength": 1 },
+          "finished_at": { "type": "string", "minLength": 1 },
+          "duration_ms": { "type": "integer", "minimum": 0 },
+          "attempt": { "type": "integer", "minimum": 1 },
+          "reason_codes": { "type": "array", "items": { "type": "string" } },
+          "evidence_refs": { "type": "array", "items": { "type": "string" } },
+          "metrics": { "type": "object" }
+        }
+      }
+    }
+  }
+}
