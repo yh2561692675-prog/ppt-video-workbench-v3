@@ -124,7 +124,26 @@ $ffprobe = Resolve-ToolPath -ConfiguredPath $FfprobeExecutable -CommandName "ffp
 $pnpm = Resolve-ToolPath -ConfiguredPath $PnpmExecutable -CommandName "pnpm.cmd" -Description "PnpmExecutable"
 
 Assert-ToolIdentity -Executable $ffmpeg -ExpectedName "ffmpeg" -Description "FfmpegExecutable"
-Assert-ToolIdentity -Executable $ffprobe -ExpectedName "ffprobe" -Description "FfprobeExecutable"
+if ([string]::IsNullOrWhiteSpace($FfprobeExecutable)) {
+    try {
+        Assert-ToolIdentity -Executable $ffprobe -ExpectedName "ffprobe" -Description "FfprobeExecutable"
+    }
+    catch {
+        $bundledFfprobe = @(
+            Get-ChildItem -LiteralPath (Join-Path $repoRoot "node_modules") -Filter "ffprobe.exe" -File -Recurse -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -match "compositor-win32-x64-msvc" } |
+                Select-Object -First 1
+        )
+        if ($bundledFfprobe.Count -eq 0) {
+            throw
+        }
+        $ffprobe = $bundledFfprobe[0].FullName
+        Assert-ToolIdentity -Executable $ffprobe -ExpectedName "ffprobe" -Description "FfprobeExecutable"
+    }
+}
+else {
+    Assert-ToolIdentity -Executable $ffprobe -ExpectedName "ffprobe" -Description "FfprobeExecutable"
+}
 Assert-QualityFilterCapabilities -Executable $ffmpeg
 
 if (Test-Path -LiteralPath $runtimeRoot) {
