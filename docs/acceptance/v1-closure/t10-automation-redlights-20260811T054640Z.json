@@ -1,0 +1,32 @@
+{
+  "task": "T10",
+  "status": "passed",
+  "authority": "application models and create_app().openapi()",
+  "contract_review": {
+    "project_schema_differences_accepted": [
+      "JobRecord.current_attempt_id",
+      "JobRecord.priority",
+      "expanded JobType enum",
+      "PreflightReport cache and fingerprint fields"
+    ],
+    "openapi_differences_accepted": [
+      "durable Job API",
+      "asset derivative jobs",
+      "legacy migration API",
+      "RenderGraph preview API",
+      "cache dependency and compatibility models"
+    ],
+    "rejected_unrelated_routes_or_fields": 0
+  },
+  "repairs": [
+    "Regenerated packages/contracts/project.schema.json and packages/contracts/openapi.json from the reviewed application contract.",
+    "Defined enqueue as creating a queued JobRecord only; attempt generation occurs when a worker claims the job. The route CAS test disables the worker to make this boundary deterministic.",
+    "Exported the serve CLI from workbench.desktop package so it remains the public module when the legacy desktop.py script and desktop package coexist."
+  ],
+  "verification": {
+    "command": ".venv\\Scripts\\python.exe -m pytest -q tests/contracts/test_project_schema.py tests/integration/test_job_control_routes.py tests/release/test_packaged_runtime.py",
+    "runs": 3,
+    "result_per_run": "12 passed",
+    "known_environment_warning": "pytest cache is not writable in the shared root; this did not affect test results."
+  }
+}

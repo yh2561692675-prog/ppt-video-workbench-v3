@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "gate": "G0",
+  "gate_name": "FOUNDATION_SOURCE_READY",
+  "status": "passed",
+  "recorded_at": "2026-08-11T05:46:40Z",
+  "baseline": {
+    "branch": "recovery/root-snapshot-20260810",
+    "head": "117fb60cbb0ca877c0920a26f5ceb31d8e42e901",
+    "tree": "d17a3a2e27930bbb11b0a27252793288ecac6ae6",
+    "checkpoint_commits": [
+      { "commit": "2b397c0", "purpose": "durable job execution foundation" },
+      { "commit": "78cb0", "purpose": "durable job recovery gate" },
+      {
+        "commit": "117fb60",
+        "purpose": "content-addressed derivative foundation and source baseline"
+      }
+    ]
+  },
+  "isolation": {
+    "method": "git archive zip extraction",
+    "reason": "Git worktree metadata is outside the writable recovery directory and rejected a worktree registration write.",
+    "snapshot_path": "C:/Users/HanYu/AppData/Local/Temp/ppt-video-workbench-foundation-117fb60-r2",
+    "tracked_file_count": 1022,
+    "archive_file_count_before_smoke": 1022,
+    "temporary_workspace": "C:/Users/HanYu/AppData/Local/Temp/ppt-video-workbench-foundation-smoke-workspace"
+  },
+  "fingerprints": {
+    "packages/contracts/project.schema.json": "3e9e4a3704fafd9de0d2158f99d2965764499642eb6eb2b44ce3d22769beba2b",
+    "packages/contracts/openapi.json": "f49c93818cf43382b3398fdc235e08480885b7d0f9150daa4135b5529cbaf2cc",
+    "schemas/render-graph-v2.schema.json": "414865148b925b8c19e4c21ebce531d31abdf8b7675836292877be310bfac9aa",
+    "pnpm-lock.yaml": "8b9b10351200fd168a4b3c088732dc208913949ea0bb190cc778591d4833a4f3",
+    "apps/api/pyproject.toml": "d1f959477b1168965ffd76297ae76d718241eb526df7cf5d500e8011943f4042"
+  },
+  "verification": [
+    {
+      "command": "PYTHONPATH=<snapshot>/apps/api/src WORKBENCH_WORKSPACE=<unique-temp> WORKBENCH_DIAGNOSTIC_ROOT=<unique-temp> WORKBENCH_CACHE_ROOT=<unique-temp>/cache WORKBENCH_OUTPUT_ROOT=<unique-temp>/output python -c import workbench.main; load project.schema.json; load openapi.json",
+      "result": "pass"
+    },
+    {
+      "command": "JSON parse ownership-map and active-worktree-stop-points",
+      "result": "pass"
+    },
+    { "command": "git diff --check", "result": "pass" }
+  ],
+  "scope_boundary": {
+    "not_claimed": [
+      "G1 contract/OpenAPI regression",
+      "release candidate validation",
+      "Windows acceptance"
+    ],
+    "known_next_failure": "The current root contract snapshot tests remain a Phase 1 task; source readiness does not imply G1 passed.",
+    "rollback": "Return to commit 117fb60; temporary archive and workspace are disposable and are not project artifacts."
+  }
+}

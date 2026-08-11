@@ -1,0 +1,30 @@
+{
+  "task": "T12",
+  "status": "passed",
+  "database": {
+    "target_schema_version": 4,
+    "coverage": [
+      "v1 to v4 job migration",
+      "v2 to v4 idempotent path",
+      "v3 to v4 idempotent path",
+      "duplicate active export-job reconciliation"
+    ]
+  },
+  "legacy_project": {
+    "coverage": [
+      "deterministic read-only adaptation",
+      "reentrant migration",
+      "interrupted staging cleanup and resume",
+      "disk-shortage pre-write block",
+      "damaged media block",
+      "dual-read fallback audit",
+      "V2-exclusive fallback prohibition",
+      "rollback preserving legacy hashes"
+    ]
+  },
+  "failure_policy": "Damaged or missing source/media is reported before V2 writes; project migration remains isolated from the legacy manifest and protected artifacts.",
+  "verification": {
+    "command": ".venv\\Scripts\\python.exe -m pytest -q tests/unit/storage/test_workspace_migrations.py tests/unit/storage/test_manifest_store.py tests/integration/test_project_v2_migration.py tests/integration/test_legacy_project_acceptance.py",
+    "result": "17 passed"
+  }
+}

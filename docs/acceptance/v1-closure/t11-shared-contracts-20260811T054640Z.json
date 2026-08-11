@@ -1,0 +1,28 @@
+{
+  "task": "T11",
+  "status": "passed",
+  "scope": "Durable Job API, its OpenAPI/Python/Web mirrors, and authoritative preview result consumption",
+  "changes": [
+    "Regenerated Project Schema and OpenAPI from reviewed Python source contracts.",
+    "Added explicit Web unions for durable job type, job status and attempt status.",
+    "Added typed attempt, checkpoint and result contracts; the authoritative preview manifest remains explicit while other job result keys stay forward-compatible.",
+    "Added tests/fixtures/durable-job-v1.json and validated it in Python and Web."
+  ],
+  "versioned_contracts_verified": [
+    "RenderGraphV2 schema_version 2.0",
+    "AssetDeriveRequest operation enum",
+    "durable Job attempt generation",
+    "authoritative preview manifest schema_version 1.0"
+  ],
+  "verification": [
+    {
+      "command": ".venv\\Scripts\\python.exe -m pytest -q tests/contracts/test_project_schema.py tests/contracts/test_durable_job_fixture.py",
+      "result": "11 passed"
+    },
+    { "command": "pnpm --filter @workbench/web typecheck", "result": "pass" },
+    {
+      "command": "pnpm --filter @workbench/web test -- src/api/durableJobContract.test.ts src/features/video/TaskCenter.test.tsx src/features/video/AuthoritativePreviewPanel.test.tsx",
+      "result": "4 passed"
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0",
+  "run_id": "20260811T054640Z",
+  "status": "frozen-for-v1-closure",
+  "required_fields": [
+    "path",
+    "branch",
+    "head",
+    "working_tree_state",
+    "owner",
+    "owned_paths",
+    "shared_paths",
+    "completed",
+    "remaining",
+    "safe_resume"
+  ],
+  "worktrees": [
+    {
+      "path": "F:/Codex-Full-Recovery-2026-08-10/11_ppt-video-workbench-v3_repair/root-git-metadata-20260810-183914",
+      "branch": "recovery/root-snapshot-20260810",
+      "head": "117fb60cbb0ca877c0920a26f5ceb31d8e42e901",
+      "working_tree_state": "mixed; see source-inventory-20260811T054640Z.md",
+      "owner": "closure-evidence and ownership-map allocation",
+      "owned_paths": [
+        "all root changes are allocated by ownership-map-20260811T054640Z.json"
+      ],
+      "shared_paths": [
+        "API routes",
+        "Remotion Root",
+        "Web API client",
+        "WorkflowShell"
+      ],
+      "completed": [
+        "G1 durable jobs",
+        "G2 asset derivatives",
+        "G3 authoritative preview",
+        "G4 cache invalidation",
+        "G5 legacy migration have passed stop points"
+      ],
+      "remaining": [
+        "create scoped checkpoint commits",
+        "G6-G8 integration, Windows acceptance and release"
+      ],
+      "safe_resume": "Stage one owner domain at a time, run focused tests, and record the resulting commit."
+    },
+    {
+      "path": "F:/ppt-video-workbench-v3/.worktrees/p2-platform-integration",
+      "branch": "codex/p2-platform-integration",
+      "head": "51cc32542bd64c758413bf3cbc8fa065070f5aa6",
+      "working_tree_state": "clean at observation",
+      "owner": "foundation-integration",
+      "owned_paths": [
+        "domain",
+        "storage",
+        "jobs",
+        "main",
+        "contracts",
+        "API composition",
+        "WorkflowShell"
+      ],
+      "shared_paths": [
+        "apps/api/src/workbench/api/",
+        "apps/web/src/api/client.ts",
+        "remotion/src/Root.tsx"
+      ],
+      "completed": ["platform integration checkpoint exists"],
+      "remaining": [
+        "compare selected commits against root semantic clusters before reuse"
+      ],
+      "safe_resume": "Use branch history plus the G1 stop point; cherry-pick only an independently verified commit."
+    },
+    {
+      "path": "F:/ppt-video-workbench-v3/.worktrees/rendergraph-v2-closure",
+      "branch": "codex/rendergraph-v2-closure",
+      "head": "676b99086c4a5d51744c38d08d1aa5e2bda6b415",
+      "working_tree_state": "clean at observation",
+      "owner": "rendergraph-preview",
+      "owned_paths": [
+        "rendering",
+        "RenderGraph schema",
+        "Remotion render graph",
+        "preview/export API"
+      ],
+      "shared_paths": [
+        "apps/api/src/workbench/api/",
+        "remotion/src/Root.tsx",
+        "timeline and preview Web surfaces"
+      ],
+      "completed": ["RenderGraph closure checkpoint exists"],
+      "remaining": [
+        "compare selected commits against root semantic clusters before reuse"
+      ],
+      "safe_resume": "Use branch history plus G2-G4 stop points; integrate only independently verified RenderGraph commits."
+    }
+  ],
+  "validation": { "result": "pass", "unknown_owner_count": 0 }
+}

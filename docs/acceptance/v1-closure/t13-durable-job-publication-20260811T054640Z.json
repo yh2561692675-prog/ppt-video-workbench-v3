@@ -1,0 +1,16 @@
+{
+  "task": "T13",
+  "status": "passed",
+  "guarantees": [
+    "Job writes use expected revision CAS; stale attempts and stale generations are rejected.",
+    "Claim creates the attempt; enqueue alone does not.",
+    "Publication reservation, manifest verification and reconciliation protect exactly-once output publication.",
+    "Pause/cancel and restart paths preserve checkpoints and clean only declared temporary render paths.",
+    "A paid remote task with unknown recovery status enters needs_confirmation and cannot retry until confirm_retry is sent with the current revision."
+  ],
+  "verification": {
+    "command": ".venv\\Scripts\\python.exe -m pytest -q tests/contracts/test_project_schema.py tests/contracts/test_durable_job_fixture.py tests/integration/test_job_control_routes.py tests/integration/test_job_recovery.py tests/unit/jobs",
+    "result": "46 passed"
+  },
+  "web_contract": "DurableJobStatus includes needs_confirmation and the task center exposes an explicit confirm_retry action."
+}

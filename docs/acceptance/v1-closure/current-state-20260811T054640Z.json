@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "run_id": "20260811T054640Z",
+  "observed_at_utc": "2026-08-11T05:46:40.5323435Z",
+  "repository": {
+    "workspace": "F:/ppt-video-workbench-v3",
+    "branch": "recovery/root-snapshot-20260810",
+    "head": "117fb60cbb0ca877c0920a26f5ceb31d8e42e901",
+    "tracked_changes": 47,
+    "untracked_entries": 96,
+    "unmerged_entries": 0,
+    "candidate_status": "not_a_clean_release_candidate"
+  },
+  "worktrees": [
+    {
+      "path": "F:/Codex-Full-Recovery-2026-08-10/11_ppt-video-workbench-v3_repair/root-git-metadata-20260810-183914",
+      "branch": "recovery/root-snapshot-20260810",
+      "head": "117fb60cbb0ca877c0920a26f5ceb31d8e42e901",
+      "owner": "unassigned_pending_t02"
+    },
+    {
+      "path": "F:/ppt-video-workbench-v3/.worktrees/p2-platform-integration",
+      "branch": "codex/p2-platform-integration",
+      "head": "51cc32542bd64c758413bf3cbc8fa065070f5aa6",
+      "owner": "p2_owner_pending_t02"
+    },
+    {
+      "path": "F:/ppt-video-workbench-v3/.worktrees/rendergraph-v2-closure",
+      "branch": "codex/rendergraph-v2-closure",
+      "head": "676b99086c4a5d51744c38d08d1aa5e2bda6b415",
+      "owner": "rendergraph_owner_pending_t02"
+    }
+  ],
+  "automation": {
+    "python_contract": {
+      "command": ".venv\\Scripts\\python.exe -m pytest -q tests\\contracts\\test_project_schema.py",
+      "result": "failed",
+      "summary": "2 failed, 7 passed",
+      "failures": [
+        "tests/contracts/test_project_schema.py::test_generated_json_schema_matches_committed_contract",
+        "tests/contracts/test_project_schema.py::test_openapi_snapshot_matches_application_contract"
+      ]
+    },
+    "python_job": {
+      "command": ".venv\\Scripts\\python.exe -m pytest -q tests\\integration\\test_job_control_routes.py",
+      "result": "failed",
+      "summary": "1 failed",
+      "failures": [
+        "tests/integration/test_job_control_routes.py::test_job_routes_expose_attempts_and_enforce_expected_revision"
+      ]
+    },
+    "python_packaged_runtime": {
+      "command": ".venv\\Scripts\\python.exe -m pytest -q tests\\release\\test_packaged_runtime.py",
+      "result": "failed",
+      "summary": "1 failed, 1 passed",
+      "failures": [
+        "tests/release/test_packaged_runtime.py::test_desktop_cli_starts_loopback_uvicorn_server"
+      ]
+    },
+    "python_release_suite": {
+      "command": ".venv\\Scripts\\python.exe -m pytest -q tests\\release",
+      "result": "timed_out",
+      "summary": "timed out after 60 seconds at 91 percent; observed a failure before timeout"
+    },
+    "web": {
+      "command": "apps/web/node_modules/.bin/vitest.cmd run --passWithNoTests",
+      "result": "passed",
+      "summary": "39 files, 76 tests passed"
+    },
+    "remotion": {
+      "command": "remotion/node_modules/.bin/vitest.cmd run --passWithNoTests",
+      "result": "passed",
+      "summary": "12 files, 32 tests passed"
+    }
+  },
+  "reports": {
+    "m8": "pending_manual_windows",
+    "effects": "pending_manual_windows",
+    "presenter": "pending_manual_windows",
+    "s1": "block_until_evidence_attached",
+    "v1_signoff": "blocked_pending_manual_signoff",
+    "p2": "blocked_pending_active_windows"
+  },
+  "release_evidence": {
+    "release_artifacts_manifest_found": false,
+    "candidate_id": null,
+    "decision": "historical installers and reports are not accepted as current candidate evidence"
+  },
+  "repository_hygiene": {
+    "gitignore": {
+      "result": "updated",
+      "covered_generated_paths": [
+        ".pnpm-store/",
+        ".tmp/",
+        ".tmp-*/",
+        "cache/acceptance-*/",
+        "backup/",
+        "release/",
+        "release-effect-v2/",
+        "*.zip",
+        "*.log"
+      ],
+      "preserved_review_evidence_root": "docs/acceptance/"
+    },
+    "source_secret_scan": {
+      "result": "passed_with_expected_pattern_hits",
+      "security_test_summary": "14 passed, 2 environment warnings",
+      "decision": "Pattern matches are configuration, redaction, or test coverage files; no plaintext credential finding was recorded."
+    },
+    "large_file_scan": {
+      "result": "passed",
+      "scope": "source paths excluding dependencies, recovery, release, cache, and temporary directories",
+      "files_over_5_mb": []
+    },
+    "tracked_user_data_scan": {
+      "result": "passed_with_name_matches",
+      "decision": "Matches are diagnostics and project UI/source modules, not tracked workspace-data or user project artifacts."
+    }
+  },
+  "stale_policy": {
+    "rule": "Any report, installer, runtime manifest, evidence manifest, or test result whose source HEAD, candidate ID, lock hashes, runtime fingerprint, or artifact hashes do not match a future clean RC is stale for release approval.",
+    "current_decision": "All pre-G6 release evidence is informational only and cannot satisfy a V1.0 release gate."
+  },
+  "next_task": "T02"
+}
