@@ -99,10 +99,10 @@ def test_build_release_promotes_the_pyinstaller_onedir_bundle_before_payload_gat
     source = script_path.read_text(encoding="ascii")
 
     assert '"scripts/stage_pyinstaller_onedir.py"' in source
-    assert "uv run python $stagePyInstallerBundle" in source
+    assert "uv run --frozen python $stagePyInstallerBundle" in source
     assert "--source $pyInstallerBundleRoot" in source
     assert "--destination $apiRoot" in source
-    stage_index = source.index("uv run python $stagePyInstallerBundle")
+    stage_index = source.index("uv run --frozen python $stagePyInstallerBundle")
     assert (
         source.index("Assert-RequiredApiRuntime -StageRoot $stageRoot", stage_index) > stage_index
     )
@@ -331,6 +331,21 @@ def test_build_release_writes_and_verifies_the_artifact_manifest() -> None:
     assert "--output $artifactManifestPath" in source
     assert "--verify $artifactManifestPath" in source
     assert "WINDOWS_RELEASE_BUILD=PASS" in source
+
+
+def test_build_release_uses_frozen_python_environment_and_source_integrity_guards() -> None:
+    repository_root = Path(__file__).parents[2]
+    source = (repository_root / "scripts" / "build-release.ps1").read_text(encoding="ascii")
+
+    assert "uv sync --frozen" in source
+    assert "uv run --frozen --with \"pyinstaller==6.16.0\"" in source
+    assert "uv run --frozen python" in source
+    assert "Get-SourceIntegrity" in source
+    assert "SOURCE_INTEGRITY_BEFORE=" in source
+    assert "SOURCE_INTEGRITY_FINAL=" in source
+    assert "uv_lock_sha256" in source
+    assert "Source HEAD changed during release build" in source
+    assert "uv.lock changed during release build" in source
 
 
 def test_build_release_packages_the_no_console_desktop_launcher() -> None:

@@ -34,6 +34,49 @@ $licenseRoot = Join-Path $stageRoot "licenses"
 $sbomRoot = Join-Path $stageRoot "sbom"
 $peripheralBuildScript = Join-Path $repoRoot "peripheral-platform\scripts\build-s0.ps1"
 $includePeripheral = $PeripheralEnabled -or ($env:PERIPHERAL_ENABLED -eq "true")
+$sourceIntegrityBefore = $null
+$sourceIntegrityAfter = $null
+$buildSucceeded = $false
+
+function Get-SourceIntegrity {
+    $head = (& git -C $repoRoot rev-parse HEAD 2>$null).Trim()
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($head)) {
+        throw "Could not read source HEAD."
+    }
+    $dirty = ((@(& git -C $repoRoot status --porcelain=v1 --untracked-files=all 2>$null)) -join "`n").Trim()
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not read source checkout status."
+    }
+    $lockPath = Join-Path $repoRoot "uv.lock"
+    if (-not (Test-Path -LiteralPath $lockPath -PathType Leaf)) {
+        throw "uv.lock is required for a frozen release build."
+    }
+    $lockHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $lockPath).Hash.ToLowerInvariant()
+    return [ordered]@{
+        head = $head
+        dirty = $dirty
+        uv_lock_sha256 = $lockHash
+    }
+}
+
+function Assert-SourceIntegrity {
+    param(
+        [System.Collections.IDictionary]$Expected,
+        [string]$Phase
+    )
+
+    $actual = Get-SourceIntegrity
+    if (-not [string]::IsNullOrWhiteSpace($actual.dirty)) {
+        throw "Source checkout is dirty at release build $Phase."
+    }
+    if ($actual.head -ne $Expected.head) {
+        throw "Source HEAD changed during release build at $Phase."
+    }
+    if ($actual.uv_lock_sha256 -ne $Expected.uv_lock_sha256) {
+        throw "uv.lock changed during release build at $Phase."
+    }
+    Write-Output ("SOURCE_INTEGRITY_" + $Phase.ToUpperInvariant() + "=" + ($actual | ConvertTo-Json -Compress))
+}
 
 function Assert-RequiredReleaseFile {
     param(
@@ -147,6 +190,11 @@ else {
 Push-Location $repoRoot
 $releasePayloadDrive = $null
 try {
+    $sourceIntegrityBefore = Get-SourceIntegrity
+    if (-not [string]::IsNullOrWhiteSpace($sourceIntegrityBefore.dirty)) {
+        throw "Source checkout is dirty before release build."
+    }
+    Write-Output ("SOURCE_INTEGRITY_BEFORE=" + ($sourceIntegrityBefore | ConvertTo-Json -Compress))
     if ($Verify) {
         Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "api\workbench.exe" -Description "API runtime"
         Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "launcher\workbench-launcher.exe" -Description "desktop launcher"
@@ -205,7 +253,7 @@ try {
         throw "Remotion build failed with exit code $LASTEXITCODE."
     }
 
-    uv run --with "pyinstaller==6.16.0" pyinstaller `
+    uv run --frozen --with "pyinstaller==6.16.0" pyinstaller `
         --noconfirm `
         --clean `
         --distpath $pyInstallerDistRoot `
@@ -216,7 +264,7 @@ try {
         throw "PyInstaller failed with exit code $pyInstallerExitCode."
     }
 
-    uv run python $stagePyInstallerBundle `
+    uv run --frozen python $stagePyInstallerBundle `
         --source $pyInstallerBundleRoot `
         --destination $apiRoot
     $stagePyInstallerExitCode = $LASTEXITCODE
@@ -229,7 +277,7 @@ try {
         }
     }
 
-    uv run --with "pyinstaller==6.16.0" pyinstaller --noconfirm --clean --distpath $pyInstallerDistRoot --workpath (Join-Path $pyInstallerWorkRoot "launcher") (Join-Path $repoRoot "apps/api/workbench-launcher.spec")
+    uv run --frozen --with "pyinstaller==6.16.0" pyinstaller --noconfirm --clean --distpath $pyInstallerDistRoot --workpath (Join-Path $pyInstallerWorkRoot "launcher") (Join-Path $repoRoot "apps/api/workbench-launcher.spec")
     if ($LASTEXITCODE -ne 0) {
         throw "PyInstaller launcher build failed with exit code $LASTEXITCODE."
     }
@@ -264,7 +312,7 @@ try {
         "Node dependency inventory: sbom/node-dependencies.json"
     ) | Set-Content -LiteralPath (Join-Path $licenseRoot "THIRD-PARTY-NOTICES.txt") -Encoding UTF8
 
-    uv run python scripts/build_runtime_manifest.py `
+    uv run --frozen python scripts/build_runtime_manifest.py `
         --release-root $stageRoot `
         --version "0.1.0" `
         --api-executable (Join-Path $apiRoot "workbench.exe") `
@@ -305,14 +353,16 @@ try {
         throw "Inno Setup did not create the installer: $installerPath"
     }
     $artifactManifestPath = Join-Path $installerOutputRoot "release-artifacts.json"
-    uv run python $releaseArtifactsScript --repository-root $repoRoot --output $artifactManifestPath --installer $installerPath --payload-manifest (Join-Path $stageRoot "runtime-manifest.json") --version "0.1.0"
+    uv run --frozen python $releaseArtifactsScript --repository-root $repoRoot --output $artifactManifestPath --installer $installerPath --payload-manifest (Join-Path $stageRoot "runtime-manifest.json") --version "0.1.0"
     if ($LASTEXITCODE -ne 0) {
         throw "Release artifact manifest generation failed with exit code $LASTEXITCODE."
     }
-    uv run python $releaseArtifactsScript --repository-root $repoRoot --verify $artifactManifestPath
+    uv run --frozen python $releaseArtifactsScript --repository-root $repoRoot --verify $artifactManifestPath
     if ($LASTEXITCODE -ne 0) {
         throw "Release artifact manifest verification failed with exit code $LASTEXITCODE."
     }
+    Assert-SourceIntegrity -Expected $sourceIntegrityBefore -Phase "after"
+    $buildSucceeded = $true
     Write-Output "WINDOWS_RELEASE_BUILD=PASS manifest=$artifactManifestPath"
 }
 finally {
@@ -320,4 +370,27 @@ finally {
         & subst $releasePayloadDrive /D | Out-Null
     }
     Pop-Location
+    if ($null -ne $sourceIntegrityBefore) {
+        try {
+            $sourceIntegrityAfter = Get-SourceIntegrity
+            Write-Output ("SOURCE_INTEGRITY_FINAL=" + ($sourceIntegrityAfter | ConvertTo-Json -Compress))
+            if (
+                $sourceIntegrityAfter.head -ne $sourceIntegrityBefore.head -or
+                $sourceIntegrityAfter.uv_lock_sha256 -ne $sourceIntegrityBefore.uv_lock_sha256 -or
+                -not [string]::IsNullOrWhiteSpace($sourceIntegrityAfter.dirty)
+            ) {
+                $message = "Source integrity changed during release build."
+                if ($buildSucceeded) {
+                    throw $message
+                }
+                Write-Output ("SOURCE_INTEGRITY_MISMATCH=" + $message)
+            }
+        }
+        catch {
+            if ($buildSucceeded) {
+                throw
+            }
+            Write-Output ("SOURCE_INTEGRITY_FINAL_ERROR=" + $_.Exception.Message)
+        }
+    }
 }
