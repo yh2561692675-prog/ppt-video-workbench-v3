@@ -11,8 +11,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Annotated, Literal
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query, Response
 
 from workbench.diagnostics.p2_privacy import scan_p2_summary
 from workbench.platform.composition import create_platform_services
@@ -28,6 +29,25 @@ from workbench.providers.upstream import (
     builtin_descriptors,
 )
 from workbench.sync import SyncClient
+
+P2DiagnosticSection = Literal[
+    "flags",
+    "platform",
+    "platform_details",
+    "providers",
+    "sync",
+    "cloud",
+    "executor",
+]
+_DIAGNOSTIC_SECTIONS: tuple[P2DiagnosticSection, ...] = (
+    "flags",
+    "platform",
+    "platform_details",
+    "providers",
+    "sync",
+    "cloud",
+    "executor",
+)
 
 
 def _env_flag(name: str) -> bool:
@@ -136,6 +156,57 @@ class P2Composition:
             sync_client=sync_client,
         )
 
+    def diagnostic_summary(self) -> dict[str, object]:
+        """Build a privacy-scanned summary without raw inputs, credentials, or host paths."""
+
+        platform_snapshot = (
+            _redact_platform_paths(self.platform.capabilities().model_dump(mode="json"))
+            if self.platform is not None
+            else None
+        )
+        platform_details = (
+            _redact_platform_paths(
+                {
+                    "media": self.platform.media.snapshot(),
+                    "office": self.platform.office.snapshot(),
+                }
+            )
+            if self.platform is not None
+            else None
+        )
+        providers = (
+            [item.model_dump(mode="json") for item in self.provider_state.registry.list()]
+            if self.provider_state is not None
+            else []
+        )
+        sync_state = self.sync_client.state().__dict__ if self.sync_client is not None else None
+        payload: dict[str, object] = {
+            "schema_version": 1,
+            "generated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            "flags": self.flags.__dict__,
+            "platform": platform_snapshot,
+            "platform_details": platform_details,
+            "providers": providers,
+            "sync": sync_state,
+            "cloud": {
+                "status": "local_outbox_enabled"
+                if self.sync_client is not None
+                else "disabled",
+                "production_auth": "not_configured",
+            },
+            "executor": {
+                "status": "not_registered",
+                "capability_labels": [],
+            },
+        }
+        findings = scan_p2_summary(payload)
+        payload["privacy_scan"] = {
+            "status": "pass" if not findings else "fail",
+            "finding_codes": sorted({item.code for item in findings}),
+            "finding_count": len(findings),
+        }
+        return payload
+
     def install(self, app: FastAPI) -> None:
         """Install only explicitly enabled local routes/state into an app."""
 
@@ -150,52 +221,32 @@ class P2Composition:
         @app.get("/api/p2/diagnostics", tags=["p2-platform"])
         def p2_diagnostics() -> dict[str, object]:
             """Return safe capability metadata; never return secrets or raw prompts."""
+            return self.diagnostic_summary()
 
-            platform_snapshot = (
-                _redact_platform_paths(self.platform.capabilities().model_dump(mode="json"))
-                if self.platform is not None
-                else None
-            )
-            platform_details = (
-                _redact_platform_paths({
-                    "media": self.platform.media.snapshot(),
-                    "office": self.platform.office.snapshot(),
-                })
-                if self.platform is not None
-                else None
-            )
-            providers = (
-                [item.model_dump(mode="json") for item in self.provider_state.registry.list()]
-                if self.provider_state is not None
-                else []
-            )
-            sync_state = self.sync_client.state().__dict__ if self.sync_client is not None else None
-            payload = {
-                "schema_version": 1,
-                "generated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-                "flags": self.flags.__dict__,
-                "platform": platform_snapshot,
-                "platform_details": platform_details,
-                "providers": providers,
-                "sync": sync_state,
-                "cloud": {
-                    "status": "local_outbox_enabled"
-                    if self.sync_client is not None
-                    else "disabled",
-                    "production_auth": "not_configured",
-                },
-                "executor": {
-                    "status": "not_registered",
-                    "capability_labels": [],
-                },
+        @app.get("/api/p2/diagnostics/export", tags=["p2-platform"])
+        def export_p2_diagnostics(
+            response: Response,
+            sections: Annotated[list[P2DiagnosticSection] | None, Query()] = None,
+        ) -> dict[str, object]:
+            """Export only explicitly selected, already-sanitized diagnostic sections."""
+
+            summary = self.diagnostic_summary()
+            selected = tuple(dict.fromkeys(sections)) if sections else _DIAGNOSTIC_SECTIONS
+            exported: dict[str, object] = {
+                "schema_version": summary["schema_version"],
+                "generated_at": summary["generated_at"],
+                **{section: summary[section] for section in selected},
             }
-            findings = scan_p2_summary(payload)
-            payload["privacy_scan"] = {
+            findings = scan_p2_summary(exported)
+            exported["privacy_scan"] = {
                 "status": "pass" if not findings else "fail",
                 "finding_codes": sorted({item.code for item in findings}),
                 "finding_count": len(findings),
             }
-            return payload
+            response.headers["Content-Disposition"] = (
+                'attachment; filename="p2-diagnostics-safe-summary.json"'
+            )
+            return exported
 
         if self.provider_state is not None:
             app.include_router(create_provider_router(self.provider_state), prefix="/api")

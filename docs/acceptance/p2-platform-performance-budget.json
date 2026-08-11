@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "scope": "local_synthetic_gate",
+  "workloads": {
+    "sync_outbox": {
+      "operations": 1000,
+      "max_elapsed_ms": 30000,
+      "max_peak_bytes": 67108864
+    },
+    "sync_pull": {
+      "operations": 1000,
+      "page_size": 100,
+      "max_elapsed_ms": 10000,
+      "max_peak_bytes": 67108864
+    },
+    "invalidation_matrix": {
+      "decisions": 60000,
+      "max_elapsed_ms": 5000,
+      "max_peak_bytes": 33554432
+    }
+  },
+  "external_evidence": {
+    "real_provider_latency_and_cost": "pending_external",
+    "macos_linux_media_export": "pending_external",
+    "production_cloud_load_and_slo": "pending_external"
+  }
+}

@@ -18,7 +18,7 @@ from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from fastapi import APIRouter, FastAPI, Header, HTTPException, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from workbench.contracts.p2_platform import canonical_sha256
+from workbench.contracts.p2_platform import BudgetV1, canonical_sha256
 
 
 def _now() -> str:
@@ -118,6 +118,7 @@ class CloudModel(BaseModel):
 
 _FINGERPRINT_KEY = re.compile(r"^[a-z][a-z0-9_.-]{0,63}$")
 _FINGERPRINT_VALUE = re.compile(r"^sha256:[0-9a-f]{64}$")
+_REMOTE_FINGERPRINT_KEYS = {"provider_policy", "runtime", "platform", "input"}
 
 
 def _validate_fingerprints(value: dict[str, str]) -> dict[str, str]:
@@ -126,6 +127,14 @@ def _validate_fingerprints(value: dict[str, str]) -> dict[str, str]:
     if any(not _FINGERPRINT_VALUE.fullmatch(item) for item in value.values()):
         raise ValueError("fingerprints must be sha256 references")
     return dict(value)
+
+
+def _validate_remote_fingerprints(value: dict[str, str]) -> dict[str, str]:
+    validated = _validate_fingerprints(value)
+    missing = _REMOTE_FINGERPRINT_KEYS - set(validated)
+    if missing:
+        raise ValueError(f"remote execution fingerprints missing: {', '.join(sorted(missing))}")
+    return validated
 
 
 def _sync_target_keys(kind: str, payload: dict[str, Any]) -> list[str]:
@@ -333,13 +342,15 @@ class JobCreate(CloudModel):
     revision_id: UUID
     kind: Literal["render", "transcribe", "export"]
     provider_policy_sha256: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
+    provider_budget: BudgetV1
+    provider_cost_estimate_minor: int = Field(ge=0, le=10_000_000_000)
     runtime_image_sha256: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     required_capabilities: list[str] = Field(default_factory=list, max_length=100)
     required_region: str | None = Field(default=None, min_length=1, max_length=64)
     parameters: dict[str, Any] = Field(default_factory=dict)
-    fingerprints: dict[str, str] = Field(default_factory=dict, max_length=16)
+    fingerprints: dict[str, str] = Field(max_length=16)
 
-    _fingerprints = field_validator("fingerprints")(_validate_fingerprints)
+    _fingerprints = field_validator("fingerprints")(_validate_remote_fingerprints)
 
     @field_validator("required_capabilities")
     @classmethod
@@ -347,6 +358,15 @@ class JobCreate(CloudModel):
         if any(not item or len(item) > 128 for item in value):
             raise ValueError("capability labels must contain 1-128 characters")
         return sorted(set(value))
+
+    @model_validator(mode="after")
+    def validate_provider_budget(self) -> JobCreate:
+        maximum = self.provider_budget.max_cost_minor
+        if maximum is None:
+            raise ValueError("remote provider jobs require max_cost_minor")
+        if self.provider_cost_estimate_minor > maximum:
+            raise ValueError("provider cost estimate exceeds budget")
+        return self
 
 
 class JobClaimRequest(CloudModel):
@@ -363,9 +383,9 @@ class JobResultReport(CloudModel):
     result_sha256: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     output_refs: list[str] = Field(default_factory=list, max_length=1000)
     output_media_types: dict[str, str] = Field(default_factory=dict, max_length=1000)
-    fingerprints: dict[str, str] = Field(default_factory=dict, max_length=16)
+    fingerprints: dict[str, str] = Field(max_length=16)
 
-    _fingerprints = field_validator("fingerprints")(_validate_fingerprints)
+    _fingerprints = field_validator("fingerprints")(_validate_remote_fingerprints)
 
     @model_validator(mode="after")
     def validate_output_manifest(self) -> JobResultReport:
@@ -565,6 +585,13 @@ class CloudRepository:
                 "TEXT NOT NULL DEFAULT "
                 "'sha256:0000000000000000000000000000000000000000000000000000000000000000'"
             ),
+            "provider_budget_json": (
+                "TEXT NOT NULL DEFAULT "
+                "'{\"schema_version\":1,\"timeout_ms\":86400000,\"max_attempts\":1,"
+                "\"max_input_bytes\":1073741824,\"max_output_bytes\":4294967296,"
+                "\"max_cost_minor\":0}'"
+            ),
+            "provider_cost_estimate_minor": "INTEGER NOT NULL DEFAULT 0",
             "runtime_image_sha256": (
                 "TEXT NOT NULL DEFAULT "
                 "'sha256:0000000000000000000000000000000000000000000000000000000000000000'"
@@ -1984,6 +2011,8 @@ class CloudRepository:
             "lease_expires_at": row["lease_expires_at"],
             "attempt_count": row["attempt_count"],
             "provider_policy_sha256": row["provider_policy_sha256"],
+            "provider_budget": json.loads(row["provider_budget_json"]),
+            "provider_cost_estimate_minor": row["provider_cost_estimate_minor"],
             "runtime_image_sha256": row["runtime_image_sha256"],
             "required_capabilities": json.loads(row["required_capabilities_json"]),
             "required_region": row["required_region"],
@@ -1998,6 +2027,8 @@ class CloudRepository:
                 "revision_id": str(request.revision_id),
                 "kind": request.kind,
                 "provider_policy_sha256": request.provider_policy_sha256,
+                "provider_budget": request.provider_budget.model_dump(mode="json"),
+                "provider_cost_estimate_minor": request.provider_cost_estimate_minor,
                 "runtime_image_sha256": request.runtime_image_sha256,
                 "required_capabilities": request.required_capabilities,
                 "required_region": request.required_region,
@@ -2005,6 +2036,23 @@ class CloudRepository:
                 "fingerprints": request.fingerprints,
             }
         )
+
+    @staticmethod
+    def _assert_executor_job_eligible(job: sqlite3.Row, executor: sqlite3.Row) -> None:
+        provider_budget = BudgetV1.model_validate(json.loads(job["provider_budget_json"]))
+        if (
+            provider_budget.max_cost_minor is None
+            or int(job["provider_cost_estimate_minor"]) > provider_budget.max_cost_minor
+        ):
+            raise HTTPException(status_code=409, detail="provider_budget_exceeded")
+        capabilities = set(json.loads(executor["capabilities_json"]))
+        required = set(json.loads(job["required_capabilities_json"]))
+        if (
+            (job["kind"] not in capabilities and "*" not in capabilities)
+            or not required.issubset(capabilities)
+            or (job["required_region"] and job["required_region"] != executor["region"])
+        ):
+            raise HTTPException(status_code=409, detail="executor_capability_mismatch")
 
     @staticmethod
     def _issue_job_attempt(
@@ -2015,6 +2063,10 @@ class CloudRepository:
         ttl_seconds: int,
         claim_idempotency_key: str | None = None,
     ) -> dict[str, str]:
+        job = db.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
+        if job is None:
+            raise HTTPException(status_code=404, detail="job_not_found")
+        CloudRepository._assert_executor_job_eligible(job, executor)
         now = datetime.now(UTC)
         executor_expires_at = _timestamp(executor["expires_at"])
         if executor_expires_at <= now:
@@ -2102,9 +2154,9 @@ class CloudRepository:
                 "INSERT INTO jobs "
                 "(id, project_id, revision_id, actor_id, kind, parameters_json, status, "
                 "executor_id, created_at, fingerprints_json, provider_policy_sha256, "
-                "runtime_image_sha256, required_capabilities_json, required_region, "
-                "idempotency_key, request_sha256) "
-                "VALUES (?, ?, ?, ?, ?, ?, 'queued', NULL, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "provider_budget_json, provider_cost_estimate_minor, runtime_image_sha256, "
+                "required_capabilities_json, required_region, idempotency_key, request_sha256) "
+                "VALUES (?, ?, ?, ?, ?, ?, 'queued', NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     job_id,
                     project_id,
@@ -2115,6 +2167,8 @@ class CloudRepository:
                     created_at,
                     json.dumps(request.fingerprints, sort_keys=True),
                     request.provider_policy_sha256,
+                    json.dumps(request.provider_budget.model_dump(mode="json"), sort_keys=True),
+                    request.provider_cost_estimate_minor,
                     request.runtime_image_sha256,
                     json.dumps(request.required_capabilities),
                     request.required_region,
@@ -2200,14 +2254,7 @@ class CloudRepository:
                 UTC
             ):
                 raise HTTPException(status_code=409, detail="executor_expired")
-            capabilities = set(json.loads(executor["capabilities_json"]))
-            required = set(json.loads(job["required_capabilities_json"]))
-            if (
-                (job["kind"] not in capabilities and "*" not in capabilities)
-                or not required.issubset(capabilities)
-                or (job["required_region"] and job["required_region"] != executor["region"])
-            ):
-                raise HTTPException(status_code=409, detail="executor_capability_mismatch")
+            self._assert_executor_job_eligible(job, executor)
             lease_expires_at = job["lease_expires_at"]
             if lease_expires_at is not None and _timestamp(lease_expires_at) > datetime.now(UTC):
                 if job["claim_idempotency_key"] == idempotency_key:
@@ -2255,6 +2302,8 @@ class CloudRepository:
             "kind": job["kind"],
             "parameters": json.loads(job["parameters_json"]),
             "provider_policy_sha256": job["provider_policy_sha256"],
+            "provider_budget": json.loads(job["provider_budget_json"]),
+            "provider_cost_estimate_minor": job["provider_cost_estimate_minor"],
             "runtime_image_sha256": job["runtime_image_sha256"],
             "required_capabilities": json.loads(job["required_capabilities_json"]),
             "required_region": job["required_region"],

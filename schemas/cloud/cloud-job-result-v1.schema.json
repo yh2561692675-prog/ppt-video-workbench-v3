@@ -28,8 +28,15 @@
     },
     "fingerprints": {
       "type": "object",
+      "required": ["provider_policy", "runtime", "platform", "input"],
       "maxProperties": 16,
       "propertyNames": { "pattern": "^[a-z][a-z0-9_.-]{0,63}$" },
+      "properties": {
+        "provider_policy": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "runtime": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "platform": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "input": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      },
       "additionalProperties": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
     }
   }

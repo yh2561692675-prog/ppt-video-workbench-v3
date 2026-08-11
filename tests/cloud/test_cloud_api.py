@@ -25,7 +25,22 @@ def _remote_job_request(revision_id: str, **overrides: object) -> dict[str, obje
         "revision_id": revision_id,
         "kind": "render",
         "provider_policy_sha256": _PROVIDER_POLICY_SHA256,
+        "provider_budget": {
+            "schema_version": 1,
+            "timeout_ms": 120_000,
+            "max_attempts": 2,
+            "max_input_bytes": 1_073_741_824,
+            "max_output_bytes": 4_294_967_296,
+            "max_cost_minor": 10_000,
+        },
+        "provider_cost_estimate_minor": 1_000,
         "runtime_image_sha256": _RUNTIME_IMAGE_SHA256,
+        "fingerprints": {
+            "provider_policy": _PROVIDER_POLICY_SHA256,
+            "platform": "sha256:" + "2" * 64,
+            "runtime": _RUNTIME_IMAGE_SHA256,
+            "input": "sha256:" + "4" * 64,
+        },
     }
     payload.update(overrides)
     return payload
@@ -65,6 +80,7 @@ def test_cloud_database_migrations_are_versioned_and_idempotent(tmp_path: Path) 
         (3, "0003_collaboration_integrity"),
         (4, "0004_remote_job_attempts"),
         (5, "0005_offline_sync_conflicts"),
+        (6, "0006_remote_job_provider_budget"),
     ]
     assert all(re.fullmatch(r"sha256:[0-9a-f]{64}", row[2]) for row in rows)
 
@@ -135,6 +151,8 @@ def test_cloud_database_upgrades_legacy_executor_columns(tmp_path: Path) -> None
         "lease_expires_at",
         "attempt_token_hash",
         "provider_policy_sha256",
+        "provider_budget_json",
+        "provider_cost_estimate_minor",
         "runtime_image_sha256",
         "required_capabilities_json",
         "idempotency_key",
@@ -803,6 +821,101 @@ def test_cloud_job_dispatch_matches_required_executor_capabilities(tmp_path: Pat
     assert job["executor_id"] == capable["executor_id"]
 
 
+def test_remote_job_provider_budget_is_checked_at_queue_and_claim(tmp_path: Path) -> None:
+    db_path = tmp_path / "control.db"
+    app = create_cloud_app(db_path, tmp_path / "objects")
+    headers = {"X-Actor-ID": "alice"}
+    budget = {
+        "schema_version": 1,
+        "timeout_ms": 120_000,
+        "max_attempts": 2,
+        "max_input_bytes": 1_073_741_824,
+        "max_output_bytes": 4_294_967_296,
+        "max_cost_minor": 100,
+    }
+    with TestClient(app) as client:
+        workspace_id = client.post(
+            "/v1/workspaces", json={"name": "Team"}, headers=headers
+        ).json()["workspace_id"]
+        project = client.post(
+            f"/v1/workspaces/{workspace_id}/projects",
+            json={"name": "Course"},
+            headers=headers,
+        ).json()
+        job_url = f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}/jobs"
+
+        over_budget = client.post(
+            job_url,
+            json=_remote_job_request(
+                project["current_revision_id"],
+                provider_budget=budget,
+                provider_cost_estimate_minor=101,
+            ),
+            headers=_idempotent(headers),
+        )
+        assert over_budget.status_code == 422
+
+        queued = client.post(
+            job_url,
+            json=_remote_job_request(
+                project["current_revision_id"],
+                provider_budget=budget,
+                provider_cost_estimate_minor=50,
+                required_region="local",
+            ),
+            headers=_idempotent(headers),
+        )
+        assert queued.status_code == 202
+        job = queued.json()
+        assert job["status"] == "queued"
+        assert job["provider_budget"]["max_cost_minor"] == 100
+        assert job["provider_cost_estimate_minor"] == 50
+
+        executor = client.post(
+            f"/v1/workspaces/{workspace_id}/executors",
+            json={
+                "platform": "linux",
+                "capabilities": ["render"],
+                "region": "local",
+                "ttl_seconds": 900,
+            },
+            headers=headers,
+        ).json()
+        with sqlite3.connect(db_path) as db:
+            db.execute(
+                "UPDATE jobs SET provider_cost_estimate_minor=101 WHERE id=?",
+                (job["job_id"],),
+            )
+        claim_url = f"{job_url}/{job['job_id']}/claim"
+        rejected = client.post(
+            claim_url,
+            json={"executor_id": executor["executor_id"]},
+            headers=_idempotent(headers),
+        )
+        assert rejected.status_code == 409
+        assert rejected.json()["detail"] == "provider_budget_exceeded"
+
+        with sqlite3.connect(db_path) as db:
+            db.execute(
+                "UPDATE jobs SET provider_cost_estimate_minor=50 WHERE id=?",
+                (job["job_id"],),
+            )
+        accepted = client.post(
+            claim_url,
+            json={"executor_id": executor["executor_id"]},
+            headers=_idempotent(headers),
+        )
+        assert accepted.status_code == 200
+        attempt = accepted.json()
+        attempt_input = client.get(
+            f"{job_url}/{job['job_id']}/attempts/{attempt['attempt_id']}/input",
+            headers={**headers, "X-Attempt-Token": attempt["attempt_access_token"]},
+        )
+        assert attempt_input.status_code == 200
+        assert attempt_input.json()["provider_budget"]["max_cost_minor"] == 100
+        assert attempt_input.json()["provider_cost_estimate_minor"] == 50
+
+
 def test_remote_job_idempotency_region_and_attempt_lease_reclaim(tmp_path: Path) -> None:
     db_path = tmp_path / "control.db"
     app = create_cloud_app(db_path, tmp_path / "objects")
@@ -979,7 +1092,7 @@ def test_remote_job_idempotency_region_and_attempt_lease_reclaim(tmp_path: Path)
                 "result_sha256": canonical_sha256(stale_result),
                 "output_refs": [],
                 "output_media_types": {},
-                "fingerprints": {},
+                "fingerprints": job["fingerprints"],
             },
             headers={**_idempotent(headers), "X-Attempt-Token": job["attempt_access_token"]},
         )

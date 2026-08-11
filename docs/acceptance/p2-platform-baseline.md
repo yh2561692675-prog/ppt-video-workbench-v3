@@ -21,12 +21,12 @@ Run from the integration worktree with the repository virtual environment:
 ```powershell
 $py = 'F:\ppt-video-workbench-v3\.venv\Scripts\python.exe'
 $env:PYTHONPATH = 'apps/api/src'
-& $py -m pytest tests/contract/test_p2_platform_contracts.py tests/contract/test_schema_alignment.py tests/unit/providers tests/unit/platform_foundation tests/unit/cache/test_p2_matrix.py tests/unit/diagnostics/test_p2_privacy.py tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/integration/test_narration_generation_api.py tests/cloud tests/platform -q
+& $py -m pytest tests/contract/test_p2_platform_contracts.py tests/contract/test_schema_alignment.py tests/unit/providers tests/unit/platform_foundation tests/unit/cache/test_p2_matrix.py tests/unit/diagnostics/test_p2_privacy.py tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/integration/test_narration_generation_api.py tests/integration/test_p2_combined_flow.py tests/cloud tests/platform tests/performance/test_p2_platform_budgets.py -q
 & $py -m mypy --cache-dir .test-mypy-cache apps/api/src/workbench/p2.py apps/api/src/workbench/contracts/p2_platform.py apps/api/src/workbench/cache apps/api/src/workbench/diagnostics/p2_privacy.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype scripts/generate_cloud_client.py
-& $py -m ruff check apps/api/src/workbench/p2.py apps/api/src/workbench/contracts/p2_platform.py apps/api/src/workbench/cache apps/api/src/workbench/diagnostics/p2_privacy.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype tests/contract tests/unit/providers tests/unit/platform_foundation tests/unit/cache/test_p2_matrix.py tests/unit/diagnostics/test_p2_privacy.py tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/integration/test_narration_generation_api.py tests/cloud tests/platform
+& $py -m ruff check --no-cache apps/api/src/workbench/p2.py apps/api/src/workbench/contracts/p2_platform.py apps/api/src/workbench/cache apps/api/src/workbench/diagnostics/p2_privacy.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype tests/contract tests/unit/providers tests/unit/platform_foundation tests/unit/cache/test_p2_matrix.py tests/unit/diagnostics/test_p2_privacy.py tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/integration/test_narration_generation_api.py tests/integration/test_p2_combined_flow.py tests/cloud tests/platform tests/performance/test_p2_platform_budgets.py
 ```
 
-Current result: **114 focused P2 tests passed**, mypy reports no issues in 33 source files,
+Current result: **121 focused P2/integration tests passed**, mypy reports no issues in 33 source files,
 and Ruff reports no violations.
 
 The generated Cloud TypeScript client covers all 44 OpenAPI operations; its drift check
@@ -37,13 +37,13 @@ current Windows runner (2 symlink tests are skipped when Developer Mode is not
 enabled); its 29 source files pass mypy and its source/tests pass Ruff.
 
 The web workspace passes all 28 Vitest files (47 tests) with its bundled
-dependency tree. A TypeScript `--noEmit` run was not repeated here because the
-isolated worktree does not contain a TypeScript compiler binary; the earlier
-baseline result is not reclassified as a current run.
+dependency tree. The generated P2 contract package passes strict `tsc --noEmit`
+using the repository's shared TypeScript compiler; this does not reclassify the
+separate full web typecheck as a current run.
 
 ## Explicitly unclaimed evidence
 
-- Full recovery-snapshot acceptance remains a separate baseline with **534 passes and 12 existing
+- Full recovery-snapshot acceptance remains a separate baseline with **542 passes and 12 existing
   unrelated failures** (10 legacy crash-recovery status expectations, the async
   M5 render status expectation, and one isolated-branch AI narration
   compatibility assertion); P04 legacy-result projection is covered by the
@@ -70,10 +70,13 @@ baseline result is not reclassified as a current run.
   cross-tenant conflict isolation, and conflict recovery after control-plane restart.
 - Desktop sync tests cover restart-safe chunk resume with final hash verification and
   full remote-replica rebuild without deleting the durable local outbox.
-- Remote jobs now bind the immutable revision, Provider policy, runtime image,
-  capability labels and region. Every dispatch/reclaim creates a new attempt and bounded
+- Remote jobs now bind the immutable revision, Provider policy, execution budget,
+  estimated cost, runtime image, capability labels and region. Budget and region are
+  checked at queue and claim. Every dispatch/reclaim creates a new attempt and bounded
   lease with a short-lived capability token stored only as a hash; stale attempts,
   expired leases, mismatched media declarations and conflicting duplicate results are rejected.
 - Provider invocations now expose a bounded tenant/project-scoped audit stream
   containing operation status and billed cost only; request inputs and secrets
   are never persisted in the audit payload.
+- The local synthetic D7 gate covers a 1,000-operation outbox, 1,000 paged remote
+  operations and 60,000 invalidation decisions; it is not production load evidence.
