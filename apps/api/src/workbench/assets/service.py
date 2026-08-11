@@ -3,12 +3,20 @@ from __future__ import annotations
 import hashlib
 import json
 import mimetypes
-import shutil
 from collections.abc import Callable
 from pathlib import Path
 from threading import RLock
-from uuid import UUID, uuid4
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
+from workbench.cache.models import CacheEntry
+from workbench.cache.repository import CacheRepository
+from workbench.domain.enums import JobType
+from workbench.domain.models import JobRecord
+from workbench.jobs.repository import JobRepository, JobSpec
+
+from .audio_executor import WaveformDerivativeExecutor
+from .derivative_models import DerivativeOperation, DerivativeRequestV1
+from .image_executor import ImageDerivativeExecutor
 from .models import (
     AssetDeriveRequest,
     AssetImportRequest,
@@ -17,6 +25,8 @@ from .models import (
     DerivedAssetRef,
     LicenseRecord,
 )
+from .object_store import ContentAddressedObjectStore, StoredObject
+from .video_executor import VideoDerivativeExecutor
 
 
 class AssetRegistryError(ValueError):
@@ -32,36 +42,162 @@ class AssetRegistryService:
         self,
         root: Path,
         project_dir_resolver: Callable[[UUID], str] | None = None,
+        jobs: JobRepository | None = None,
     ) -> None:
         self.root = root.resolve()
         self.project_dir_resolver = project_dir_resolver
+        self.jobs = jobs
+        self.object_store = ContentAddressedObjectStore(
+            self.root / "workspace-data" / "assets"
+        )
+        self.cache = CacheRepository(
+            self.root / "workspace-data" / "assets" / "cache-index.json"
+        )
         self._assets: dict[UUID, AssetRecord] = {}
         self._brands: dict[UUID, BrandPack] = {}
         self._lock = RLock()
         self._load()
+
+    def submit_derivative(self, project_id: UUID, request: AssetDeriveRequest) -> JobRecord:
+        if self.jobs is None:
+            raise AssetRegistryError(
+                "asset_jobs_unavailable", "asset job repository is unavailable"
+            )
+        parent = self.get(project_id, request.parent_asset_id)
+        tool_fingerprint = hashlib.sha256(request.tool_version.encode("utf-8")).hexdigest()
+        frozen = DerivativeRequestV1(
+            parent_asset_id=parent.asset_id,
+            parent_revision=parent.revision,
+            parent_content_hash=parent.content_hash,
+            operation=DerivativeOperation(request.operation),
+            parameters=request.parameters,
+            output_slot=request.operation,
+            tool_fingerprint=tool_fingerprint,
+        )
+        job_type = (
+            JobType.BUILD_WAVEFORM
+            if frozen.operation is DerivativeOperation.WAVEFORM
+            else JobType.DERIVE_ASSET
+        )
+        return self.jobs.enqueue_or_get(
+            JobSpec(
+                project_id=project_id,
+                job_type=job_type,
+                cache_key=f"asset-derivative:{frozen.fingerprint}",
+                input_fingerprint=frozen.fingerprint,
+                payload={"request": frozen.model_dump(mode="json")},
+            )
+        ).record
+
+    def handle_derivative_job(self, job: JobRecord) -> None:
+        if self.jobs is None:
+            raise AssetRegistryError(
+                "asset_jobs_unavailable", "asset job repository is unavailable"
+            )
+        raw_request = job.payload.get("request")
+        request = DerivativeRequestV1.model_validate(raw_request)
+        parent = self.get(job.project_id, request.parent_asset_id)
+        if (
+            parent.revision != request.parent_revision
+            or parent.content_hash != request.parent_content_hash
+        ):
+            raise AssetRegistryError("asset_derivative_stale", "parent asset revision has changed")
+        derivative_id = uuid5(NAMESPACE_URL, f"{job.project_id}:{request.fingerprint}")
+        existing = self._assets.get(derivative_id)
+        if existing is None:
+            source = self._safe_path(self.root, parent.relative_object_path)
+            stored = self._execute_derivative(job, parent, request, source)
+            relative_path = (
+                Path("workspace-data") / "assets" / stored.relative_path
+            ).as_posix()
+            existing = parent.model_copy(
+                update={
+                    "asset_id": derivative_id,
+                    "revision": 1,
+                    "content_hash": stored.content_hash,
+                    "relative_object_path": relative_path,
+                    "size_bytes": stored.size_bytes,
+                    "mime_type": _mime_for_path(relative_path),
+                    "derived_from": parent.asset_id,
+                    "operation": f"{request.operation.value}:{request.fingerprint[:12]}",
+                    "original_name": (
+                        f"{Path(parent.original_name).stem}-{request.operation.value}"
+                        f"{Path(relative_path).suffix}"
+                    ),
+                }
+            )
+            with self._lock:
+                self._assets[existing.asset_id] = existing
+                self._persist_asset(existing)
+            self.cache.put(
+                CacheEntry(
+                    cache_key=request.fingerprint,
+                    project_id=job.project_id,
+                    artifact_hash=existing.content_hash,
+                    relative_path=stored.relative_path,
+                    size_bytes=existing.size_bytes,
+                    dependencies=[
+                        f"asset:{parent.asset_id}:revision:{parent.revision}",
+                        f"tool:{request.tool_fingerprint}",
+                    ],
+                )
+            )
+        attempt = self.jobs.current_attempt(job.id)
+        if attempt is None:
+            raise AssetRegistryError(
+                "asset_attempt_missing", "derivative job has no active attempt"
+            )
+        publication = self.jobs.reserve_publication(
+            f"asset:{job.project_id}:{request.fingerprint}",
+            job.id,
+            attempt.id,
+            existing.model_dump(mode="json"),
+        )
+        self.jobs.publish_publication(
+            publication.publication_key,
+            job_id=job.id,
+            attempt_id=attempt.id,
+            manifest_hash=publication.manifest_hash,
+        )
+        self.jobs.succeed(job.id, {"asset": existing.model_dump(mode="json")})
+
+    def _execute_derivative(
+        self,
+        job: JobRecord,
+        parent: AssetRecord,
+        request: DerivativeRequestV1,
+        source: Path,
+    ) -> StoredObject:
+        work_root = self.root / "workspace-data" / "assets" / ".jobs" / str(job.id)
+        if request.operation is DerivativeOperation.WAVEFORM:
+            return WaveformDerivativeExecutor(self.object_store, work_root).execute(request, source)
+        if parent.kind.value in {"image", "logo", "sticker", "icon"}:
+            return ImageDerivativeExecutor(self.object_store, work_root).execute(request, source)
+        if parent.kind.value == "video":
+            return VideoDerivativeExecutor(self.object_store, work_root).execute(request, source)
+        raise AssetRegistryError(
+            "asset_derivative_unsupported", f"derivatives are not supported for {parent.kind.value}"
+        )
 
     def import_asset(self, project_id: UUID, request: AssetImportRequest) -> AssetRecord:
         project_root = self._project_root(project_id)
         source = self._safe_path(project_root, request.relative_path)
         if not source.is_file():
             raise AssetRegistryError("asset_source_missing", "asset source does not exist")
-        digest, size = _hash_file(source)
-        object_path = self._object_path(digest, source.suffix)
-        object_path.parent.mkdir(parents=True, exist_ok=True)
-        if not object_path.is_file():
-            temporary = object_path.with_name(f".{object_path.name}.part")
-            shutil.copyfile(source, temporary)
-            temporary.replace(object_path)
+        stored = self.object_store.ingest_file(source)
+        relative_object_path = (
+            Path("workspace-data") / "assets" / stored.relative_path
+        ).as_posix()
         record = AssetRecord(
             project_id=project_id,
             kind=request.kind,
-            content_hash=digest,
-            relative_object_path=self._relative(object_path),
+            content_hash=stored.content_hash,
+            relative_object_path=relative_object_path,
             original_name=request.original_name or source.name,
             mime_type=request.mime_type
             if request.mime_type != "application/octet-stream"
             else mimetypes.guess_type(source.name)[0] or "application/octet-stream",
-            size_bytes=size,
+            size_bytes=stored.size_bytes,
             license=request.license,
             tags=sorted(set(request.tags)),
             brand_pack_id=request.brand_pack_id,
@@ -72,7 +208,7 @@ class AssetRegistryService:
                     item
                     for item in self._assets.values()
                     if item.project_id == project_id
-                    and item.content_hash == digest
+                    and item.content_hash == stored.content_hash
                     and item.kind == record.kind
                 ),
                 None,
@@ -164,19 +300,6 @@ class AssetRegistryService:
         )
         return self._safe_path(self.root, relative, allow_missing=True)
 
-    def _object_path(self, digest: str, suffix: str) -> Path:
-        return (
-            self.root
-            / "workspace-data"
-            / "assets"
-            / "objects"
-            / digest[:2]
-            / f"{digest}{suffix.lower()}"
-        )
-
-    def _relative(self, path: Path) -> str:
-        return path.resolve().relative_to(self.root).as_posix()
-
     def _persist_asset(self, record: AssetRecord) -> None:
         target = self.root / "workspace-data" / "assets" / "index" / f"{record.asset_id}.json"
         _atomic_json(target, record.model_dump(mode="json"))
@@ -217,14 +340,8 @@ class AssetRegistryService:
         return candidate
 
 
-def _hash_file(path: Path) -> tuple[str, int]:
-    digest = hashlib.sha256()
-    size = 0
-    with path.open("rb") as handle:
-        while chunk := handle.read(1024 * 1024):
-            digest.update(chunk)
-            size += len(chunk)
-    return digest.hexdigest(), size
+def _mime_for_path(relative_path: str) -> str:
+    return mimetypes.guess_type(relative_path)[0] or "application/octet-stream"
 
 
 def _atomic_json(path: Path, payload: object) -> None:

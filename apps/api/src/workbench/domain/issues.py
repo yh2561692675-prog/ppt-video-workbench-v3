@@ -71,9 +71,13 @@ class PreflightIssue(IssueContractModel):
 
 class PreflightReport(IssueContractModel):
     id: UUID = Field(default_factory=uuid4)
+    preflight_run_id: UUID = Field(default_factory=uuid4)
     project_id: UUID
     checked_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     scope: list[str] = Field(default_factory=list)
+    # Old project manifests predate the field; their zero digest is deliberately
+    # treated as stale on first read and therefore cannot authorize a render.
+    project_fingerprint: str = Field(default="0" * 64, min_length=64, max_length=64)
     input_fingerprint: str = Field(min_length=64, max_length=64)
     check_fingerprints: dict[str, str] = Field(default_factory=dict)
     issues: list[PreflightIssue] = Field(default_factory=list)
@@ -81,6 +85,9 @@ class PreflightReport(IssueContractModel):
     snapshot_path: str | None = None
     reused_checks: list[str] = Field(default_factory=list)
     executed_checks: list[str] = Field(default_factory=list)
+    fresh: bool = False
+    cache_status: Literal["fresh", "reused", "mixed", "stale"] = "fresh"
+    is_stale: bool = False
 
 
 PreflightScope = Literal[

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from uuid import uuid4
 
@@ -30,8 +31,19 @@ def test_remotion_graph_runner_renders_full_composition_once(tmp_path: Path) -> 
         browser_executable=None,
     )
     calls: list[list[str]] = []
+    props: list[dict[str, object]] = []
+
+    def run(command: list[str], _: Path) -> None:
+        calls.append(command)
+        props_path = next(
+            Path(argument.removeprefix("--props="))
+            for argument in command
+            if argument.startswith("--props=")
+        )
+        props.append(json.loads(props_path.read_text(encoding="utf-8")))
+
     runner = RemotionGraphRunner(
-        tmp_path, runtime=runtime, run=lambda command, _: calls.append(command)
+        tmp_path, runtime=runtime, run=run
     )
     graph = RenderGraphV2(
         project_id=uuid4(),
@@ -41,8 +53,9 @@ def test_remotion_graph_runner_renders_full_composition_once(tmp_path: Path) -> 
         graph_hash="0" * 64,
     )
     output = tmp_path / "rendered.mp4"
-    runner.render(graph, output)
+    runner.render(graph, output, execution_mode="authoritative-preview")
     assert len(calls) == 1
     assert "RenderGraphV2" in calls[0]
     assert "--frames=0-59" in calls[0]
+    assert props[0]["executionMode"] == "authoritative-preview"
     assert not list(tmp_path.glob(".*.render-graph.json"))

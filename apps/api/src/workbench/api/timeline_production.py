@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException
 from workbench.api.projects import Envelope, envelope
 from workbench.assets.models import AssetRecord
 from workbench.continuity.models import ContinuityPlan
+from workbench.domain.models import JobRecord
 from workbench.rendering.compiler import RenderGraphCompiler
 from workbench.rendering.models import AffectedRange, RenderGraphV2
 from workbench.rendering.preflight import GraphPreflight, GraphPreflightReport
@@ -18,6 +19,11 @@ from workbench.rendering.preview import (
     RenderGraphPreviewPlan,
     RenderGraphPreviewRequest,
     build_preview_plan,
+)
+from workbench.rendering.preview_service import (
+    AuthoritativePreviewJobRequest,
+    AuthoritativePreviewService,
+    PreviewSubmissionBlocked,
 )
 from workbench.rendering.snapshot_store import RenderGraphSnapshotStore, RenderSnapshotError
 from workbench.subtitles.workbench_models import SubtitleWorkbenchDocument
@@ -186,7 +192,10 @@ class TimelineWorkspaceService:
         self._editors[project_id] = editor
 
 
-def create_timeline_router(service: TimelineWorkspaceService) -> APIRouter:
+def create_timeline_router(
+    service: TimelineWorkspaceService,
+    preview_jobs: AuthoritativePreviewService | None = None,
+) -> APIRouter:
     router = APIRouter(prefix="/api/projects/{project_id}")
 
     @router.get("/timeline", response_model=Envelope[ProductionTimeline])
@@ -361,5 +370,38 @@ def create_timeline_router(service: TimelineWorkspaceService) -> APIRouter:
             return envelope(build_preview_plan(graph, request))
         except PreviewRangeError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @router.post(
+        "/render-graphs/{graph_id}/preview-jobs",
+        response_model=Envelope[JobRecord],
+        status_code=202,
+    )
+    def create_preview_job(
+        project_id: UUID,
+        graph_id: UUID,
+        request: AuthoritativePreviewJobRequest,
+    ) -> Envelope[JobRecord]:
+        if preview_jobs is None:
+            raise HTTPException(status_code=503, detail="preview worker unavailable")
+        if request.graph_id != graph_id:
+            raise HTTPException(status_code=422, detail="graph id does not match route")
+        try:
+            return envelope(preview_jobs.submit(project_id, request))
+        except PreviewSubmissionBlocked as error:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "preview_preflight_blocked",
+                    "message": str(error),
+                    "issues": [item.model_dump(mode="json") for item in error.report.issues],
+                },
+            ) from error
+        except (KeyError, RenderSnapshotError) as error:
+            raise HTTPException(status_code=404, detail="RenderGraph V2 not found") from error
+        except (PreviewRangeError, ValueError) as error:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "preview_request_invalid", "message": str(error)},
+            ) from error
 
     return router

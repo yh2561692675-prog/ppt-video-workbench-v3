@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/cache-dependency-v1.schema.json",
+  "title": "CacheDependencyV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "domain",
+    "node_key",
+    "upstream_kind",
+    "upstream_key",
+    "upstream_hash",
+    "start_us",
+    "end_us",
+    "artifact_refs"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "domain": {
+      "enum": [
+        "video_only",
+        "audio",
+        "subtitle_soft",
+        "subtitle_burn_in",
+        "transition",
+        "overlay",
+        "layout",
+        "final"
+      ]
+    },
+    "node_key": { "type": "string", "minLength": 1, "maxLength": 240 },
+    "upstream_kind": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "upstream_key": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "upstream_hash": { "$ref": "#/$defs/hash" },
+    "start_us": { "type": ["integer", "null"], "minimum": 0 },
+    "end_us": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+    "artifact_refs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/artifact" }
+    }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relative_path", "sha256", "size_bytes"],
+      "properties": {
+        "relative_path": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "sha256": { "$ref": "#/$defs/hash" },
+        "size_bytes": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

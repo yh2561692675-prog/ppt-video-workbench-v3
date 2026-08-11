@@ -75,6 +75,7 @@ def test_v2_job_pins_graph_snapshot_and_worker_uses_pinned_graph(tmp_path: Path)
     )
     job = service.submit(project_id).job
     assert job.payload["render_generation"] == "v2"
+    assert job.payload["graph_id"] == str(graph.graph_id)
     assert job.payload["graph_hash"] == graph.graph_hash
     service.handle(job)
     assert seen == [graph.graph_hash]

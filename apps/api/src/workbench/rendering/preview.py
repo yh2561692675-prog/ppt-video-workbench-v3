@@ -29,6 +29,7 @@ class RenderGraphPreviewPlan(BaseModel):
     start_us: int = Field(ge=0)
     end_us: int = Field(gt=0)
     preset: Literal["interactive", "authoritative"]
+    runtime_version: str = Field(min_length=1, max_length=80)
     cache_key: str = Field(pattern=r"^[0-9a-f]{64}$")
     affected_ranges: list[AffectedRange] = Field(default_factory=list)
 
@@ -60,6 +61,7 @@ def build_preview_plan(
         start_us=request.start_us,
         end_us=request.end_us,
         preset=request.preset,
+        runtime_version=request.runtime_version,
         cache_key=cache_key,
         affected_ranges=affected,
     )

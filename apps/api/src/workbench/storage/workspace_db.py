@@ -142,6 +142,45 @@ workers = Table(
     Column("revision", Integer, nullable=False, server_default="1"),
 )
 
+cache_entries = Table(
+    "cache_entries",
+    metadata,
+    Column("cache_key", String(64), primary_key=True),
+    Column("project_id", String(36), nullable=False),
+    Column("domain", String(40), nullable=False),
+    Column("node_key", String(240), nullable=False),
+    Column("state", String(20), nullable=False),
+    Column("artifact_manifest_json", Text, nullable=False),
+    Column("artifact_manifest_hash", String(64), nullable=False),
+    Column("relative_path", String(500), nullable=False),
+    Column("artifact_hash", String(64), nullable=False),
+    Column("size_bytes", Integer, nullable=False),
+    Column("runtime_fingerprint", String(128), nullable=False),
+    Column("license_status", String(24), nullable=False),
+    Column("rebuildable", Boolean, nullable=False, default=True),
+    Column("protected", Boolean, nullable=False, default=False),
+    Column("lease_count", Integer, nullable=False, default=0),
+    Column("stale_reason", String(80), nullable=True),
+    Column("created_at", String(40), nullable=False),
+    Column("last_accessed_at", String(40), nullable=False),
+    Column("revision", Integer, nullable=False, server_default="1"),
+)
+
+cache_dependencies = Table(
+    "cache_dependencies",
+    metadata,
+    Column("dependency_key", String(64), primary_key=True),
+    Column("cache_key", String(64), primary_key=True),
+    Column("domain", String(40), nullable=False),
+    Column("node_key", String(240), nullable=False),
+    Column("upstream_kind", String(80), nullable=False),
+    Column("upstream_key", String(500), nullable=False),
+    Column("upstream_hash", String(64), nullable=False),
+    Column("start_us", Integer, nullable=True),
+    Column("end_us", Integer, nullable=True),
+    Column("artifact_refs_json", Text, nullable=False),
+)
+
 peripheral_projection_inbox = Table(
     "peripheral_projection_inbox",
     metadata,
@@ -178,17 +217,23 @@ class WorkspaceDatabase:
         with self.engine.begin() as connection:
             version = connection.execute(select(schema_meta.c.version)).scalar_one_or_none()
             if version is None:
-                connection.execute(insert(schema_meta).values(version=3))
+                connection.execute(insert(schema_meta).values(version=4))
             elif version == 1:
-                from .migrations import migrate_v1_to_v2, migrate_v2_to_v3
+                from .migrations import migrate_v1_to_v2, migrate_v2_to_v3, migrate_v3_to_v4
 
                 migrate_v1_to_v2(connection)
                 migrate_v2_to_v3(connection)
+                migrate_v3_to_v4(connection)
             elif version == 2:
-                from .migrations import migrate_v2_to_v3
+                from .migrations import migrate_v2_to_v3, migrate_v3_to_v4
 
                 migrate_v2_to_v3(connection)
-            elif version != 3:
+                migrate_v3_to_v4(connection)
+            elif version == 3:
+                from .migrations import migrate_v3_to_v4
+
+                migrate_v3_to_v4(connection)
+            elif version != 4:
                 from .migrations import WorkspaceMigrationError
 
                 raise WorkspaceMigrationError(f"unsupported workspace schema version: {version}")

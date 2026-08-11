@@ -56,7 +56,9 @@ class LicenseRecord(AssetModel):
 
 class DerivedAssetRef(AssetModel):
     asset_id: UUID
-    operation: Literal["proxy", "thumbnail", "crop", "remove_background", "transcode"]
+    operation: Literal[
+        "proxy", "thumbnail", "crop", "remove_background", "transcode", "waveform"
+    ]
     parameters: dict[str, Any] = Field(default_factory=dict)
     tool_version: str = Field(min_length=1, max_length=80)
 
@@ -105,7 +107,9 @@ class AssetImportRequest(AssetModel):
 
 class AssetDeriveRequest(AssetModel):
     parent_asset_id: UUID
-    operation: Literal["proxy", "thumbnail", "crop", "remove_background", "transcode"]
+    operation: Literal[
+        "proxy", "thumbnail", "crop", "remove_background", "transcode", "waveform"
+    ]
     parameters: dict[str, Any] = Field(default_factory=dict)
     tool_version: str = Field(default="asset-tools-v1", min_length=1, max_length=80)
 

@@ -13,6 +13,7 @@ from workbench.assets.models import (
     LicenseRecord,
 )
 from workbench.assets.service import AssetRegistryError, AssetRegistryService
+from workbench.domain.models import JobRecord
 
 
 def create_assets_router(service: AssetRegistryService) -> APIRouter:
@@ -49,6 +50,22 @@ def create_assets_router(service: AssetRegistryService) -> APIRouter:
         except AssetRegistryError as error:
             raise HTTPException(
                 status_code=422, detail={"code": error.code, "message": str(error)}
+            ) from error
+
+    @router.post(
+        "/derivative-jobs", response_model=Envelope[JobRecord], status_code=202
+    )
+    def create_derivative_job(
+        project_id: UUID, request: AssetDeriveRequest
+    ) -> Envelope[JobRecord]:
+        try:
+            return envelope(service.submit_derivative(project_id, request))
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="asset not found") from error
+        except (AssetRegistryError, ValueError) as error:
+            code = error.code if isinstance(error, AssetRegistryError) else "asset_request_invalid"
+            raise HTTPException(
+                status_code=422, detail={"code": code, "message": str(error)}
             ) from error
 
     @router.patch("/{asset_id}/license", response_model=Envelope[AssetRecord])

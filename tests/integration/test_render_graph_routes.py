@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
 from uuid import uuid4
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from workbench.api.timeline_production import TimelineWorkspaceService, create_timeline_router
+from workbench.main import create_app
 from workbench.timeline.production import ClipKind, ProductionTimeline, TimelineTrack
 
 
@@ -76,3 +79,38 @@ def test_render_graph_v2_routes_compile_current_get_preflight_and_ranges() -> No
 
         missing = client.get(f"/api/projects/{project_id}/render-graphs/{uuid4()}")
         assert missing.status_code == 404
+
+
+def test_authoritative_preview_job_route_freezes_graph_snapshot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("WORKBENCH_ASYNC_RENDER_ENABLED", "false")
+    app = create_app(tmp_path)
+    project = app.state.project_service.create("preview job")
+    timeline = ProductionTimeline(
+        project_id=project.id,
+        duration_us=1_000_000,
+        tracks=[TimelineTrack(kind=ClipKind.SLIDE, name="Slides", order=0)],
+    )
+
+    with TestClient(app) as client:
+        client.post(
+            f"/api/projects/{project.id}/timeline/initialize",
+            json=timeline.model_dump(mode="json"),
+        )
+        compiled = client.post(f"/api/projects/{project.id}/render-graphs:compile")
+        graph = compiled.json()["data"]
+        submitted = client.post(
+            f"/api/projects/{project.id}/render-graphs/{graph['graph_id']}/preview-jobs",
+            json={
+                "graph_id": graph["graph_id"],
+                "graph_hash": graph["graph_hash"],
+                "start_us": 0,
+                "end_us": 500_000,
+                "runtime_version": "test-runtime",
+            },
+        )
+
+    assert submitted.status_code == 202
+    assert submitted.json()["data"]["job_type"] == "render_preview"
+    assert submitted.json()["data"]["payload"]["plan"]["graph_hash"] == graph["graph_hash"]

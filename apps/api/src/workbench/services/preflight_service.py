@@ -36,12 +36,19 @@ class PreflightService:
         self.engine = engine
         self.video_preview = video_preview
 
-    def run(self, project_id: UUID, scope: Iterable[str] | None = None) -> PreflightReport:
+    def run(
+        self,
+        project_id: UUID,
+        scope: Iterable[str] | None = None,
+        *,
+        fresh: bool = False,
+    ) -> PreflightReport:
         project = self.projects.get(project_id)
         report = self.engine.run_preflight(
             project,
             scope=set(scope) if scope is not None else None,
             previous=project.preflight_report,
+            fresh=fresh,
         )
         report = self._apply_existing_confirmations(project, report)
         return self._persist_report(project, report, action="preflight_completed")
@@ -50,7 +57,7 @@ class PreflightService:
         project = self.projects.get(project_id)
         if project.preflight_report is None:
             return self.run(project_id)
-        return project.preflight_report
+        return self._with_staleness(project, project.preflight_report)
 
     def confirm(
         self,
@@ -148,6 +155,7 @@ class PreflightService:
         report = self.engine.run_preflight(
             latest,
             previous=latest.preflight_report,
+            fresh=True,
         )
         report = self._apply_existing_confirmations(latest, report)
         return self._persist_report(latest, report, action="preflight_render_gate")
@@ -189,6 +197,21 @@ class PreflightService:
         saved = self.projects.save(updated)
         self._rewrite_snapshot(project_dir, report)
         return saved.preflight_report or report
+
+    def _with_staleness(
+        self, project: ProjectManifest, report: PreflightReport | None
+    ) -> PreflightReport:
+        if report is None:
+            return self.run(project.id, fresh=True)
+        stale = report.project_fingerprint != self.engine.project_fingerprint(project)
+        if stale == report.is_stale:
+            return report
+        return report.model_copy(
+            update={
+                "is_stale": stale,
+                "cache_status": "stale" if stale else report.cache_status,
+            }
+        )
 
     def _apply_existing_confirmations(
         self, project: ProjectManifest, report: PreflightReport

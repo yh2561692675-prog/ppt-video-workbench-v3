@@ -167,3 +167,63 @@ def migrate_v2_to_v3(connection: Connection) -> None:
         "ON resource_leases(status, expires_at)"
     )
     connection.exec_driver_sql("UPDATE schema_meta SET version = 3 WHERE version = 2")
+
+
+def migrate_v3_to_v4(connection: Connection) -> None:
+    """Add the persistent cache entry and reverse dependency index."""
+
+    connection.exec_driver_sql(
+        """
+        CREATE TABLE IF NOT EXISTS cache_entries (
+            cache_key VARCHAR(64) PRIMARY KEY,
+            project_id VARCHAR(36) NOT NULL,
+            domain VARCHAR(40) NOT NULL,
+            node_key VARCHAR(240) NOT NULL,
+            state VARCHAR(20) NOT NULL,
+            artifact_manifest_json TEXT NOT NULL,
+            artifact_manifest_hash VARCHAR(64) NOT NULL,
+            relative_path VARCHAR(500) NOT NULL,
+            artifact_hash VARCHAR(64) NOT NULL,
+            size_bytes INTEGER NOT NULL,
+            runtime_fingerprint VARCHAR(128) NOT NULL,
+            license_status VARCHAR(24) NOT NULL,
+            rebuildable BOOLEAN NOT NULL DEFAULT 1,
+            protected BOOLEAN NOT NULL DEFAULT 0,
+            lease_count INTEGER NOT NULL DEFAULT 0,
+            stale_reason VARCHAR(80),
+            created_at VARCHAR(40) NOT NULL,
+            last_accessed_at VARCHAR(40) NOT NULL,
+            revision INTEGER NOT NULL DEFAULT 1
+        )
+        """
+    )
+    connection.exec_driver_sql(
+        """
+        CREATE TABLE IF NOT EXISTS cache_dependencies (
+            dependency_key VARCHAR(64) NOT NULL,
+            cache_key VARCHAR(64) NOT NULL,
+            domain VARCHAR(40) NOT NULL,
+            node_key VARCHAR(240) NOT NULL,
+            upstream_kind VARCHAR(80) NOT NULL,
+            upstream_key VARCHAR(500) NOT NULL,
+            upstream_hash VARCHAR(64) NOT NULL,
+            start_us INTEGER,
+            end_us INTEGER,
+            artifact_refs_json TEXT NOT NULL,
+            PRIMARY KEY (cache_key, dependency_key)
+        )
+        """
+    )
+    connection.exec_driver_sql(
+        "CREATE INDEX IF NOT EXISTS ix_cache_dependencies_upstream "
+        "ON cache_dependencies(upstream_kind, upstream_key, domain)"
+    )
+    connection.exec_driver_sql(
+        "CREATE INDEX IF NOT EXISTS ix_cache_dependencies_cache_key "
+        "ON cache_dependencies(cache_key)"
+    )
+    connection.exec_driver_sql(
+        "CREATE INDEX IF NOT EXISTS ix_cache_entries_project_state "
+        "ON cache_entries(project_id, state, last_accessed_at)"
+    )
+    connection.exec_driver_sql("UPDATE schema_meta SET version = 4 WHERE version = 3")

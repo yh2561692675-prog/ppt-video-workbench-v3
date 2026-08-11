@@ -48,7 +48,10 @@ class ReleaseCandidate:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> ReleaseCandidate:
-        _keys(data, {"rc_id", "installer_sha256", "installer_relative_path", "assets", "v2_enabled"})
+        _keys(
+            data,
+            {"rc_id", "installer_sha256", "installer_relative_path", "assets", "v2_enabled"},
+        )
         rc_id = data.get("rc_id")
         digest = data.get("installer_sha256")
         installer_relative_path = data.get("installer_relative_path")

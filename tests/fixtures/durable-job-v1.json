@@ -1,0 +1,56 @@
+{
+  "job": {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "project_id": "22222222-2222-4222-8222-222222222222",
+    "job_type": "render_preview",
+    "status": "running",
+    "cache_key": "preview:graph:abc123",
+    "page_id": null,
+    "progress": 0.5,
+    "attempts": 1,
+    "max_attempts": 3,
+    "paid": false,
+    "error": null,
+    "created_at": "2026-08-11T06:00:00Z",
+    "updated_at": "2026-08-11T06:01:00Z",
+    "input_fingerprint": "input:abc123",
+    "idempotency_key": "preview:abc123",
+    "parent_job_id": null,
+    "payload": { "graph_id": "33333333-3333-4333-8333-333333333333" },
+    "result": null,
+    "stage": "rendering",
+    "message": "Rendering authoritative preview",
+    "error_code": null,
+    "revision": 2,
+    "priority": 0,
+    "current_attempt_id": "44444444-4444-4444-8444-444444444444",
+    "heartbeat_at": "2026-08-11T06:01:00Z",
+    "started_at": "2026-08-11T06:00:01Z",
+    "finished_at": null
+  },
+  "attempts": [
+    {
+      "id": "44444444-4444-4444-8444-444444444444",
+      "job_id": "11111111-1111-4111-8111-111111111111",
+      "generation": 1,
+      "status": "running",
+      "worker_id": "local-render-worker",
+      "runtime_fingerprint": "runtime:ffmpeg-7",
+      "started_at": "2026-08-11T06:00:01Z",
+      "heartbeat_at": "2026-08-11T06:01:00Z",
+      "finished_at": null,
+      "exit_code": null,
+      "error_code": null,
+      "checkpoint_sequence": 3,
+      "revision": 4
+    }
+  ],
+  "latest_checkpoint": {
+    "job_id": "11111111-1111-4111-8111-111111111111",
+    "attempt_id": "44444444-4444-4444-8444-444444444444",
+    "sequence": 3,
+    "checkpoint": { "stage": "rendering", "frame": 450 },
+    "checkpoint_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "created_at": "2026-08-11T06:01:00Z"
+  }
+}

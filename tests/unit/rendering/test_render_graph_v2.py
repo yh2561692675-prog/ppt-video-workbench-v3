@@ -135,6 +135,15 @@ def test_compiler_is_deterministic_and_compiles_transition_audio_and_subtitles(
     assert graph.subtitles.render_mode == "both"
     assert graph.transitions[0].audio_mode == "j_cut"
     assert graph.subtitles.cues[0].words[0].start_us == 100_000
+    domains = {dependency.domain.value for dependency in graph.cache_dependencies}
+    assert {"video_only", "audio", "transition", "subtitle_soft", "subtitle_burn_in"} <= domains
+    assert any(
+        dependency.upstream_kind == "compiler"
+        and dependency.upstream_key == graph.compiler_version
+        for dependency in graph.cache_dependencies
+    )
+    reasons = {reason for affected in graph.affected_ranges for reason in affected.reasons}
+    assert {"audio:j_cut", "subtitle:both", "transition:dissolve"} <= reasons
     assert (
         RenderGraphCompiler()
         .compile(timeline, continuity=continuity, subtitles=subtitles, project_root=tmp_path)

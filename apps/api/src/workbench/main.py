@@ -33,6 +33,7 @@ from workbench.api.jobs import create_jobs_router
 from workbench.api.matching import create_matching_router
 from workbench.api.material_collections import create_material_collections_router
 from workbench.api.materials import create_materials_router
+from workbench.api.migrations import create_migrations_router, load_raw_project
 from workbench.api.narrations import create_narrations_router
 from workbench.api.peripheral import create_peripheral_router
 from workbench.api.peripheral_s1 import create_peripheral_s1_router
@@ -68,6 +69,7 @@ from workbench.diagnostics.center import (
 )
 from workbench.diagnostics.package import DiagnosticPackager
 from workbench.diagnostics.probes import build_default_probes, create_heygen_health_probe
+from workbench.domain.enums import JobType
 from workbench.effects.service import EffectService
 from workbench.environment.detector import EnvironmentDetector
 from workbench.exports.presets import ExportPresetService
@@ -91,6 +93,9 @@ from workbench.quality.jobs import QualityJobService
 from workbench.rendering.export_pipeline import RenderGraphExportPipeline
 from workbench.rendering.feature_flags import RenderFeatureFlags
 from workbench.rendering.models import RenderGraphV2
+from workbench.rendering.preflight import GraphPreflight
+from workbench.rendering.preview_service import AuthoritativePreviewService
+from workbench.rendering.project_reader import ProjectRenderSourceReader
 from workbench.runtime.layout import RuntimeComponentMissingError, RuntimeLayout
 from workbench.scheduler.service import BatchSchedulerService
 from workbench.services.import_service import ImportService
@@ -112,6 +117,8 @@ from workbench.subtitles.service import SubtitleService
 from workbench.subtitles.workbench_service import SubtitleWorkbenchService
 from workbench.updates.secure import SecureUpdateClient, TrustedRoot
 from workbench.updates.service import UpdateService
+from workbench.video.models import PreflightIssue as VideoPreflightIssue
+from workbench.video.models import VideoPreflight
 from workbench.video.package_service import VideoExportService
 from workbench.video.preview_service import VideoPreviewService
 from workbench.video.props_service import VideoPropsService
@@ -257,6 +264,7 @@ def create_app(
     asset_registry_service = AssetRegistryService(
         configured_root,
         project_dir_resolver=lambda project_id: service.get(project_id).project_dir,
+        jobs=service.jobs,
     )
     app.state.asset_registry_service = asset_registry_service
     material_collection_service = MaterialCollectionService(
@@ -295,10 +303,59 @@ def create_app(
         configured_root,
         project_dir_resolver=lambda project_id: service.get(project_id).project_dir,
     )
+    authoritative_preview_service = AuthoritativePreviewService(service)
     app.state.fidelity_job_service = fidelity_job_service
     app.state.timeline_workspace_service = timeline_workspace_service
+    app.state.authoritative_preview_service = authoritative_preview_service
     app.state.video_export_service = video_export_service
     render_feature_flags = RenderFeatureFlags.from_environment()
+
+    def compatibility_video_preflight(project_id: UUID) -> VideoPreflight | None:
+        root, payload = load_raw_project(service, project_id)
+        pointer = root / "07_视频工程" / "v2-migration.json"
+        if not pointer.is_file():
+            try:
+                service.get(project_id)
+                return None
+            except (KeyError, ValueError):
+                pass
+        source = ProjectRenderSourceReader(root).open(
+            payload,
+            renderer_generation=render_feature_flags.renderer_generation,
+            migration_enabled=render_feature_flags.compile,
+        )
+        if source.mode == "v2" and source.graph is not None:
+            report = GraphPreflight().check(
+                source.graph,
+                root,
+                strict_assets=render_feature_flags.strict_assets,
+            )
+            return VideoPreflight(
+                allowed=report.allowed,
+                issues=[
+                    VideoPreflightIssue(
+                        code=issue.code,
+                        message=issue.message,
+                        action=issue.action,
+                        blocking=issue.blocking,
+                    )
+                    for issue in report.issues
+                ],
+            )
+        if source.legacy is None:
+            return None
+        return VideoPreflight(
+            allowed=not any(issue.severity == "blocking" for issue in source.legacy.issues),
+            issues=[
+                VideoPreflightIssue(
+                    code=issue.code,
+                    message=issue.message,
+                    action="Review the legacy migration preview before export.",
+                    blocking=issue.severity == "blocking",
+                )
+                for issue in source.legacy.issues
+            ],
+        )
 
     def render_graph_provider(project_id: UUID) -> RenderGraphV2:
         return timeline_workspace_service.compile_v2(
@@ -352,6 +409,17 @@ def create_app(
     render_job_worker = RenderJobWorker(
         service.jobs,
         render_job_service.handle,
+        job_types=(
+            JobType.EXPORT_PACKAGE,
+            JobType.DERIVE_ASSET,
+            JobType.BUILD_WAVEFORM,
+            JobType.RENDER_PREVIEW,
+        ),
+        handlers={
+            JobType.DERIVE_ASSET: asset_registry_service.handle_derivative_job,
+            JobType.BUILD_WAVEFORM: asset_registry_service.handle_derivative_job,
+            JobType.RENDER_PREVIEW: authoritative_preview_service.handle,
+        },
         enabled=os.environ.get("WORKBENCH_ASYNC_RENDER_ENABLED", "true").lower()
         not in {"0", "false", "no"},
     )
@@ -422,17 +490,25 @@ def create_app(
     app.include_router(create_subtitle_router(subtitle_service))
     app.include_router(create_subtitle_workbench_router(subtitle_workbench_service))
     app.include_router(
-        create_video_router(video_preview_service, video_export_service, render_job_service)
+        create_video_router(
+            video_preview_service,
+            video_export_service,
+            render_job_service,
+            compatibility_video_preflight,
+        )
     )
     app.include_router(create_quality_router(quality_job_service))
     app.include_router(create_jobs_router(service))
+    app.include_router(create_migrations_router(service))
     app.include_router(create_assets_router(asset_registry_service))
     app.include_router(create_material_collections_router(material_collection_service))
     app.include_router(create_continuity_router(continuity_service))
     app.include_router(create_export_presets_router(export_preset_service))
     app.include_router(create_scheduler_router(batch_scheduler_service))
     app.include_router(create_fidelity_router(fidelity_job_service))
-    app.include_router(create_timeline_router(timeline_workspace_service))
+    app.include_router(
+        create_timeline_router(timeline_workspace_service, authoritative_preview_service)
+    )
     app.include_router(create_preflight_router(preflight_service, video_export_service))
     app.include_router(create_sources_router(ImportService(service)))
     app.include_router(create_matching_router(MatchingService(service)))

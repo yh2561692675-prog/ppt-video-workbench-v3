@@ -43,10 +43,13 @@ ACTIVE_STATUSES = frozenset(
 )
 
 ALLOWED_TRANSITIONS: dict[JobStatus, frozenset[JobStatus]] = {
-    JobStatus.QUEUED: frozenset({JobStatus.RUNNING, JobStatus.PAUSED, JobStatus.CANCELLED}),
+    JobStatus.QUEUED: frozenset(
+        {JobStatus.RUNNING, JobStatus.PAUSED, JobStatus.NEEDS_CONFIRMATION, JobStatus.CANCELLED}
+    ),
     JobStatus.RUNNING: frozenset(
         {
             JobStatus.PAUSE_REQUESTED,
+            JobStatus.NEEDS_CONFIRMATION,
             JobStatus.CANCEL_REQUESTED,
             JobStatus.SUCCEEDED,
             JobStatus.FAILED,
@@ -56,9 +59,18 @@ ALLOWED_TRANSITIONS: dict[JobStatus, frozenset[JobStatus]] = {
     # terminal result before it observes the request.  Do not let shutdown
     # overwrite that completed work with a stale pause state.
     JobStatus.PAUSE_REQUESTED: frozenset(
-        {JobStatus.PAUSED, JobStatus.CANCEL_REQUESTED, JobStatus.SUCCEEDED, JobStatus.FAILED}
+        {
+            JobStatus.PAUSED,
+            JobStatus.NEEDS_CONFIRMATION,
+            JobStatus.CANCEL_REQUESTED,
+            JobStatus.SUCCEEDED,
+            JobStatus.FAILED,
+        }
     ),
-    JobStatus.PAUSED: frozenset({JobStatus.QUEUED, JobStatus.CANCELLED}),
+    JobStatus.PAUSED: frozenset(
+        {JobStatus.QUEUED, JobStatus.NEEDS_CONFIRMATION, JobStatus.CANCELLED}
+    ),
+    JobStatus.NEEDS_CONFIRMATION: frozenset({JobStatus.QUEUED, JobStatus.CANCELLED}),
     JobStatus.CANCEL_REQUESTED: frozenset({JobStatus.CANCELLED, JobStatus.FAILED}),
     JobStatus.SUCCEEDED: frozenset(),
     JobStatus.FAILED: frozenset(),
@@ -601,6 +613,42 @@ class JobRepository:
             message="已恢复并重新排队",
         )
 
+    def require_manual_confirmation(
+        self, job_id: UUID, *, expected_revision: int | None = None
+    ) -> JobRecord:
+        record = self.get(job_id)
+        self._require_expected_revision(record, expected_revision)
+        if not record.paid:
+            raise JobTransitionConflict("manual confirmation is reserved for paid jobs")
+        if record.status is JobStatus.NEEDS_CONFIRMATION:
+            return record
+        return self._transition(
+            job_id,
+            JobStatus.NEEDS_CONFIRMATION,
+            expected_revision=record.revision,
+            stage="manual_confirmation",
+            message="paid remote task outcome is unknown; manual confirmation is required",
+            error="paid remote task outcome is unknown",
+            error_code="paid_remote_result_unknown",
+        )
+
+    def confirm_paid_retry(
+        self, job_id: UUID, *, expected_revision: int | None = None
+    ) -> JobRecord:
+        record = self.get(job_id)
+        self._require_expected_revision(record, expected_revision)
+        if not record.paid or record.status is not JobStatus.NEEDS_CONFIRMATION:
+            raise JobTransitionConflict("job is not awaiting paid-result confirmation")
+        return self._transition(
+            job_id,
+            JobStatus.QUEUED,
+            expected_revision=record.revision,
+            stage="queued",
+            message="paid remote result confirmed for retry",
+            error=None,
+            error_code=None,
+        )
+
     def request_cancel(self, job_id: UUID, *, expected_revision: int | None = None) -> JobRecord:
         record = self.get(job_id)
         self._require_expected_revision(record, expected_revision)
@@ -808,6 +856,7 @@ class JobRepository:
         )
         attempt_status = {
             JobStatus.PAUSED: "paused",
+            JobStatus.NEEDS_CONFIRMATION: "paused",
             JobStatus.SUCCEEDED: "succeeded",
             JobStatus.FAILED: "failed",
             JobStatus.CANCELLED: "cancelled",

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 from workbench.jobs.execution import RenderExecutionContext
 from workbench.video.process_runner import (
@@ -67,6 +68,9 @@ class RenderGraphExportPipeline:
         *,
         context: RenderExecutionContext | None = None,
         strict_assets: bool = True,
+        execution_mode: Literal[
+            "interactive-preview", "authoritative-preview", "final"
+        ] = "final",
     ) -> GraphExportResult:
         report = GraphPreflight().check(
             graph,
@@ -83,7 +87,13 @@ class RenderGraphExportPipeline:
         final_video = output_dir / "最终视频.mp4"
         subtitles_dir = output_dir / "subtitles"
         runner = self.runner or RemotionGraphRunner(self.project_root)
-        runner.render(graph, video_only, control=execution, muted=True)
+        runner.render(
+            graph,
+            video_only,
+            control=execution,
+            muted=True,
+            execution_mode=execution_mode,
+        )
         self._require_artifact(video_only, "Remotion video-only 输出")
         self._run_ffmpeg(
             build_audio_render_command(

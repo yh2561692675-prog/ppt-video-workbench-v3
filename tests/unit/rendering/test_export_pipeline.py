@@ -10,7 +10,7 @@ from workbench.rendering.models import GraphCanvas, RenderGraphV2
 
 
 class FakeGraphRunner:
-    def render(self, graph, output, *, control, muted):
+    def render(self, graph, output, *, control, muted, execution_mode):
         output.write_bytes(b"video-only")
 
 

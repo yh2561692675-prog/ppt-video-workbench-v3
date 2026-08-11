@@ -17,6 +17,7 @@
     "transitions",
     "assets",
     "source_revisions",
+    "cache_dependencies",
     "affected_ranges"
   ],
   "properties": {
@@ -36,6 +37,10 @@
     "subtitles": { "$ref": "#/$defs/subtitles" },
     "subtitle_plan": { "$ref": "#/$defs/subtitles" },
     "source_revisions": { "type": "object", "additionalProperties": { "type": "string" } },
+    "cache_dependencies": {
+      "type": "array",
+      "items": { "$ref": "cache-dependency-v1.schema.json" }
+    },
     "affected_ranges": { "type": "array", "items": { "$ref": "#/$defs/affected_range" } },
     "graph_hash": { "$ref": "#/$defs/hash" },
     "content_hash": { "$ref": "#/$defs/hash" },

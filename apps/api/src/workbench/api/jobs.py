@@ -16,7 +16,7 @@ from workbench.services.project_service import ProjectService
 class JobActionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    action: Literal["pause", "resume", "cancel"]
+    action: Literal["pause", "resume", "cancel", "confirm_retry"]
     expected_revision: int = Field(ge=1)
 
 
@@ -59,6 +59,10 @@ def create_jobs_router(service: ProjectService) -> APIRouter:
                 )
             elif request.action == "resume":
                 updated = service.jobs.resume(job_id, expected_revision=request.expected_revision)
+            elif request.action == "confirm_retry":
+                updated = service.jobs.confirm_paid_retry(
+                    job_id, expected_revision=request.expected_revision
+                )
             else:
                 updated = service.jobs.request_cancel(
                     job_id, expected_revision=request.expected_revision

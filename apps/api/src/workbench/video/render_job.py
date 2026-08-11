@@ -191,6 +191,7 @@ class RenderJobService:
             idempotency_key=idempotency_key,
             payload={
                 "render_generation": "v2",
+                "graph_id": str(graph.graph_id),
                 "graph_hash": graph.graph_hash,
                 "graph_snapshot_relative_path": snapshot.relative_to(root).as_posix(),
             },
@@ -247,8 +248,13 @@ class RenderJobService:
             if record.payload.get("render_generation") == "v2":
                 if self.graph_exporter is None:
                     raise GraphExportError("RenderGraph V2 exporter is not configured")
+                graph_id = str(record.payload.get("graph_id", ""))
                 graph_hash = str(record.payload.get("graph_hash", ""))
-                graph = RenderGraphSnapshotStore(root).load(graph_hash)
+                if not graph_id or not graph_hash:
+                    raise GraphExportError("RenderGraph V2 job is missing graph identity")
+                graph = RenderGraphSnapshotStore(root).load(graph_id)
+                if graph.graph_hash != graph_hash:
+                    raise GraphExportError("RenderGraph V2 snapshot hash changed")
                 result = self.graph_exporter(record.project_id, graph, context)
             else:
                 result = self.exporter.export(record.project_id, context=context)

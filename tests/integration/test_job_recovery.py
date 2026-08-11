@@ -111,6 +111,45 @@ def test_paid_job_stops_after_two_attempts(tmp_path: Path) -> None:
     assert result.error == "provider unavailable"
 
 
+def test_paid_unknown_remote_result_requires_explicit_confirmation_before_retry(
+    tmp_path: Path,
+) -> None:
+    repository = repository_at(tmp_path / "workspace.db")
+    job_id = repository.enqueue(
+        JobSpec(
+            project_id=uuid4(),
+            job_type=JobType.SYNTHESIZE_PAGE,
+            cache_key="paid-unknown-remote-result",
+            paid=True,
+        )
+    )
+    context = JobContext(
+        job_id,
+        tmp_path / "project",
+        JobType.SYNTHESIZE_PAGE,
+        paid=True,
+        remote_status_lookup=lambda _: None,
+    )
+    context.checkpoint(0.1, {"remote_task_ids": ["provider-task-1"]})
+    called = False
+
+    def handler() -> None:
+        nonlocal called
+        called = True
+
+    paused_for_review = JobRunner(repository, sleeper=lambda _: None).recover_job(
+        job_id, handler, context=context
+    )
+
+    assert paused_for_review.status is JobStatus.NEEDS_CONFIRMATION
+    assert paused_for_review.error_code == "paid_remote_result_unknown"
+    assert called is False
+    retried = repository.confirm_paid_retry(
+        job_id, expected_revision=paused_for_review.revision
+    )
+    assert retried.status is JobStatus.QUEUED
+
+
 def test_cancelled_job_pauses_without_calling_handler(tmp_path: Path) -> None:
     repository = repository_at(tmp_path / "workspace.db")
     job_id = repository.enqueue(

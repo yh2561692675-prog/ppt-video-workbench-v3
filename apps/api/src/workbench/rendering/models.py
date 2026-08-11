@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from workbench.assets.models import LicenseRecord
+from workbench.cache.contracts import CacheDependency
 
 
 class RenderModel(BaseModel):
@@ -240,6 +241,7 @@ class RenderGraphV2(RenderModel):
     audio: AudioMixPlan = Field(default_factory=AudioMixPlan)
     subtitles: SubtitleRenderPlan = Field(default_factory=SubtitleRenderPlan)
     source_revisions: dict[str, str] = Field(default_factory=dict)
+    cache_dependencies: list[CacheDependency] = Field(default_factory=list)
     affected_ranges: list[AffectedRange] = Field(default_factory=list)
     graph_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     created_at: datetime | None = None

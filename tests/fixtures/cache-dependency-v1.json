@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "domain": "overlay",
+  "node_key": "visual:node-1",
+  "upstream_kind": "asset_revision",
+  "upstream_key": "asset-1",
+  "upstream_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "start_us": 1000000,
+  "end_us": 2000000,
+  "artifact_refs": [
+    {
+      "relative_path": "preview-cache/node-1.mp4",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "size_bytes": 1024
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "fixture_version": "1.0",
+  "manifest": {
+    "schema_version": 1,
+    "id": "12345678-1234-4234-8234-1234567890ab",
+    "name": "匿名旧项目",
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "pages": [
+      {
+        "order": 1,
+        "title": "Page A",
+        "preview_path": "02_pages/page-0001.png",
+        "audio": { "relative_path": "05_audio/page-0001.wav", "duration_ms": 2000 },
+        "timeline": { "start_ms": 0, "end_ms": 2000 }
+      },
+      {
+        "order": 1,
+        "title": "Page B duplicate order",
+        "preview_path": "C:\\AnonymousLegacy\\missing-page.png",
+        "timeline": { "start_ms": 2000, "end_ms": 5000 }
+      },
+      { "title": "Page C missing media" }
+    ],
+    "subtitle_cues": [{ "start_ms": 100, "end_ms": 900, "text": "匿名字幕", "language": "zh-CN" }],
+    "subtitle_artifact": { "srt_relative_path": "06_subtitles/subtitles.srt" },
+    "video_export": { "mp4_relative_path": "08_output/legacy-final.mp4" }
+  },
+  "files": {
+    "02_pages/page-0001.png": "anonymous-image-fixture",
+    "05_audio/page-0001.wav": "anonymous-audio-fixture",
+    "06_subtitles/subtitles.srt": "1\n00:00:00,100 --> 00:00:00,900\nanonymous subtitle\n",
+    "08_output/legacy-final.mp4": "anonymous-final-fixture"
+  },
+  "protected_paths": [
+    "02_pages/page-0001.png",
+    "05_audio/page-0001.wav",
+    "06_subtitles/subtitles.srt",
+    "08_output/legacy-final.mp4"
+  ],
+  "expected_sha256": {
+    "02_pages/page-0001.png": "070025bf35d03db21e3247c85381c17f8ce0552151d35071f1a398bfa6621ab3",
+    "05_audio/page-0001.wav": "87222e1cc009fc7ce2f09fd156089b268d974109a0f0df0538631a0e2cbb21bf",
+    "06_subtitles/subtitles.srt": "c83ab0a0e19081f2af416bc2773d9bf5c61fdc90eeee3aa1e9ac8f5da2133961",
+    "08_output/legacy-final.mp4": "2c673e478d873314a2e0376c9f2b23e3a4262d1ea3ad955d3c23bd6a135bf6b1"
+  }
+}

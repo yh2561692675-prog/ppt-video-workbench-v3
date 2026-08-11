@@ -30,12 +30,16 @@ class MissingFontError(OfficeRendererError):
 def ensure_fonts_available(required_fonts: set[str]) -> None:
     matcher = shutil.which("fc-match")
     if not matcher:
-        missing = sorted(required_fonts)
+        missing_fonts = sorted(required_fonts)
         if sys.platform == "win32":
             labels = _windows_font_labels()
-            missing = [font for font in missing if not _windows_font_label_matches(font, labels)]
-        if missing:
-            raise MissingFontError("缺少字体：" + ", ".join(missing))
+            missing_fonts = [
+                font
+                for font in missing_fonts
+                if not _windows_font_label_matches(font, labels)
+            ]
+        if missing_fonts:
+            raise MissingFontError("缺少字体：" + ", ".join(missing_fonts))
         return
     missing: list[str] = []
     for font in sorted(required_fonts):

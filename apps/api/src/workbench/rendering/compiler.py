@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid5
 
 from workbench.assets.models import AssetRecord
+from workbench.cache.contracts import (
+    CacheDependency,
+    CacheDomain,
+    normalize_dependencies,
+)
 from workbench.continuity.models import AudioCutMode, ContinuityPlan
 from workbench.subtitles.workbench_models import SubtitleWorkbenchDocument
 from workbench.timeline.production import ClipKind, ProductionTimeline
@@ -18,12 +24,15 @@ from .models import (
     GraphCanvas,
     RenderGraphV2,
     RenderNodeV2,
+    ResolvedAsset,
     SubtitleCue,
     SubtitleRenderPlan,
     SubtitleWord,
     TransitionEdge,
 )
 from .timebase import us_range_to_frames
+
+COMPILER_VERSION = "rendergraph-v2-0.2"
 
 
 class RenderGraphCompiler:
@@ -90,6 +99,7 @@ class RenderGraphCompiler:
                         {
                             "clip": clip.model_dump(mode="json"),
                             "timeline_hash": timeline.content_hash,
+                            "compiler_version": COMPILER_VERSION,
                         }
                     ),
                 )
@@ -104,12 +114,15 @@ class RenderGraphCompiler:
         audio = self._compile_audio(timeline, nodes, transitions)
         subtitle_plan = self._compile_subtitles(subtitles)
         ranges = self._affected_ranges(transitions, subtitle_plan, nodes)
+        dependencies = self._cache_dependencies(
+            nodes, transitions, subtitle_plan, resolved_assets, timeline
+        )
         graph = RenderGraphV2(
             graph_id=uuid5(namespace, f"render-graph-v2:{timeline.revision}"),
             project_id=timeline.project_id,
             timeline_revision=timeline.revision,
             timeline_hash=timeline.content_hash or sha256_json(timeline.model_dump(mode="json")),
-            compiler_version="rendergraph-v2-0.1",
+            compiler_version=COMPILER_VERSION,
             duration_us=timeline.duration_us,
             canvas=GraphCanvas(
                 width=timeline.width,
@@ -129,6 +142,7 @@ class RenderGraphCompiler:
                 "timeline": timeline.content_hash or sha256_json(timeline.model_dump(mode="json")),
                 **(source_revisions or {}),
             },
+            cache_dependencies=list(dependencies),
             affected_ranges=ranges,
             graph_hash="0" * 64,
             created_at=datetime.now(UTC),
@@ -344,9 +358,143 @@ class RenderGraphCompiler:
                 )
         for cue in subtitles.cues:
             ranges.append(
-                AffectedRange(start_us=cue.start_us, end_us=cue.end_us, reasons=["subtitle"])
+                AffectedRange(
+                    start_us=cue.start_us,
+                    end_us=cue.end_us,
+                    reasons=[f"subtitle:{subtitles.render_mode}"],
+                )
             )
-        return ranges
+        for node in nodes:
+            if node.kind == ClipKind.OVERLAY.value:
+                ranges.append(
+                    AffectedRange(
+                        start_us=node.start_us,
+                        end_us=node.end_us,
+                        reasons=["overlay"],
+                    )
+                )
+        return _merge_affected_ranges(ranges)
+
+    def _cache_dependencies(
+        self,
+        nodes: list[RenderNodeV2],
+        transitions: list[TransitionEdge],
+        subtitles: SubtitleRenderPlan,
+        resolved_assets: Mapping[str, ResolvedAsset],
+        timeline: ProductionTimeline,
+    ) -> tuple[CacheDependency, ...]:
+        dependencies: list[CacheDependency] = []
+        for node in nodes:
+            if node.kind in {ClipKind.NARRATION.value, ClipKind.MUSIC.value, ClipKind.SFX.value}:
+                domain = CacheDomain.AUDIO
+            elif node.kind == ClipKind.OVERLAY.value:
+                domain = CacheDomain.OVERLAY
+            else:
+                domain = CacheDomain.VIDEO_ONLY
+            asset = resolved_assets.get(node.source_ref)
+            asset_hash = getattr(asset, "content_hash", None)
+            upstream_hash = asset_hash if isinstance(asset_hash, str) else node.cache_key
+            if upstream_hash is None:
+                upstream_hash = sha256_json({"source_ref": node.source_ref})
+            dependencies.append(
+                CacheDependency(
+                    domain=domain,
+                    node_key=f"{domain.value}:{node.id}",
+                    upstream_kind="asset_revision" if node.asset_id else "source_revision",
+                    upstream_key=str(node.asset_id or node.source_ref),
+                    upstream_hash=upstream_hash,
+                    start_us=node.start_us,
+                    end_us=node.end_us,
+                )
+            )
+        for edge in transitions:
+            range_start = edge.start_us if edge.end_us > edge.start_us else None
+            range_end = edge.end_us if edge.end_us > edge.start_us else None
+            edge_hash = sha256_json(edge.model_dump(mode="json"))
+            dependencies.append(
+                CacheDependency(
+                    domain=CacheDomain.TRANSITION,
+                    node_key=f"transition:{edge.id}",
+                    upstream_kind="continuity_revision",
+                    upstream_key=str(edge.id),
+                    upstream_hash=edge_hash,
+                    start_us=range_start,
+                    end_us=range_end,
+                )
+            )
+            if edge.audio_mode != "cut":
+                dependencies.append(
+                    CacheDependency(
+                        domain=CacheDomain.AUDIO,
+                        node_key=f"audio-transition:{edge.id}",
+                        upstream_kind="continuity_revision",
+                        upstream_key=str(edge.id),
+                        upstream_hash=edge_hash,
+                        start_us=range_start,
+                        end_us=range_end,
+                    )
+                )
+        subtitle_domains: tuple[CacheDomain, ...] = {
+            "soft": (CacheDomain.SUBTITLE_SOFT,),
+            "burn_in": (CacheDomain.SUBTITLE_BURN_IN,),
+            "both": (CacheDomain.SUBTITLE_SOFT, CacheDomain.SUBTITLE_BURN_IN),
+            "none": (),
+        }[subtitles.render_mode]
+        for cue in subtitles.cues:
+            for domain in subtitle_domains:
+                dependencies.append(
+                    CacheDependency(
+                        domain=domain,
+                        node_key=f"{domain.value}:{cue.id}",
+                        upstream_kind="subtitle_revision",
+                        upstream_key=str(cue.id),
+                        upstream_hash=subtitles.document_hash,
+                        start_us=cue.start_us,
+                        end_us=cue.end_us,
+                    )
+                )
+        dependencies.extend(
+            [
+                CacheDependency(
+                    domain=CacheDomain.LAYOUT,
+                    node_key="layout:canvas",
+                    upstream_kind="timeline_revision",
+                    upstream_key=str(timeline.project_id),
+                    upstream_hash=sha256_json(
+                        {
+                            "width": timeline.width,
+                            "height": timeline.height,
+                            "fps": timeline.fps,
+                        }
+                    ),
+                    start_us=0,
+                    end_us=timeline.duration_us,
+                ),
+                CacheDependency(
+                    domain=CacheDomain.FINAL,
+                    node_key="compiler:rendergraph-v2",
+                    upstream_kind="compiler",
+                    upstream_key=COMPILER_VERSION,
+                    upstream_hash=sha256_json({"compiler_version": COMPILER_VERSION}),
+                ),
+            ]
+        )
+        return normalize_dependencies(dependencies)
+
+
+def _merge_affected_ranges(ranges: list[AffectedRange]) -> list[AffectedRange]:
+    merged: list[AffectedRange] = []
+    for item in sorted(ranges, key=lambda value: (value.start_us, value.end_us)):
+        if not merged or item.start_us > merged[-1].end_us:
+            merged.append(item.model_copy(update={"reasons": sorted(set(item.reasons))}))
+            continue
+        previous = merged[-1]
+        merged[-1] = AffectedRange(
+            start_us=previous.start_us,
+            end_us=max(previous.end_us, item.end_us),
+            reasons=sorted(set(previous.reasons + item.reasons)),
+        )
+    return merged
 
 
 def _as_int(value: object, default: int) -> int:

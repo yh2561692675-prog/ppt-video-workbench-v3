@@ -15,6 +15,7 @@ class JobStatus(StrEnum):
     RUNNING = "running"
     PAUSE_REQUESTED = "pause_requested"
     PAUSED = "paused"
+    NEEDS_CONFIRMATION = "needs_confirmation"
     CANCEL_REQUESTED = "cancel_requested"
     SUCCEEDED = "succeeded"
     FAILED = "failed"

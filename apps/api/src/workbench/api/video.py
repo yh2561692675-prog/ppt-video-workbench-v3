@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Literal
 from uuid import UUID
 
@@ -36,6 +37,7 @@ def create_video_router(
     service: VideoPreviewService,
     exporter: VideoExportService | None = None,
     render_jobs: RenderJobService | None = None,
+    compatibility_preflight: Callable[[UUID], VideoPreflight | None] | None = None,
 ) -> APIRouter:
     router = APIRouter(prefix="/api/projects/{project_id}/video")
 
@@ -44,6 +46,10 @@ def create_video_router(
         project_id: UUID, request: PreflightRequest | None = None
     ) -> Envelope[VideoPreflight]:
         try:
+            if compatibility_preflight is not None:
+                compatible = compatibility_preflight(project_id)
+                if compatible is not None:
+                    return envelope(compatible)
             return envelope(
                 service.preflight(
                     project_id,

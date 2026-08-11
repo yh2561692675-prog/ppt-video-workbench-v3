@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from pathlib import Path
+from typing import Literal
 
 from workbench.jobs.execution import RenderCancelled
 from workbench.runtime.layout import RendererRuntime, RuntimeLayout
@@ -52,6 +53,9 @@ class RemotionGraphRunner:
         asset_base_url: str = "",
         control: ProcessControl | None = None,
         muted: bool = True,
+        execution_mode: Literal[
+            "interactive-preview", "authoritative-preview", "final"
+        ] = "final",
     ) -> None:
         output.parent.mkdir(parents=True, exist_ok=True)
         props_path = output.with_name(f".{output.stem}.render-graph.json")
@@ -60,7 +64,7 @@ class RemotionGraphRunner:
                 {
                     "graph": graph.model_dump(mode="json"),
                     "assetBaseUrl": asset_base_url,
-                    "executionMode": "final",
+                    "executionMode": execution_mode,
                 },
                 ensure_ascii=False,
             ),

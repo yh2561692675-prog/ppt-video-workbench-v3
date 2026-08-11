@@ -1463,6 +1463,19 @@
           "title": "Created At",
           "type": "string"
         },
+        "current_attempt_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current Attempt Id"
+        },
         "error": {
           "anyOf": [
             {
@@ -1592,6 +1605,13 @@
           "title": "Payload",
           "type": "object"
         },
+        "priority": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Priority",
+          "type": "integer"
+        },
         "progress": {
           "default": 0.0,
           "maximum": 1.0,
@@ -1668,6 +1688,7 @@
         "running",
         "pause_requested",
         "paused",
+        "needs_confirmation",
         "cancel_requested",
         "succeeded",
         "failed",
@@ -1685,7 +1706,14 @@
         "build_subtitles",
         "render_page",
         "export_package",
-        "presenter_sync"
+        "presenter_sync",
+        "render_preview",
+        "derive_asset",
+        "build_proxy",
+        "build_waveform",
+        "translate_subtitles",
+        "quality_scan",
+        "render_export"
       ],
       "title": "JobType",
       "type": "string"
@@ -2421,6 +2449,17 @@
           "title": "Allowed",
           "type": "boolean"
         },
+        "cache_status": {
+          "default": "fresh",
+          "enum": [
+            "fresh",
+            "reused",
+            "mixed",
+            "stale"
+          ],
+          "title": "Cache Status",
+          "type": "string"
+        },
         "check_fingerprints": {
           "additionalProperties": {
             "type": "string"
@@ -2440,6 +2479,11 @@
           "title": "Executed Checks",
           "type": "array"
         },
+        "fresh": {
+          "default": false,
+          "title": "Fresh",
+          "type": "boolean"
+        },
         "id": {
           "format": "uuid",
           "title": "Id",
@@ -2451,12 +2495,29 @@
           "title": "Input Fingerprint",
           "type": "string"
         },
+        "is_stale": {
+          "default": false,
+          "title": "Is Stale",
+          "type": "boolean"
+        },
         "issues": {
           "items": {
             "$ref": "#/$defs/PreflightIssue"
           },
           "title": "Issues",
           "type": "array"
+        },
+        "preflight_run_id": {
+          "format": "uuid",
+          "title": "Preflight Run Id",
+          "type": "string"
+        },
+        "project_fingerprint": {
+          "default": "0000000000000000000000000000000000000000000000000000000000000000",
+          "maxLength": 64,
+          "minLength": 64,
+          "title": "Project Fingerprint",
+          "type": "string"
         },
         "project_id": {
           "format": "uuid",

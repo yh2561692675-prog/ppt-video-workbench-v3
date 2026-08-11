@@ -73,6 +73,11 @@ class JobRunner:
         if checkpoint is None:
             raise JobRecoveryError(f"no valid checkpoint found for job {job_id}")
         context.query_remote_tasks(checkpoint)
+        has_unknown_remote_status = any(
+            status is None for status in context.remote_status_results.values()
+        )
+        if context.paid and has_unknown_remote_status:
+            return self.repository.require_manual_confirmation(job_id)
         self.repository.requeue_for_recovery(job_id)
         return self.execute(job_id, handler, context=context)
 

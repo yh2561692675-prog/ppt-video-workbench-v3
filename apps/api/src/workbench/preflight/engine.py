@@ -6,6 +6,7 @@ import sys
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 
 from workbench.domain.issues import IssueLevel, IssueLocation, PreflightIssue, PreflightReport
 from workbench.domain.models import ProjectManifest
@@ -38,6 +39,8 @@ class PreflightEngine:
         project: ProjectManifest,
         scope: set[str] | list[str] | None = None,
         previous: PreflightReport | None = None,
+        *,
+        fresh: bool = False,
     ) -> PreflightReport:
         root = (self.workspace_root / project.project_dir).resolve()
         selected = set(
@@ -56,33 +59,41 @@ class PreflightEngine:
         check_fingerprints: dict[str, str] = {}
         reused: list[str] = []
         executed: list[str] = []
-        previous_issues = self._group_previous_issues(previous)
+        reusable_previous = None if fresh else previous
+        previous_issues = self._group_previous_issues(reusable_previous)
         for name, checker in checkers.items():
             if name not in selected:
-                if previous is not None and name in previous.check_fingerprints:
-                    check_fingerprints[name] = previous.check_fingerprints[name]
+                if reusable_previous is not None and name in reusable_previous.check_fingerprints:
+                    check_fingerprints[name] = reusable_previous.check_fingerprints[name]
                     issues.extend(previous_issues.get(name, []))
                     reused.append(name)
                 continue
             fingerprint, fresh_issues = checker()
             check_fingerprints[name] = fingerprint
-            if previous is not None and previous.check_fingerprints.get(name) == fingerprint:
+            if (
+                reusable_previous is not None
+                and reusable_previous.check_fingerprints.get(name) == fingerprint
+            ):
                 issues.extend(previous_issues.get(name, []))
                 reused.append(name)
             else:
                 issues.extend(fresh_issues)
                 executed.append(name)
 
-        input_fingerprint = digest(
-            {
-                "project": project.model_dump(mode="json"),
-                "checks": check_fingerprints,
-            }
+        project_fingerprint = self.project_fingerprint(project)
+        input_fingerprint = digest({"project": project_fingerprint, "checks": check_fingerprints})
+        cache_status: Literal["fresh", "reused", "mixed", "stale"] = (
+            "fresh"
+            if fresh or not reused
+            else "reused"
+            if not executed
+            else "mixed"
         )
         report = PreflightReport(
             project_id=project.id,
             checked_at=datetime.now(UTC),
             scope=sorted(selected),
+            project_fingerprint=project_fingerprint,
             input_fingerprint=input_fingerprint,
             check_fingerprints=check_fingerprints,
             issues=issues,
@@ -96,6 +107,8 @@ class PreflightEngine:
             ),
             reused_checks=reused,
             executed_checks=executed,
+            fresh=fresh,
+            cache_status=cache_status,
         )
         snapshot_path = self._write_snapshot(root, report)
         return report.model_copy(update={"snapshot_path": snapshot_path})
@@ -105,7 +118,12 @@ class PreflightEngine:
     ) -> tuple[str, list[PreflightIssue]]:
         free = shutil.disk_usage(root if root.exists() else self.workspace_root).free
         writable = root.is_dir() and os.access(root, os.W_OK)
-        fingerprint = digest({"free": free, "writable": writable, "root": str(root)})
+        fingerprint = digest(
+            {
+                "disk_space_sufficient": free >= 1_048_576,
+                "writable": writable,
+            }
+        )
         issues: list[PreflightIssue] = []
         if not writable:
             issues.append(
@@ -128,6 +146,23 @@ class PreflightEngine:
                 )
             )
         return fingerprint, issues
+
+    @staticmethod
+    def project_fingerprint(project: ProjectManifest) -> str:
+        """Hash user/render inputs while excluding preflight's own persistence fields."""
+        payload = project.model_dump(
+            mode="json",
+            exclude={
+                "updated_at",
+                "audit_log",
+                "preflight_report",
+                "preflight_history",
+                "issue_confirmations",
+                "video_preflight",
+                "video_export",
+            },
+        )
+        return digest(payload)
 
     @staticmethod
     def _resource_issue(

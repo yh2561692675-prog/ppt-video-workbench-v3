@@ -24,6 +24,7 @@ class PreflightRunRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     scope: list[str] | None = None
+    fresh: bool = True
 
 
 class IssueConfirmationRequest(BaseModel):
@@ -44,7 +45,11 @@ def create_preflight_router(
         project_id: UUID, request: PreflightRunRequest | None = None
     ) -> Envelope[PreflightReport]:
         try:
-            report = service.run(project_id, request.scope if request else None)
+            report = service.run(
+                project_id,
+                request.scope if request else None,
+                fresh=request.fresh if request else True,
+            )
         except KeyError as error:
             raise HTTPException(status_code=404, detail="project not found") from error
         return envelope(report)
