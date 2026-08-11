@@ -95,7 +95,7 @@ def _probe(command: str, *args: str) -> dict[str, Any]:
 def build_candidate(repo_root: Path, output_root: Path, candidate_id: str | None = None) -> Path:
     repo_root = repo_root.resolve()
     output_root = output_root.resolve()
-    dirty = bool(_git(repo_root, "status", "--porcelain=v1", "--untracked-files=no"))
+    dirty = bool(_git(repo_root, "status", "--porcelain=v1", "--untracked-files=all"))
     if dirty:
         raise RuntimeError("source worktree is dirty; candidate generation is fail-closed")
     commit = _git(repo_root, "rev-parse", "HEAD")
@@ -105,20 +105,25 @@ def build_candidate(repo_root: Path, output_root: Path, candidate_id: str | None
     candidate_id = candidate_id or f"v1-rc-{commit[:12]}-{stamp}"
     candidate_root = output_root / candidate_id
     candidate_root.mkdir(parents=True, exist_ok=False)
-    snapshot_root = candidate_root / "source"
-    snapshot_root.mkdir()
-    refs: list[dict[str, Any]] = []
-    missing: list[str] = []
-    for relative in SNAPSHOT_FILES:
-        source = repo_root / relative
-        if not source.is_file():
-            missing.append(relative)
-            continue
-        destination = snapshot_root / relative
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, destination)
-        refs.append(_ref(destination, candidate_root))
-    runtime = {
+    try:
+        snapshot_root = candidate_root / "source"
+        snapshot_root.mkdir()
+        refs: list[dict[str, Any]] = []
+        missing: list[str] = []
+        for relative in SNAPSHOT_FILES:
+            source = repo_root / relative
+            if not source.is_file():
+                missing.append(relative)
+                continue
+            destination = snapshot_root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
+            refs.append(_ref(destination, candidate_root))
+        if missing:
+            raise RuntimeError(
+                "required candidate snapshot files are missing: " + ", ".join(missing)
+            )
+        runtime = {
         "python": _probe("python", "--version"),
         "node": _probe("node", "--version"),
         "pnpm": _probe("pnpm", "--version"),
@@ -134,8 +139,8 @@ def build_candidate(repo_root: Path, output_root: Path, candidate_id: str | None
                 repo_root / "dist/release/launcher/workbench-launcher.exe"
             ).is_file()
         },
-    }
-    manifest: dict[str, Any] = {
+        }
+        manifest: dict[str, Any] = {
         "schema_version": "1.0",
         "candidate_id": candidate_id,
         "generated_at": timestamp.isoformat().replace("+00:00", "Z"),
@@ -149,14 +154,17 @@ def build_candidate(repo_root: Path, output_root: Path, candidate_id: str | None
             "missing_snapshot_files": missing,
             "installer_required_for_release": True,
         },
-    }
-    validate_candidate_manifest(manifest, candidate_root)
-    manifest_path = candidate_root / "candidate-manifest.json"
-    manifest_path.write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    return manifest_path
+        }
+        validate_candidate_manifest(manifest, candidate_root)
+        manifest_path = candidate_root / "candidate-manifest.json"
+        manifest_path.write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        return manifest_path
+    except BaseException:
+        shutil.rmtree(candidate_root, ignore_errors=True)
+        raise
 
 
 def main() -> int:

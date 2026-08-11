@@ -11,7 +11,13 @@ from .candidate import build_candidate, validate_checkout
 from .evidence import EvidenceWriter
 from .models import ValidationError, load_and_validate, validate_candidate_manifest, validate_run
 from .registry import list_scenarios
-from .runner import new_run_id, python_smoke_plan, recover_automation, run_plan
+from .runner import (
+    full_automation_plan,
+    new_run_id,
+    python_smoke_plan,
+    recover_automation,
+    run_plan,
+)
 
 
 def _json(value: object) -> None:
@@ -109,14 +115,19 @@ def main(argv: list[str] | None = None) -> int:
                 args.candidate, validate_candidate_manifest, args.candidate.parent
             )
             validate_checkout(candidate, args.repo_root)
-            if args.matrix != "python-smoke":
+            if args.matrix not in {"python-smoke", "dp20-full"}:
                 raise ValidationError(f"unsupported automation matrix: {args.matrix}")
             run_id = new_run_id(candidate["candidate_id"], args.matrix)
             writer = EvidenceWriter(args.evidence_root, candidate["candidate_id"], run_id)
+            plan = (
+                python_smoke_plan(args.repo_root.resolve())
+                if args.matrix == "python-smoke"
+                else full_automation_plan(args.repo_root.resolve())
+            )
             verdict = run_plan(
                 writer=writer,
                 matrix=args.matrix,
-                commands=python_smoke_plan(args.repo_root.resolve()),
+                commands=plan,
                 environment={"runner": "scripts.debug_program.runner"},
             )
             _json(verdict)

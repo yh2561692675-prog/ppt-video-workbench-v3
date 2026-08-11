@@ -325,8 +325,10 @@ def validate_automation_verdict(
         if entry["status"] not in {"passed", "failed"}:
             raise ValidationError(f"commands[{index}].status is invalid")
         relative = _relative_path(entry["result"], f"commands[{index}].result")
-        if base_dir is not None and not (base_dir / relative).is_file():
-            raise ValidationError(f"missing automation result: {relative}")
+        if base_dir is not None:
+            resolved = (base_dir / relative).resolve()
+            if base_dir.resolve() not in resolved.parents or not resolved.is_file():
+                raise ValidationError(f"missing or escaped automation result: {relative}")
     failure = item["first_failure"]
     if failure is not None:
         entry = _object(failure, "first_failure")
@@ -336,10 +338,24 @@ def validate_automation_verdict(
         if not isinstance(entry["exit_code"], int):
             raise ValidationError("first_failure.exit_code must be an integer")
         relative = _relative_path(entry["result"], "first_failure.result")
-        if base_dir is not None and not (base_dir / relative).is_file():
-            raise ValidationError(f"missing first failure result: {relative}")
-    if item["status"] == "failed" and failure is None:
-        raise ValidationError("failed automation verdict requires first_failure")
+        if base_dir is not None:
+            resolved = (base_dir / relative).resolve()
+            if base_dir.resolve() not in resolved.parents or not resolved.is_file():
+                raise ValidationError(f"missing or escaped first failure result: {relative}")
+    if item["status"] == "passed":
+        if not commands or any(command["status"] != "passed" for command in commands):
+            raise ValidationError("passed automation verdict requires all commands to pass")
+        if failure is not None:
+            raise ValidationError("passed automation verdict cannot have first_failure")
+    if item["status"] == "failed":
+        failed = [command for command in commands if command["status"] == "failed"]
+        if not failed or failure is None:
+            raise ValidationError(
+                "failed automation verdict requires a failed command and first_failure"
+            )
+        first = failed[0]
+        if any(failure[key] != first[key] for key in ("name", "exit_code", "result")):
+            raise ValidationError("first_failure must match the first failed command")
     if "notes" in item and not isinstance(item["notes"], list):
         raise ValidationError("automation_verdict.notes must be an array")
     return item

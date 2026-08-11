@@ -23,6 +23,7 @@ from scripts.debug_program.registry import list_scenarios
 from scripts.debug_program.runner import (
     CommandSpec,
     execute_command,
+    full_automation_plan,
     new_run_id,
     recover_automation,
     run_plan,
@@ -167,6 +168,15 @@ def test_runner_executes_and_preserves_first_failure(tmp_path: Path) -> None:
     assert json.loads(result.read_text(encoding="utf-8"))["exit_code"] == 7
 
 
+def test_runner_rejects_empty_plan_without_creating_a_passed_run(tmp_path: Path) -> None:
+    writer = EvidenceWriter(
+        tmp_path / "evidence", "v1-rc-abc1234-20260811T193000Z", "run-empty-001"
+    )
+    with pytest.raises(ValueError, match="at least one"):
+        run_plan(writer=writer, matrix="python-smoke", commands=())
+    assert not (writer.run_root / "run.json").exists()
+
+
 def test_runner_closes_logs_and_rejects_empty_command_name(tmp_path: Path) -> None:
     output = tmp_path / "commands"
     result = execute_command(
@@ -216,6 +226,29 @@ def test_automation_verdict_is_validated_and_recovery_is_idempotent(tmp_path: Pa
     with pytest.raises(ValidationError, match="unknown fields"):
         validate_automation_verdict(verdict)
 
+    result = writer.run_root / "result.json"
+    result.write_text("{}", encoding="utf-8")
+    base = {
+        "schema_version": "1.0",
+        "candidate_id": writer.candidate_id,
+        "run_id": writer.run_id,
+        "matrix": "python-smoke",
+        "started_at": "2026-08-11T19:30:00Z",
+        "finished_at": "2026-08-11T19:30:01Z",
+        "commands": [],
+        "first_failure": None,
+    }
+    with pytest.raises(ValidationError, match="all commands"):
+        validate_automation_verdict({**base, "status": "passed"}, writer.run_root)
+    failed = {
+        **base,
+        "status": "failed",
+        "commands": [{"name": "x", "exit_code": 7, "status": "failed", "result": "result.json"}],
+        "first_failure": {"name": "wrong", "exit_code": 7, "result": "result.json"},
+    }
+    with pytest.raises(ValidationError, match="first_failure"):
+        validate_automation_verdict(failed, writer.run_root)
+
 
 def test_candidate_checkout_binding_rejects_mismatch_and_dirty(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -248,7 +281,49 @@ def test_candidate_checkout_binding_rejects_mismatch_and_dirty(
         candidate_module.validate_checkout(value, tmp_path)
 
 
+def test_candidate_rejects_untracked_checkout_and_missing_snapshot_cleans_partial_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def clean_or_untracked(_root: Path, *args: str) -> str:
+        if args[0] == "status":
+            return "?? new-source.py"
+        if args[-1] == "--show-toplevel":
+            return str(tmp_path)
+        return "a" * 40
+
+    monkeypatch.setattr(candidate_module, "_git", clean_or_untracked)
+    with pytest.raises(RuntimeError, match="dirty"):
+        candidate_module.build_candidate(tmp_path, tmp_path / "candidates")
+    assert not (tmp_path / "candidates").exists()
+
+    def clean_git(_root: Path, *args: str) -> str:
+        if args[0] == "status":
+            return ""
+        if args[-1] == "--show-toplevel":
+            return str(tmp_path)
+        if args[-1] == "HEAD":
+            return "a" * 40
+        return "codex/test"
+
+    monkeypatch.setattr(candidate_module, "_git", clean_git)
+    monkeypatch.setattr(candidate_module, "SNAPSHOT_FILES", ("missing-lock.yaml",))
+    output = tmp_path / "candidates"
+    with pytest.raises(RuntimeError, match="snapshot files"):
+        candidate_module.build_candidate(tmp_path, output)
+    assert not any(output.iterdir())
+
+
 def test_run_ids_are_unique_within_one_second() -> None:
     first = new_run_id("v1-rc-abc1234-20260811T193000Z", "python-smoke")
     second = new_run_id("v1-rc-abc1234-20260811T193000Z", "python-smoke")
     assert first != second
+
+
+def test_full_automation_plan_is_explicit_and_sequential(tmp_path: Path) -> None:
+    plan = full_automation_plan(tmp_path)
+    names = [item.name for item in plan]
+    assert names[:3] == ["python-full-tests", "python-ruff", "python-mypy"]
+    assert "web-tests" in names
+    assert "remotion-tests" in names
+    assert "contract-migration-regression" in names
+    assert all(item.argv and item.argv[0] != "cmd.exe" for item in plan)

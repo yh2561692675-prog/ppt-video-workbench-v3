@@ -142,6 +142,8 @@ def run_plan(
 ) -> dict[str, Any]:
     """Run commands sequentially, preserving the first failure and all artifacts."""
 
+    if not commands:
+        raise ValueError("automation plan must contain at least one command")
     writer.create_run(matrix, environment, status="running")
     command_root = writer.run_root / "commands"
     results: list[CommandResult] = []
@@ -244,5 +246,72 @@ def python_smoke_plan(repo_root: Path) -> tuple[CommandSpec, ...]:
             repo_root,
             {"PYTHONPATH": os.pathsep.join((".", "apps/api/src", "peripheral-platform/src"))},
             300,
+        ),
+    )
+
+
+def full_automation_plan(repo_root: Path) -> tuple[CommandSpec, ...]:
+    """DP20-DP24 command plan; execution remains sequential and fail-closed."""
+
+    python_env = {
+        "PYTHONPATH": os.pathsep.join((".", "apps/api/src", "peripheral-platform/src"))
+    }
+    python = sys.executable
+    pnpm = "pnpm.cmd" if os.name == "nt" else "pnpm"
+
+    def spec(
+        name: str,
+        argv: Sequence[str],
+        timeout_seconds: int,
+        env: dict[str, str] | None = None,
+    ) -> CommandSpec:
+        return CommandSpec(name, tuple(argv), repo_root, env or {}, timeout_seconds)
+
+    return (
+        spec("python-full-tests", [python, "-m", "pytest", "-q"], 3600, python_env),
+        spec(
+            "python-ruff",
+            [python, "-m", "ruff", "check", "apps", "tests", "scripts"],
+            900,
+            python_env,
+        ),
+        spec("python-mypy", [python, "-m", "mypy", "--strict"], 1800, python_env),
+        spec(
+            "web-lint",
+            [pnpm, "--filter", "@workbench/web", "exec", "eslint", "src", "--max-warnings=0"],
+            900,
+        ),
+        spec("web-typecheck", [pnpm, "--filter", "@workbench/web", "typecheck"], 900),
+        spec(
+            "web-tests",
+            [pnpm, "--filter", "@workbench/web", "test", "--", "--reporter=verbose"],
+            1800,
+        ),
+        spec("web-build", [pnpm, "--filter", "@workbench/web", "build"], 1800),
+        spec(
+            "remotion-typecheck",
+            [pnpm, "--filter", "@workbench/remotion", "typecheck"],
+            900,
+        ),
+        spec(
+            "remotion-tests",
+            [pnpm, "--filter", "@workbench/remotion", "test", "--", "--reporter=verbose"],
+            1800,
+        ),
+        spec("remotion-build", [pnpm, "--filter", "@workbench/remotion", "build"], 1200),
+        spec(
+            "contract-migration-regression",
+            [
+                python,
+                "-m",
+                "pytest",
+                "-q",
+                "tests/contracts",
+                "tests/contract",
+                "tests/integration/test_project_v2_migration.py",
+                "tests/unit/storage/test_workspace_migrations.py",
+            ],
+            1800,
+            python_env,
         ),
     )
