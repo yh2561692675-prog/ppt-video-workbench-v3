@@ -73,6 +73,7 @@ def _validate_hash_files(
         raise ValidationError(f"{name} must be a non-empty array")
     for index, raw_ref in enumerate(values):
         ref = _hash_ref(raw_ref, f"{name}[{index}]")
+        _no_unknown(ref, {"path", "size", "sha256"}, f"{name}[{index}]")
         relative = _strict_relative_path(ref["path"], f"{name}[{index}].path")
         if isinstance(ref["size"], bool):
             raise ValidationError(f"{name}[{index}].size must be an integer")

@@ -150,6 +150,7 @@ def test_ci_preflight_without_external_evidence_is_blocked(tmp_path: Path) -> No
         lambda value: value["jobs"][0].update({"timeout": True}),
         lambda value: value["jobs"][0].update({"cancelled": True}),
         lambda value: value["jobs"][0]["quality"][0].update({"exit_code": 1}),
+        lambda value: value["jobs"][0]["artifacts"][0].update({"extra": True}),
         lambda value: value["jobs"][0]["artifacts"][0].update({"sha256": "0" * 64}),
         lambda value: value["jobs"][0]["logs"][0].update({"path": "../outside.txt"}),
         lambda value: value["jobs"][0]["reports"][0].update({"path": "C:/outside.json"}),
