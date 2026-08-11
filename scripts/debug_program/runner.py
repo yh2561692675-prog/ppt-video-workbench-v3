@@ -300,8 +300,8 @@ def full_automation_plan(
     if candidate is not None:
         tool_preflight_command.extend(("--candidate", str(candidate)))
         release_command.extend(("--candidate", str(candidate)))
-    release_root = repo_root / "test-results" / "debug-program" / "release-payload"
-    installer_root = repo_root / "test-results" / "debug-program" / "release-artifacts"
+    release_root = Path("test-results/debug-program/release-payload")
+    installer_root = Path("test-results/debug-program/release-artifacts")
     return (
         spec("release-tool-preflight", tool_preflight_command, 300, python_env),
         spec(

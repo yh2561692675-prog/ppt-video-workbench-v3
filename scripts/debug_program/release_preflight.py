@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -43,6 +44,14 @@ def _probe(path: Path | None, *arguments: str) -> dict[str, Any]:
         "exit_code": result.returncode,
         "identity": lines[0][:240] if lines else "",
     }
+
+
+def _file_ref(path: Path) -> dict[str, Any]:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return {"size": path.stat().st_size, "sha256": digest.hexdigest()}
 
 
 def run_preflight(
@@ -92,6 +101,11 @@ def run_preflight(
         "status": "passed" if not reasons else "blocked",
         "required_files": list(required_files),
         "phase": phase,
+        "runtime_artifacts": {
+            relative: _file_ref(repo_root / relative)
+            for relative in runtime_files
+            if (repo_root / relative).is_file()
+        },
         "missing": missing,
         "tools": tools,
         "identity_probes": {
