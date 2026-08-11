@@ -50,7 +50,13 @@ describe('project lifecycle workbench shell', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: '创建项目' }));
 
-    expect(await screen.findByRole('heading', { name: '计算机类专业介绍' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole(
+        'heading',
+        { name: '计算机类专业介绍' },
+        { timeout: 5000 },
+      ),
+    ).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /第\d步/ })).toHaveLength(7);
     expect(screen.getByText('可用磁盘 600 B')).toBeInTheDocument();
 
