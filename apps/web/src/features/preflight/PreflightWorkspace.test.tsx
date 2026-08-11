@@ -5,15 +5,20 @@ import { PreflightWorkspace } from './PreflightWorkspace';
 
 const report = {
   id: 'report-1',
+  preflight_run_id: 'run-1',
   project_id: 'project-1',
   checked_at: '2026-08-04T00:00:00Z',
   scope: ['materials', 'content'],
+  project_fingerprint: 'd'.repeat(64),
   input_fingerprint: 'a'.repeat(64),
   check_fingerprints: {},
   allowed: false,
   snapshot_path: '09_日志/预检/report.json',
   reused_checks: [],
   executed_checks: ['materials', 'content'],
+  fresh: true,
+  cache_status: 'fresh' as const,
+  is_stale: false,
   issues: [
     {
       issue_id: 'issue-1',

@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 
 import type { RenderGraphV2Record, VideoPreflight } from '../../api/client';
 import { ProjectVideo } from '../../../../../remotion/src/video/ProjectVideo';
+import { AuthoritativePreviewPanel } from './AuthoritativePreviewPanel';
 import { RenderGraphPreview } from './RenderGraphPreview';
 import { SubtitleStylePanel } from './SubtitleStylePanel';
 
@@ -87,7 +88,12 @@ export function PreviewWorkspace({
       )}
       {effectControls}
 
-      {renderGraph ? <RenderGraphPreview projectId={projectId} graph={renderGraph} /> : null}
+      {renderGraph ? (
+        <>
+          <RenderGraphPreview projectId={projectId} graph={renderGraph} />
+          <AuthoritativePreviewPanel projectId={projectId} graph={renderGraph} />
+        </>
+      ) : null}
 
       {preflight === null ? (
         <p className="muted">正在等待预检结果……</p>

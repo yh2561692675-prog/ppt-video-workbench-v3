@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
-import { api, Project } from '../../api/client';
+import { api, ApiRequestError, Project } from '../../api/client';
 import { AudioImport } from '../audio/import/AudioImport';
 import { AudioPipelineActions } from '../audio/import/AudioPipelineActions';
 import { AudioDifferences } from '../audio/differences/AudioDifferences';
@@ -17,11 +17,13 @@ import { SubtitleActions } from '../subtitles/SubtitleActions';
 import { PreviewWorkspace } from '../video/PreviewWorkspace';
 import { EffectWorkspace } from '../effects/EffectWorkspace';
 import { RenderJobPanel } from '../video/RenderJobPanel';
+import { TaskCenter } from '../video/TaskCenter';
 import { PresenterWorkspace } from '../presenter/PresenterWorkspace';
 import { PresenterModeEntry } from '../presenter/PresenterModeEntry';
 import { QualityPanel } from '../quality/QualityPanel';
 import { SubtitleWorkbench } from '../subtitles/SubtitleWorkbench';
-import { TimelineWorkspace, type TimelineTrackView } from '../timeline/TimelineWorkspace';
+import { type TimelineTrackView } from '../timeline/TimelineWorkspace';
+import { EnhancedTimelineWorkspace } from '../timeline/EnhancedTimelineWorkspace';
 import { ContinuityWorkspace } from '../continuity/ContinuityWorkspace';
 import { ExportPresetWorkspace } from '../exports/ExportPresetWorkspace';
 import { BatchProductionWorkspace } from '../scheduler/BatchProductionWorkspace';
@@ -67,6 +69,18 @@ export function WorkflowShell() {
     enabled: Boolean(projectId) && (projectQuery.data?.current_step ?? 0) >= 6,
     retry: false,
   });
+  const timelineRevisionsQuery = useQuery({
+    queryKey: ['production-timeline-revisions', projectId],
+    queryFn: () => api.timelineRevisions(projectId),
+    enabled: Boolean(projectId) && (projectQuery.data?.current_step ?? 0) >= 6,
+    retry: false,
+  });
+  const renderGraphQuery = useQuery({
+    queryKey: ['render-graph-v2', projectId],
+    queryFn: () => api.getRenderGraphV2(projectId),
+    enabled: Boolean(projectId) && (projectQuery.data?.current_step ?? 0) >= 6,
+    retry: false,
+  });
   const subtitleWorkbenchQuery = useQuery({
     queryKey: ['subtitle-workbench', projectId],
     queryFn: () => api.getSubtitleWorkbench(projectId),
@@ -95,6 +109,10 @@ export function WorkflowShell() {
     enabled: Boolean(projectId) && (projectQuery.data?.current_step ?? 0) >= 7,
   });
   const [selectedAudioRoute, setSelectedAudioRoute] = useState<AudioRoute>(null);
+  const [timelineConflict, setTimelineConflict] = useState<{
+    command: { kind: string; payload: Record<string, unknown> };
+    message: string;
+  } | null>(null);
   const persistedAudioRoute = inferAudioRoute(projectQuery.data);
   const audioRoute = selectedAudioRoute ?? persistedAudioRoute;
   const audioRouteRef = useRef<AudioRoute>(audioRoute);
@@ -161,10 +179,32 @@ export function WorkflowShell() {
         kind: command.kind,
         payload: command.payload,
       }),
-    onSuccess: (result) => queryClient.setQueryData(['production-timeline', projectId], result),
+    onSuccess: (result) => {
+      setTimelineConflict(null);
+      queryClient.setQueryData(['production-timeline', projectId], result);
+      void timelineRevisionsQuery.refetch();
+    },
+    onError: (error, command) => {
+      if (error instanceof ApiRequestError && error.status === 409) {
+        setTimelineConflict({ command, message: '时间线已被其他操作更新，当前编辑意图已保留。' });
+        void timelineQuery.refetch();
+        void timelineRevisionsQuery.refetch();
+      }
+    },
+  });
+  const timelineRestoreMutation = useMutation({
+    mutationFn: (revision: number) =>
+      api.restoreTimeline(projectId, revision, timelineQuery.data?.revision ?? 1),
+    onSuccess: (result) => {
+      setTimelineConflict(null);
+      queryClient.setQueryData(['production-timeline', projectId], result);
+      void timelineRevisionsQuery.refetch();
+      void queryClient.invalidateQueries({ queryKey: ['render-graph-v2', projectId] });
+    },
   });
   const timelineCompileMutation = useMutation({
-    mutationFn: () => api.compileTimeline(projectId),
+    mutationFn: () => api.compileTimelineV2(projectId),
+    onSuccess: (result) => queryClient.setQueryData(['render-graph-v2', projectId], result),
   });
   const subtitleWorkbenchMutation = useMutation({
     mutationFn: (command: { kind: string; payload: Record<string, unknown> }) =>
@@ -240,6 +280,7 @@ export function WorkflowShell() {
       duration_us: clip.duration_us,
       source_ref: clip.source_ref,
       locked: clip.locked,
+      payload: clip.payload,
     })),
   }));
   const pageLabels = Object.fromEntries(
@@ -369,10 +410,17 @@ export function WorkflowShell() {
                 />
               )}
               {timelineQuery.data && (
-                <TimelineWorkspace
+                <EnhancedTimelineWorkspace
                   durationUs={timelineQuery.data.duration_us}
                   revision={timelineQuery.data.revision}
+                  fps={timelineQuery.data.fps}
                   tracks={timelineTracks}
+                  historyRevisions={timelineRevisionsQuery.data ?? []}
+                  onRestoreRevision={(revision) => timelineRestoreMutation.mutate(revision)}
+                  conflictMessage={timelineConflict?.message}
+                  onRetryConflict={() =>
+                    timelineConflict && timelineCommandMutation.mutate(timelineConflict.command)
+                  }
                   onSelectClip={() => undefined}
                   onCommand={(command) => {
                     if (command.kind === 'compile') {
@@ -403,6 +451,7 @@ export function WorkflowShell() {
                   void videoPreflightQuery.refetch();
                 }}
                 onRender={() => createRenderJobMutation.mutate()}
+                renderGraph={renderGraphQuery.data ?? null}
               />
               <PreflightWorkspace
                 projectId={project.id}
@@ -413,6 +462,7 @@ export function WorkflowShell() {
                 }
                 onExport={() => window.open(api.preflightReportUrl(project.id), '_blank')}
               />
+              <TaskCenter projectId={project.id} />
             </>
           )}
           {project.current_step === 7 && (
@@ -436,6 +486,7 @@ export function WorkflowShell() {
                 />
               )}
               <RenderJobPanel projectId={project.id} enabled />
+              <TaskCenter projectId={project.id} />
               <QualityPanel project={project} />
             </>
           )}

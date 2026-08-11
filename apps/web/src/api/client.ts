@@ -94,9 +94,11 @@ export interface PreflightIssue {
 
 export interface PreflightReport {
   id: string;
+  preflight_run_id: string;
   project_id: string;
   checked_at: string;
   scope: string[];
+  project_fingerprint: string;
   input_fingerprint: string;
   check_fingerprints: Record<string, string>;
   issues: PreflightIssue[];
@@ -104,6 +106,9 @@ export interface PreflightReport {
   snapshot_path: string | null;
   reused_checks: string[];
   executed_checks: string[];
+  fresh: boolean;
+  cache_status: 'fresh' | 'reused' | 'mixed' | 'stale';
+  is_stale: boolean;
 }
 
 export interface CleanupPlan {
@@ -279,6 +284,135 @@ export interface RenderGraphRecord {
 }
 
 export type RenderGraphV2Record = RenderGraphV2;
+
+export interface AuthoritativePreviewManifest {
+  schema_version: '1.0';
+  project_id: string;
+  job_id: string;
+  graph_id: string;
+  graph_hash: string;
+  projected_graph_hash: string;
+  start_us: number;
+  end_us: number;
+  duration_us: number;
+  timeline_revision: number;
+  runtime_version: string;
+  subtitle_mode: string;
+  cache_key: string;
+  video_relative_path: string;
+  video_hash: string;
+  size_bytes: number;
+  container: string;
+  probe_tool_version: string;
+  has_audio: boolean;
+}
+
+export type DurableJobType =
+  | 'parse_materials'
+  | 'generate_narration'
+  | 'transcribe_audio'
+  | 'synthesize_page'
+  | 'build_subtitles'
+  | 'render_page'
+  | 'export_package'
+  | 'presenter_sync'
+  | 'render_preview'
+  | 'derive_asset'
+  | 'build_proxy'
+  | 'build_waveform'
+  | 'translate_subtitles'
+  | 'quality_scan'
+  | 'render_export';
+
+export type DurableJobStatus =
+  | 'queued'
+  | 'running'
+  | 'pause_requested'
+  | 'paused'
+  | 'needs_confirmation'
+  | 'cancel_requested'
+  | 'succeeded'
+  | 'failed'
+  | 'cancelled';
+
+export type DurableJobAttemptStatus =
+  | 'claimed'
+  | 'running'
+  | 'paused'
+  | 'succeeded'
+  | 'failed'
+  | 'cancelled'
+  | 'expired';
+
+export interface DurableJobAttempt {
+  id: string;
+  job_id: string;
+  generation: number;
+  status: DurableJobAttemptStatus;
+  worker_id: string | null;
+  runtime_fingerprint: string | null;
+  started_at: string;
+  heartbeat_at: string | null;
+  finished_at: string | null;
+  exit_code: number | null;
+  error_code: string | null;
+  checkpoint_sequence: number | null;
+  revision: number;
+}
+
+export interface DurableJobCheckpoint {
+  job_id: string;
+  attempt_id: string;
+  sequence: number;
+  checkpoint: Record<string, unknown>;
+  checkpoint_hash: string;
+  created_at: string;
+}
+
+/**
+ * Job results are job-type specific.  The authoritative-preview manifest is
+ * the only result currently rendered by the shared Web client; preserve other
+ * result payloads without weakening that explicit contract.
+ */
+export interface DurableJobResult extends Record<string, unknown> {
+  manifest?: AuthoritativePreviewManifest;
+}
+
+export interface DurableJobRecord {
+  id: string;
+  project_id: string;
+  job_type: DurableJobType;
+  status: DurableJobStatus;
+  cache_key: string;
+  page_id: string | null;
+  progress: number;
+  attempts: number;
+  max_attempts: number;
+  paid: boolean;
+  input_fingerprint: string | null;
+  idempotency_key: string | null;
+  parent_job_id: string | null;
+  payload: Record<string, unknown>;
+  stage: string;
+  message: string;
+  error: string | null;
+  error_code: string | null;
+  revision: number;
+  priority: number;
+  current_attempt_id: string | null;
+  created_at: string;
+  updated_at: string;
+  heartbeat_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  result: DurableJobResult | null;
+}
+
+export interface DurableJobDetail {
+  job: DurableJobRecord;
+  attempts: DurableJobAttempt[];
+  latest_checkpoint: DurableJobCheckpoint | null;
+}
 
 export interface AssetRecord {
   asset_id: string;
@@ -1005,6 +1139,39 @@ export const api = {
     request<RenderGraphV2Record>(`/api/projects/${id}/timeline/compile-v2`, { method: 'POST' }),
   getRenderGraphV2: (id: string) =>
     request<RenderGraphV2Record>(`/api/projects/${id}/render-graph-v2`),
+  createAuthoritativePreview: (
+    id: string,
+    graphId: string,
+    input: {
+      graph_id: string;
+      graph_hash: string;
+      start_us: number;
+      end_us: number;
+      runtime_version?: string;
+    },
+  ) =>
+    request<DurableJobRecord>(`/api/projects/${id}/render-graphs/${graphId}/preview-jobs`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  getDurableJob: (id: string, jobId: string) =>
+    request<DurableJobDetail>(`/api/projects/${id}/jobs/${jobId}`),
+  listDurableJobs: (id: string) => request<DurableJobRecord[]>(`/api/projects/${id}/jobs`),
+  actDurableJob: (
+    id: string,
+    jobId: string,
+    input: { action: 'pause' | 'resume' | 'cancel' | 'confirm_retry'; expected_revision: number },
+  ) =>
+    request<DurableJobRecord>(`/api/projects/${id}/jobs/${jobId}/actions`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  timelineRevisions: (id: string) => request<number[]>(`/api/projects/${id}/timeline/revisions`),
+  restoreTimeline: (id: string, revision: number, expectedRevision: number) =>
+    request<ProductionTimelineRecord>(
+      `/api/projects/${id}/timeline/revisions/${revision}/restore?expected_revision=${expectedRevision}`,
+      { method: 'POST' },
+    ),
   listAssets: (id: string, kind?: string) =>
     request<AssetRecord[]>(
       `/api/projects/${id}/assets${kind ? `?kind=${encodeURIComponent(kind)}` : ''}`,
@@ -1048,10 +1215,10 @@ export const api = {
       `/api/projects/${id}/effects/generate`,
       { method: 'POST', body: JSON.stringify({ page_ids: pageIds ?? null, force: false }) },
     ),
-  preflight: (id: string, scope?: string[]) =>
+  preflight: (id: string, scope?: string[], fresh = true) =>
     request<PreflightReport>(`/api/projects/${id}/preflight`, {
       method: 'POST',
-      ...(scope ? { body: JSON.stringify({ scope }) } : {}),
+      body: JSON.stringify({ scope: scope ?? null, fresh }),
     }),
   getPreflight: (id: string) => request<PreflightReport>(`/api/projects/${id}/preflight`),
   confirmPreflightIssue: (id: string, issueId: string, actor: string, note: string) =>

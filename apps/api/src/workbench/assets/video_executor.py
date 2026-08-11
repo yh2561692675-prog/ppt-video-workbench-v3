@@ -21,9 +21,7 @@ class VideoDerivativeError(ValueError):
 
 
 class ProcessRunner(Protocol):
-    def run(
-        self, command: list[str], cwd: Path, control: ProcessControl
-    ) -> ProcessResult: ...
+    def run(self, command: list[str], cwd: Path, control: ProcessControl) -> ProcessResult: ...
 
 
 class VideoDerivativeExecutor:
@@ -56,7 +54,13 @@ class VideoDerivativeExecutor:
         with TemporaryDirectory(prefix="video-derivative-", dir=self.work_root) as temporary:
             output = Path(temporary) / f"output{suffix}"
             command.append(str(output))
-            self.process_runner.run(command, Path(temporary), control or NullProcessControl())
+            result = self.process_runner.run(
+                command, Path(temporary), control or NullProcessControl()
+            )
+            if result.returncode != 0:
+                raise VideoDerivativeError(
+                    result.stderr.strip() or "ffmpeg failed to create derivative artifact"
+                )
             if not output.is_file() or output.stat().st_size <= 0:
                 raise VideoDerivativeError("ffmpeg produced no derivative artifact")
             probe = self.media_probe(output)

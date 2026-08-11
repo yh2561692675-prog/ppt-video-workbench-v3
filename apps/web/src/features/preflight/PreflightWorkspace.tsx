@@ -68,7 +68,15 @@ export function PreflightWorkspace({
           <div className={report.allowed ? 'preflight-result success' : 'preflight-result error'}>
             {report.allowed ? '预检已通过，可以进入渲染。' : '预检未通过，请先处理下列问题。'}
           </div>
-          <p className="muted">最后检查：{new Date(report.checked_at).toLocaleString()}</p>
+          <p className="muted">
+            最后检查：{new Date(report.checked_at).toLocaleString()} · 输入版本{' '}
+            {report.input_fingerprint.slice(0, 12)}
+            {report.is_stale
+              ? ' · 输入已变化，请重新运行完整预检'
+              : report.fresh
+                ? ' · 本次为完整新鲜预检'
+                : ' · 使用了可复用检查结果'}
+          </p>
           <label className="preflight-actor">
             确认人
             <input value={actor} onChange={(event) => setActor(event.target.value)} />

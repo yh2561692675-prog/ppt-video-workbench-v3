@@ -157,6 +157,25 @@ export type RenderGraphV2 = {
   subtitles: SubtitleRenderPlan;
   subtitle_plan?: SubtitleRenderPlan;
   source_revisions: Record<string, string>;
+  cache_dependencies?: Array<{
+    schema_version: '1.0';
+    domain:
+      | 'video_only'
+      | 'audio'
+      | 'subtitle_soft'
+      | 'subtitle_burn_in'
+      | 'transition'
+      | 'overlay'
+      | 'layout'
+      | 'final';
+    node_key: string;
+    upstream_kind: string;
+    upstream_key: string;
+    upstream_hash: RenderGraphHash;
+    start_us: number | null;
+    end_us: number | null;
+    artifact_refs: Array<{ relative_path: string; sha256: RenderGraphHash; size_bytes: number }>;
+  }>;
   affected_ranges: Array<Record<string, unknown>>;
   graph_hash?: RenderGraphHash;
   content_hash?: RenderGraphHash;
@@ -196,6 +215,7 @@ export function parseRenderGraph(input: unknown): RenderGraphV2 {
     'subtitles',
     'subtitle_plan',
     'source_revisions',
+    'cache_dependencies',
     'affected_ranges',
     'graph_hash',
     'content_hash',

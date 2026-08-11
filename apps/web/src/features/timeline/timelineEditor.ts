@@ -16,6 +16,59 @@ export interface DragPreview {
   trackId: string;
 }
 
+export interface VisibleTimeRange {
+  startUs: number;
+  endUs: number;
+}
+
+export function timeToPixels(timeUs: number, pixelsPerSecond: number): number {
+  return (Math.max(0, timeUs) / 1_000_000) * Math.max(0, pixelsPerSecond);
+}
+
+export function visibleTimeRange(
+  scrollLeft: number,
+  viewportWidth: number,
+  pixelsPerSecond: number,
+  overscanPx = 300,
+): VisibleTimeRange {
+  const startPx = Math.max(0, scrollLeft - overscanPx);
+  const endPx = Math.max(startPx, scrollLeft + viewportWidth + overscanPx);
+  return {
+    startUs: Math.floor((startPx / pixelsPerSecond) * 1_000_000),
+    endUs: Math.ceil((endPx / pixelsPerSecond) * 1_000_000),
+  };
+}
+
+export function zoomAroundAnchor(
+  currentPixelsPerSecond: number,
+  nextPixelsPerSecond: number,
+  scrollLeft: number,
+  anchorViewportX: number,
+): number {
+  const anchorTimeSeconds = (scrollLeft + anchorViewportX) / currentPixelsPerSecond;
+  return Math.max(0, anchorTimeSeconds * nextPixelsPerSecond - anchorViewportX);
+}
+
+export function waveformLevelForViewport(microsecondsPerPixel: number): number {
+  if (microsecondsPerPixel <= 10_000) return 0;
+  if (microsecondsPerPixel <= 50_000) return 1;
+  if (microsecondsPerPixel <= 250_000) return 2;
+  return 3;
+}
+
+export function requestMatchesRevision(requestRevision: number, serverRevision: number): boolean {
+  return requestRevision === serverRevision;
+}
+
+export function visibleClips<T extends { start_us: number; duration_us: number }>(
+  clips: T[],
+  range: VisibleTimeRange,
+): T[] {
+  return clips.filter(
+    (clip) => clip.start_us < range.endUs && clip.start_us + clip.duration_us > range.startUs,
+  );
+}
+
 /** Convert a pointer delta into an integer microsecond position. */
 export function timeFromPointer(
   pointerX: number,

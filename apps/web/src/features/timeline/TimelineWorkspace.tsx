@@ -7,6 +7,7 @@ export interface TimelineClipView {
   duration_us: number;
   source_ref: string;
   locked?: boolean;
+  payload?: Record<string, unknown>;
 }
 
 export interface TimelineTrackView {

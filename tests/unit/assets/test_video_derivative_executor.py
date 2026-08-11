@@ -15,12 +15,15 @@ class FixtureRunner:
     def __init__(self) -> None:
         self.commands: list[list[str]] = []
 
-    def run(
-        self, command: list[str], cwd: Path, control: ProcessControl
-    ) -> ProcessResult:
+    def run(self, command: list[str], cwd: Path, control: ProcessControl) -> ProcessResult:
         self.commands.append(command)
         Path(command[-1]).write_bytes(b"derived-media")
         return ProcessResult(returncode=0, stdout="", stderr="")
+
+
+class FailingRunner:
+    def run(self, command: list[str], cwd: Path, control: ProcessControl) -> ProcessResult:
+        return ProcessResult(returncode=1, stdout="", stderr="ffmpeg rejected input")
 
 
 def _probe(_: Path) -> MediaProbeResult:
@@ -79,3 +82,17 @@ def test_video_executor_rejects_unknown_and_invalid_parameters(tmp_path: Path) -
         executor.execute(
             _request(DerivativeOperation.TRANSCODE, {"audio_bitrate": "$(bad)"}), source
         )
+
+
+def test_video_executor_rejects_ffmpeg_failures(tmp_path: Path) -> None:
+    source = tmp_path / "source.mp4"
+    source.write_bytes(b"source")
+    executor = VideoDerivativeExecutor(
+        ContentAddressedObjectStore(tmp_path / "store"),
+        tmp_path / "work",
+        process_runner=FailingRunner(),
+        media_probe=_probe,
+    )
+
+    with pytest.raises(VideoDerivativeError, match="rejected input"):
+        executor.execute(_request(DerivativeOperation.PROXY, {}), source)
