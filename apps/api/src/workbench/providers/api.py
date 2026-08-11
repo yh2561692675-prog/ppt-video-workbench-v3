@@ -19,6 +19,7 @@ from workbench.contracts.p2_platform import (
 
 from .adapter import ProviderAdapter
 from .broker import ProviderBroker, ProviderBrokerError, RouteRequest
+from .cache import ProviderCache
 from .credentials import CredentialMetadataV1, CredentialStore, CredentialStoreError
 from .models import ProviderCostEstimateV1
 from .policy import ProviderPolicyV1
@@ -89,7 +90,7 @@ class ProviderApiState:
 
     def __post_init__(self) -> None:
         if self.broker is None:
-            self.broker = ProviderBroker(self.registry, self.adapters)
+            self.broker = ProviderBroker(self.registry, self.adapters, cache=ProviderCache())
         if self.credential_store is None:
             from .credentials import InMemoryCredentialStore
 

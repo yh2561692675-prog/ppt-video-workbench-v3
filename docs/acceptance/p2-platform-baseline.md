@@ -26,7 +26,7 @@ $env:PYTHONPATH = 'apps/api/src'
 & $py -m ruff check apps/api/src/workbench/p2.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype tests/contract/test_p2_platform_contracts.py tests/unit/providers tests/unit/platform_foundation tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/cloud tests/platform
 ```
 
-Current result: **60 tests passed**, mypy reports no issues in 24 source files,
+Current result: **64 tests passed**, mypy reports no issues in 24 source files,
 and Ruff reports no violations.
 
 The web workspace also passes TypeScript `--noEmit` and all 28 Vitest files
@@ -35,7 +35,9 @@ The web workspace also passes TypeScript `--noEmit` and all 28 Vitest files
 ## Explicitly unclaimed evidence
 
 - Full recovery-snapshot acceptance remains a separate baseline with existing
-  unrelated failures; it is not silently reclassified as a P2 pass.
+  unrelated failures (10 legacy crash-recovery status expectations, the async
+  M5 render status expectation, and the P04 payload-contract expectation); it
+  is not silently reclassified as a P2 pass.
 - macOS/Linux media export, native credential-store evidence, and signed
   installer/rollback artifacts require real runners and signing material.
 - Production cloud release still requires OIDC token validation, PostgreSQL

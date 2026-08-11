@@ -17,8 +17,8 @@ This file records evidence for the isolated integration branch
 | P2 settings UI panels | three focused Vitest suites under `apps/web/src/features/{providers,settings/platform,cloud}` | pass |
 | Full web UI regression | Vitest 28 files / 47 tests + TypeScript `--noEmit` | pass with bundled web dependencies |
 | Static quality | Ruff + mypy on 24 P2 source files | pass |
-| Focused P2 regression | 60 tests across contracts/providers/platform/sync/cloud/integration | pass |
-| Full recovery snapshot | `pytest --import-mode=importlib -q --maxfail=12` | pending: stale OpenAPI snapshot, 10 crash-recovery status mismatches, M5 render status mismatch |
+| Focused P2 regression | 64 tests across contracts/providers/platform/sync/cloud/integration | pass |
+| Full recovery snapshot | `pytest --import-mode=importlib -q --maxfail=12` | pending: 10 crash-recovery status mismatches (`succeeded` vs legacy `completed`), M5 async render status mismatch (202 vs legacy 201), and P04 payload-contract mismatch |
 | Real macOS/Linux media and signed installers | three-OS CI/tag evidence | pending runner artifacts |
 | Production cloud | OIDC, PostgreSQL PITR, object retention, security scans | pending production environment |
 

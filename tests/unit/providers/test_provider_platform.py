@@ -125,6 +125,26 @@ async def test_idempotency_returns_original_result_without_second_call() -> None
 
 
 @pytest.mark.asyncio
+async def test_broker_reuses_tenant_scoped_cache_without_invoking_provider() -> None:
+    fake = DeterministicFakeProvider(descriptor("fake-a"))
+    broker = ProviderBroker(
+        ProviderRegistry([fake.descriptor]),
+        {"fake-a": fake},
+        cache=ProviderCache(),
+    )
+    first_context = context()
+    first = await broker.invoke(request(first_context, model="stable-model"))
+
+    second_context = context().model_copy(update={"tenant_id": first_context.tenant_id})
+    second = await broker.invoke(request(second_context, model="stable-model"))
+
+    assert first.cache_hit is False
+    assert second.cache_hit is True
+    assert second.result.operation_id == second_context.operation_id
+    assert len(fake.calls) == 1
+
+
+@pytest.mark.asyncio
 async def test_budget_gate_rejects_unknown_cost_before_invoke() -> None:
     fake = DeterministicFakeProvider(
         descriptor("fake-a"), FakeProviderBehavior(failure_mode="unknown_billing")

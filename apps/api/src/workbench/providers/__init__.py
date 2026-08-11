@@ -18,7 +18,14 @@ from .models import (
 from .policy import ProviderPolicyV1
 from .probe import CapabilityProbeService
 from .registry import ProviderRegistry
-from .upstream import BUILTIN_PROVIDER_SPECS, BuiltinProviderAdapter, builtin_descriptors
+from .upstream import (
+    BUILTIN_PROVIDER_SPECS,
+    BrokerCompletionClient,
+    BuiltinArtifactStore,
+    BuiltinProviderAdapter,
+    builtin_descriptors,
+    create_llm_handler,
+)
 
 __all__ = [
     "ProviderBroker",
@@ -38,6 +45,9 @@ __all__ = [
     "cache_identity",
     "create_provider_router",
     "BuiltinProviderAdapter",
+    "BuiltinArtifactStore",
+    "BrokerCompletionClient",
+    "create_llm_handler",
     "BUILTIN_PROVIDER_SPECS",
     "builtin_descriptors",
 ]

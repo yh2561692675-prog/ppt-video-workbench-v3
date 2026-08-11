@@ -4,7 +4,7 @@ import shutil
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
@@ -97,6 +97,7 @@ from workbench.rendering.models import RenderGraphV2
 from workbench.rendering.preflight import GraphPreflight
 from workbench.rendering.preview_service import AuthoritativePreviewService
 from workbench.rendering.project_reader import ProjectRenderSourceReader
+from workbench.providers.upstream import BrokerCompletionClient, create_llm_handler
 from workbench.runtime.layout import RuntimeComponentMissingError, RuntimeLayout
 from workbench.scheduler.service import BatchSchedulerService
 from workbench.services.import_service import ImportService
@@ -193,7 +194,6 @@ def create_app(
         service.close()
 
     app = FastAPI(title="PPT Video Workbench", version="0.1.0", lifespan=lifespan)
-    P2Composition.build(configured_root, flags=p2_flags).install(app)
     app.state.project_service = service
     app.state.llm_profile_store = profile_store
     app.state.heygen_profile_store = heygen_profile_store
@@ -201,6 +201,30 @@ def create_app(
     audio_gate = AudioGateService(audio_service)
     llm_client = LlmClient(transport=llm_transport)
     heygen_client = HeyGenClient(transport=heygen_transport)
+    p2_composition = P2Composition.build(
+        configured_root,
+        flags=p2_flags,
+        provider_handlers={"builtin-llm": create_llm_handler(llm_client, profile_store)},
+    )
+    p2_composition.install(app)
+    completion_factory: Callable[[UUID], BrokerCompletionClient] | None = None
+    if (
+        p2_composition.provider_state is not None
+        and p2_composition.provider_state.broker is not None
+        and p2_composition.artifact_store is not None
+    ):
+        provider_broker = p2_composition.provider_state.broker
+        artifact_store = p2_composition.artifact_store
+        tenant_id = uuid5(NAMESPACE_URL, configured_root.resolve().as_uri())
+        def make_completion_client(profile_id: UUID) -> BrokerCompletionClient:
+            return BrokerCompletionClient(
+                provider_broker,
+                artifact_store,
+                tenant_id=tenant_id,
+                profile_id=profile_id,
+            )
+
+        completion_factory = make_completion_client
     try:
         configured_diagnostic_center = (
             diagnostic_center_factory(configured_diagnostic_root)
@@ -524,6 +548,7 @@ def create_app(
                 profile_store,
                 llm_client,
                 narration_repository,
+                completion_factory=completion_factory,
             ),
         )
     )

@@ -7,16 +7,24 @@ services migrate one at a time while preserving their public service methods.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import inspect
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from workbench.contracts.p2_platform import ErrorCategory, StructuredErrorV1
+from workbench.contracts.p2_platform import (
+    BudgetV1,
+    ErrorCategory,
+    OperationContextV1,
+    StructuredErrorV1,
+)
 
 from .adapter import ProviderAdapter, ProviderAdapterError
+from .broker import ProviderBroker, RouteRequest
 from .models import (
     ProviderCapabilityV1,
     ProviderCostEstimateV1,
@@ -27,6 +35,56 @@ from .models import (
 )
 
 BuiltinHandler = Callable[[ProviderInvocationV1], object | Awaitable[object]]
+
+
+class BuiltinArtifactStore:
+    """Bounded in-memory bridge for local adapter outputs.
+
+    Provider contracts expose only logical artifact references. The local
+    migration seam keeps the small response payload available to the legacy
+    caller without putting provider text or bytes into the contract result.
+    """
+
+    def __init__(self, *, max_entries: int = 1_024, max_bytes: int = 64 * 1024 * 1024) -> None:
+        if max_entries < 1 or max_bytes < 1:
+            raise ValueError("artifact store limits must be positive")
+        self.max_entries = max_entries
+        self.max_bytes = max_bytes
+        self._values: dict[str, str | bytes] = {}
+        self._bytes = 0
+
+    def put(self, value: str | bytes) -> str:
+        raw = value.encode("utf-8") if isinstance(value, str) else value
+        if len(raw) > self.max_bytes:
+            raise ProviderAdapterError(
+                "provider.output_too_large",
+                "Provider output exceeds the local artifact bridge limit",
+                retryable=False,
+                failover_allowed=False,
+            )
+        reference = "artifact://sha256:" + hashlib.sha256(raw).hexdigest()
+        previous = self._values.pop(reference, None)
+        if previous is not None:
+            self._bytes -= len(previous.encode("utf-8") if isinstance(previous, str) else previous)
+        while self._values and (
+            len(self._values) >= self.max_entries or self._bytes + len(raw) > self.max_bytes
+        ):
+            _, evicted = self._values.popitem()
+            self._bytes -= len(evicted.encode("utf-8") if isinstance(evicted, str) else evicted)
+        self._values[reference] = value
+        self._bytes += len(raw)
+        return reference
+
+    def get(self, reference: str) -> str | bytes:
+        try:
+            return self._values[reference]
+        except KeyError as error:
+            raise ProviderAdapterError(
+                "provider.artifact_missing",
+                "Provider artifact is no longer available in the local bridge",
+                retryable=False,
+                failover_allowed=False,
+            ) from error
 
 
 @dataclass(frozen=True)
@@ -103,9 +161,16 @@ def builtin_descriptors() -> list[ProviderDescriptorV1]:
 class BuiltinProviderAdapter(ProviderAdapter):
     """Normalize an injected existing-service callable into Provider Kernel output."""
 
-    def __init__(self, descriptor: ProviderDescriptorV1, handler: BuiltinHandler) -> None:
+    def __init__(
+        self,
+        descriptor: ProviderDescriptorV1,
+        handler: BuiltinHandler,
+        *,
+        artifact_store: BuiltinArtifactStore | None = None,
+    ) -> None:
         self.descriptor = descriptor
         self.handler = handler
+        self.artifact_store = artifact_store
         self.cancelled: set[UUID] = set()
 
     async def probe(self, invocation: ProviderInvocationV1) -> ProviderHealthV1:
@@ -220,11 +285,19 @@ class BuiltinProviderAdapter(ProviderAdapter):
                 )
             return value.model_copy(update={"operation_id": invocation.operation.operation_id})
         if isinstance(value, bytes):
-            digest = "sha256:" + hashlib.sha256(value).hexdigest()
-            return self._result(invocation, "succeeded", [f"artifact://{digest}"])
+            reference = (
+                self.artifact_store.put(value)
+                if self.artifact_store is not None
+                else "artifact://sha256:" + hashlib.sha256(value).hexdigest()
+            )
+            return self._result(invocation, "succeeded", [reference])
         if isinstance(value, str):
-            digest = "sha256:" + hashlib.sha256(value.encode("utf-8")).hexdigest()
-            return self._result(invocation, "succeeded", [f"artifact://{digest}"])
+            reference = (
+                self.artifact_store.put(value)
+                if self.artifact_store is not None
+                else "artifact://sha256:" + hashlib.sha256(value.encode("utf-8")).hexdigest()
+            )
+            return self._result(invocation, "succeeded", [reference])
         if isinstance(value, Iterable) and not isinstance(value, (str, bytes, dict)):
             refs = [str(item) for item in value]
             if any(ref.startswith(("/", "\\", "file:", "C:", "F:", "D:")) for ref in refs):
@@ -260,3 +333,93 @@ class BuiltinProviderAdapter(ProviderAdapter):
             billed_cost=Decimal(0),
             cache_identity="sha256:" + "0" * 64,
         )
+
+
+def create_llm_handler(client: object, profiles: object) -> BuiltinHandler:
+    """Adapt the existing profile-backed LLM client to the Provider Kernel."""
+
+    def handle(invocation: ProviderInvocationV1) -> object:
+        from uuid import UUID
+
+        profile_value = invocation.parameters.get("llm.profile_id")
+        messages = invocation.parameters.get("llm.messages")
+        if not isinstance(profile_value, str) or not isinstance(messages, list):
+            raise ProviderAdapterError(
+                "llm.invalid_parameters",
+                "LLM provider parameters are incomplete",
+                retryable=False,
+                failover_allowed=False,
+            )
+        profile_id = UUID(profile_value)
+        credentials = profiles.credentials(profile_id)  # type: ignore[attr-defined]
+        complete = client.complete  # type: ignore[attr-defined]
+        max_tokens = invocation.parameters.get("llm.max_tokens")
+        return complete(
+            base_url=str(credentials.profile.base_url).rstrip("/"),
+            api_key=credentials.api_key,
+            model=invocation.model or credentials.profile.model,
+            messages=messages,
+            max_tokens=int(max_tokens) if isinstance(max_tokens, int) else None,
+        )
+
+    return handle
+
+
+class BrokerCompletionClient:
+    """CompletionClient-compatible facade for the opt-in provider route."""
+
+    def __init__(
+        self,
+        broker: ProviderBroker,
+        artifacts: BuiltinArtifactStore,
+        *,
+        tenant_id: UUID,
+        profile_id: UUID,
+    ) -> None:
+        self.broker = broker
+        self.artifacts = artifacts
+        self.tenant_id = tenant_id
+        self.profile_id = profile_id
+
+    def complete(
+        self,
+        *,
+        base_url: str,
+        api_key: str,
+        model: str,
+        messages: list[dict[str, str]],
+        max_tokens: int | None = None,
+    ) -> str:
+        del base_url, api_key
+        now = datetime.now(UTC)
+        context = OperationContextV1(
+            operation_id=uuid4(),
+            idempotency_key=uuid4(),
+            attempt_id=uuid4(),
+            tenant_id=self.tenant_id,
+            request_kind="provider.invoke",
+            started_at=now,
+            deadline_at=now + timedelta(seconds=120),
+            budget=BudgetV1(timeout_ms=120_000),
+        )
+        request = RouteRequest(
+            context=context,
+            kind="llm",
+            capability_id="completion",
+            model=model,
+            parameters={
+                "llm.profile_id": str(self.profile_id),
+                "llm.messages": messages,
+                "llm.max_tokens": max_tokens or 0,
+            },
+            expected_output_schema="text-v1",
+            fixed_provider_id="builtin-llm",
+            allow_failover=False,
+        )
+        result = asyncio.run(self.broker.invoke(request)).result
+        if result.status != "succeeded" or not result.output_refs:
+            raise RuntimeError("LLM provider returned no text artifact")
+        value = self.artifacts.get(result.output_refs[0])
+        if not isinstance(value, str):
+            raise RuntimeError("LLM provider returned a non-text artifact")
+        return value

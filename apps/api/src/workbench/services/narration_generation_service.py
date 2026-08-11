@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 from uuid import UUID
 
 from workbench.domain.models import AuditEvent, LlmUsageRecord
 from workbench.integrations.llm.client import LlmClient
-from workbench.narration.generator import NarrationGenerator
+from workbench.narration.generator import CompletionClient, NarrationGenerator
 from workbench.narration.prompt_builder import PageContext
 from workbench.narration.repository import NarrationRepository, NarrationRevision
 from workbench.services.project_service import ProjectService
@@ -19,11 +20,13 @@ class NarrationGenerationService:
         profiles: LlmProfileStore,
         client: LlmClient,
         revisions: NarrationRepository,
+        completion_factory: Callable[[UUID], CompletionClient] | None = None,
     ) -> None:
         self.projects = projects
         self.profiles = profiles
         self.client = client
         self.revisions = revisions
+        self.completion_factory = completion_factory
 
     def generate(self, project_id: UUID, page_id: UUID, profile_id: UUID) -> NarrationRevision:
         manifest = self.projects.get(project_id)
@@ -58,8 +61,13 @@ class NarrationGenerationService:
             ],
         )
         credentials = self.profiles.credentials(profile_id)
+        completion_client = (
+            self.completion_factory(credentials.profile.id)
+            if self.completion_factory is not None
+            else self.client
+        )
         generator = NarrationGenerator(
-            self.client,
+            completion_client,
             base_url=str(credentials.profile.base_url).rstrip("/"),
             api_key=credentials.api_key,
             model=credentials.profile.model,

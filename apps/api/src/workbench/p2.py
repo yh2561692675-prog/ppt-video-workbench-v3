@@ -21,6 +21,7 @@ from workbench.providers.adapter import ProviderAdapterError
 from workbench.providers.api import ProviderApiState, create_provider_router
 from workbench.providers.registry import ProviderRegistry
 from workbench.providers.upstream import (
+    BuiltinArtifactStore,
     BuiltinHandler,
     BuiltinProviderAdapter,
     builtin_descriptors,
@@ -78,6 +79,7 @@ class P2Composition:
     flags: P2FeatureFlags
     platform: LocalPlatformServices | None = None
     provider_state: ProviderApiState | None = None
+    artifact_store: BuiltinArtifactStore | None = None
     sync_client: SyncClient | None = None
 
     @classmethod
@@ -95,6 +97,11 @@ class P2Composition:
             if configured.platform_services_enabled
             else None
         )
+        artifact_store = (
+            BuiltinArtifactStore()
+            if configured.provider_platform_enabled
+            else None
+        )
         provider_state = (
             ProviderApiState(
                 registry=ProviderRegistry(builtin_descriptors()),
@@ -102,6 +109,7 @@ class P2Composition:
                     descriptor.provider_id: BuiltinProviderAdapter(
                         descriptor,
                         (provider_handlers or {}).get(descriptor.provider_id, _not_configured),
+                        artifact_store=artifact_store,
                     )
                     for descriptor in builtin_descriptors()
                 },
@@ -123,6 +131,7 @@ class P2Composition:
             configured,
             platform=platform,
             provider_state=provider_state,
+            artifact_store=artifact_store,
             sync_client=sync_client,
         )
 

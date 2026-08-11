@@ -110,6 +110,23 @@ class ProviderBroker:
                 parameters=request.parameters,
                 expected_output_schema=request.expected_output_schema,
             )
+            cached = self._cached_result(request, descriptor.provider_id)
+            if cached is not None:
+                result = cached.model_copy(
+                    update={
+                        "operation_id": request.context.operation_id,
+                        "provider_id": descriptor.provider_id,
+                        "capability_id": request.capability_id,
+                    }
+                )
+                attempts.append(
+                    BrokerAttempt(descriptor.provider_id, attempt_context.attempt_id, "cached")
+                )
+                broker_result = BrokerResult(
+                    result=result, attempts=tuple(attempts), cache_hit=True
+                )
+                self._idempotency[key] = broker_result
+                return broker_result
             max_cost_minor = request.max_cost_minor
             if max_cost_minor is None and request.policy is not None:
                 max_cost_minor = request.policy.max_cost_minor
@@ -203,6 +220,37 @@ class ProviderBroker:
         raise ProviderBrokerError(
             str(last_error.message), error=last_error, attempts=tuple(attempts)
         )
+
+    def _cached_result(
+        self, request: RouteRequest, provider_id: str
+    ) -> ProviderInvocationResultV1 | None:
+        """Read only deterministic requests from the tenant-scoped cache.
+
+        A missing model may be resolved by the provider, so it is deliberately
+        not looked up before invocation. The first call still stores the fully
+        resolved identity; callers that need reuse should provide a model.
+        """
+
+        if self.cache is None or request.model is None:
+            return None
+        identity = cache_identity(
+            provider_id=provider_id,
+            capability_id=request.capability_id,
+            adapter_version=self.registry.require(provider_id).adapter_version,
+            model_resolved=request.model,
+            parameters=request.parameters,
+            input_fingerprints=request.input_refs,
+            output_schema_version=request.expected_output_schema,
+            locale=request.locale,
+            region=request.region,
+            deterministic_seed=request.deterministic_seed,
+            tenant_scope=str(request.context.tenant_id),
+            platform_fingerprint=request.platform_fingerprint,
+            runtime_fingerprint=request.runtime_fingerprint,
+            font_fingerprint=request.font_fingerprint,
+            cloud_revision_id=request.cloud_revision_id,
+        )
+        return self.cache.get(str(request.context.tenant_id), identity)
 
     async def cancel(self, operation_id: UUID) -> None:
         await asyncio.gather(
