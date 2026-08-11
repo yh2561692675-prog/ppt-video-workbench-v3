@@ -23,6 +23,7 @@ from scripts.debug_program.registry import list_scenarios
 from scripts.debug_program.release_preflight import resolve_iscc
 from scripts.debug_program.runner import (
     CommandSpec,
+    _safe_release_output,
     execute_command,
     full_automation_plan,
     new_run_id,
@@ -333,6 +334,15 @@ def test_release_preflight_resolves_user_local_iscc(
     monkeypatch.setenv("LOCALAPPDATA", str(local_app_data))
     monkeypatch.setattr("scripts.debug_program.release_preflight.shutil.which", lambda _: None)
     assert resolve_iscc() == iscc.resolve()
+
+
+def test_release_output_rejects_escape_and_absolute_paths(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="relative path"):
+        _safe_release_output(tmp_path, "../outside")
+    with pytest.raises(ValueError, match="relative path"):
+        _safe_release_output(tmp_path, "C:/outside")
+    with pytest.raises(ValueError, match="evidence root"):
+        _safe_release_output(tmp_path, "dist/release")
 
 
 def test_generated_run_id_is_accepted_by_verdict_validator(tmp_path: Path) -> None:

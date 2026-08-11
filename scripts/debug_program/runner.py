@@ -18,6 +18,19 @@ from .models import validate_automation_verdict
 _RUN_ID = re.compile(r"^[a-z0-9][a-z0-9-]{3,127}$")
 
 
+def _safe_release_output(repo_root: Path, relative: str) -> str:
+    """Allow release outputs only below the debug evidence root."""
+
+    value = Path(relative)
+    if value.is_absolute() or value.drive or value.root or ".." in value.parts:
+        raise ValueError("release output must be a relative path without traversal")
+    allowed_root = (repo_root / "test-results" / "debug-program").resolve()
+    resolved = (repo_root / value).resolve()
+    if resolved == allowed_root or not resolved.is_relative_to(allowed_root):
+        raise ValueError("release output escaped the debug evidence root")
+    return value.as_posix()
+
+
 @dataclass(frozen=True)
 class CommandSpec:
     """One executable invocation in a deterministic automation plan."""
@@ -300,8 +313,12 @@ def full_automation_plan(
     if candidate is not None:
         tool_preflight_command.extend(("--candidate", str(candidate)))
         release_command.extend(("--candidate", str(candidate)))
-    release_root = Path("test-results/debug-program/release-payload")
-    installer_root = Path("test-results/debug-program/release-artifacts")
+    release_root = _safe_release_output(
+        repo_root, "test-results/debug-program/release-payload"
+    )
+    installer_root = _safe_release_output(
+        repo_root, "test-results/debug-program/release-artifacts"
+    )
     return (
         spec("release-tool-preflight", tool_preflight_command, 300, python_env),
         spec(
