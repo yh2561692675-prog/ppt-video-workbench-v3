@@ -295,6 +295,7 @@ def validate_automation_verdict(
             "finished_at",
             "commands",
             "first_failure",
+            "first_blocker",
             "notes",
         },
         "automation_verdict",
@@ -318,12 +319,18 @@ def validate_automation_verdict(
     for index, command in enumerate(commands):
         entry = _object(command, f"commands[{index}]")
         _required(entry, ("name", "exit_code", "status", "result"))
-        _no_unknown(entry, {"name", "exit_code", "status", "result"}, f"commands[{index}]")
+        _no_unknown(
+            entry,
+            {"name", "exit_code", "status", "result", "blocked"},
+            f"commands[{index}]",
+        )
         _string(entry, "name")
         if not isinstance(entry["exit_code"], int):
             raise ValidationError(f"commands[{index}].exit_code must be an integer")
         if entry["status"] not in {"passed", "failed"}:
             raise ValidationError(f"commands[{index}].status is invalid")
+        if "blocked" in entry and not isinstance(entry["blocked"], bool):
+            raise ValidationError(f"commands[{index}].blocked must be a boolean")
         relative = _relative_path(entry["result"], f"commands[{index}].result")
         if base_dir is not None:
             resolved = (base_dir / relative).resolve()
@@ -342,13 +349,35 @@ def validate_automation_verdict(
             resolved = (base_dir / relative).resolve()
             if base_dir.resolve() not in resolved.parents or not resolved.is_file():
                 raise ValidationError(f"missing or escaped first failure result: {relative}")
+    blocker = item.get("first_blocker")
+    if blocker is not None:
+        entry = _object(blocker, "first_blocker")
+        _required(entry, ("name", "exit_code", "result", "reason"))
+        _no_unknown(entry, {"name", "exit_code", "result", "reason"}, "first_blocker")
+        _string(entry, "name")
+        _string(entry, "reason")
+        if not entry["reason"].strip():
+            raise ValidationError("first_blocker.reason must not be empty")
+        if not isinstance(entry["exit_code"], int):
+            raise ValidationError("first_blocker.exit_code must be an integer")
+        relative = _relative_path(entry["result"], "first_blocker.result")
+        if base_dir is not None:
+            resolved = (base_dir / relative).resolve()
+            if base_dir.resolve() not in resolved.parents or not resolved.is_file():
+                raise ValidationError(f"missing or escaped first blocker result: {relative}")
+    if item["status"] != "blocked" and blocker is not None:
+        raise ValidationError("only blocked automation verdicts may have first_blocker")
     if item["status"] == "passed":
         if not commands or any(command["status"] != "passed" for command in commands):
             raise ValidationError("passed automation verdict requires all commands to pass")
         if failure is not None:
             raise ValidationError("passed automation verdict cannot have first_failure")
     if item["status"] == "failed":
-        failed = [command for command in commands if command["status"] == "failed"]
+        failed = [
+            command
+            for command in commands
+            if command["status"] == "failed" and command.get("blocked") is not True
+        ]
         if not failed or failure is None:
             raise ValidationError(
                 "failed automation verdict requires a failed command and first_failure"
@@ -356,6 +385,17 @@ def validate_automation_verdict(
         first = failed[0]
         if any(failure[key] != first[key] for key in ("name", "exit_code", "result")):
             raise ValidationError("first_failure must match the first failed command")
+    if item["status"] == "blocked":
+        failed = [command for command in commands if command["status"] == "failed"]
+        blocked = [command for command in failed if command.get("blocked") is True]
+        if not failed or not blocked or failure is not None or blocker is None:
+            raise ValidationError(
+                "blocked automation verdict requires a failed blocked command, "
+                "first_blocker, and no first_failure"
+            )
+        first = blocked[0]
+        if any(blocker[key] != first[key] for key in ("name", "exit_code", "result")):
+            raise ValidationError("first_blocker must match the first blocked command")
     if "notes" in item and not isinstance(item["notes"], list):
         raise ValidationError("automation_verdict.notes must be an array")
     return item

@@ -25,8 +25,32 @@
     "finished_at": { "type": "string", "format": "date-time" },
     "commands": { "type": "array", "items": { "$ref": "#/$defs/command" } },
     "first_failure": { "anyOf": [{ "$ref": "#/$defs/failure" }, { "type": "null" }] },
+    "first_blocker": { "anyOf": [{ "$ref": "#/$defs/blocker" }, { "type": "null" }] },
     "notes": { "type": "array" }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "blocked" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["first_blocker"],
+        "properties": { "first_blocker": { "$ref": "#/$defs/blocker" } }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": { "enum": ["passed", "failed", "interrupted"] }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": { "first_blocker": { "type": "null" } }
+      }
+    }
+  ],
   "$defs": {
     "resultPath": {
       "type": "string",
@@ -40,7 +64,8 @@
         "name": { "type": "string", "minLength": 1 },
         "exit_code": { "type": "integer" },
         "status": { "enum": ["passed", "failed"] },
-        "result": { "$ref": "#/$defs/resultPath" }
+        "result": { "$ref": "#/$defs/resultPath" },
+        "blocked": { "type": "boolean" }
       }
     },
     "failure": {
@@ -51,6 +76,17 @@
         "name": { "type": "string", "minLength": 1 },
         "exit_code": { "type": "integer" },
         "result": { "$ref": "#/$defs/resultPath" }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "exit_code", "result", "reason"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "exit_code": { "type": "integer" },
+        "result": { "$ref": "#/$defs/resultPath" },
+        "reason": { "type": "string", "minLength": 1 }
       }
     }
   }

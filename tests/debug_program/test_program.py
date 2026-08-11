@@ -196,6 +196,101 @@ def test_runner_preserves_external_ci_block_as_blocked(tmp_path: Path) -> None:
     validate_automation_verdict(verdict, writer.run_root)
 
 
+def test_validator_rejects_unbound_blocked_verdicts(tmp_path: Path) -> None:
+    result = tmp_path / "result.json"
+    result.write_text("{}", encoding="utf-8")
+    base = {
+        "schema_version": "1.0",
+        "candidate_id": "v1-rc-abc1234-20260811T193000Z",
+        "run_id": "run-blocked-001",
+        "matrix": "dp20-full",
+        "status": "blocked",
+        "started_at": "2026-08-11T19:30:00Z",
+        "finished_at": "2026-08-11T19:30:01Z",
+        "first_failure": None,
+        "first_blocker": None,
+    }
+
+    with pytest.raises(ValidationError, match="blocked automation verdict"):
+        validate_automation_verdict({**base, "commands": []}, tmp_path)
+
+    with pytest.raises(ValidationError, match="blocked automation verdict"):
+        validate_automation_verdict(
+            {
+                **base,
+                "commands": [
+                    {
+                        "name": "ci-wiring-check",
+                        "exit_code": 0,
+                        "status": "passed",
+                        "result": "result.json",
+                    }
+                ],
+                "first_blocker": {
+                    "name": "ci-wiring-check",
+                    "exit_code": 2,
+                    "result": "result.json",
+                    "reason": "external CI evidence is required",
+                },
+            },
+            tmp_path,
+        )
+
+    with pytest.raises(ValidationError, match="first_blocker must match"):
+        validate_automation_verdict(
+            {
+                **base,
+                "commands": [
+                    {
+                        "name": "ci-wiring-check",
+                        "exit_code": 2,
+                        "status": "failed",
+                        "result": "result.json",
+                        "blocked": True,
+                    }
+                ],
+                "first_blocker": {
+                    "name": "other-command",
+                    "exit_code": 2,
+                    "result": "result.json",
+                    "reason": "external CI evidence is required",
+                },
+            },
+            tmp_path,
+        )
+
+    blocker = {
+        "name": "ci-wiring-check",
+        "exit_code": 2,
+        "result": "result.json",
+        "reason": "external CI evidence is required",
+    }
+    for status, commands, failure in (
+        (
+            "passed",
+            [{"name": "ok", "exit_code": 0, "status": "passed", "result": "result.json"}],
+            None,
+        ),
+        (
+            "failed",
+            [{"name": "failed", "exit_code": 1, "status": "failed", "result": "result.json"}],
+            {"name": "failed", "exit_code": 1, "result": "result.json"},
+        ),
+        ("interrupted", [], None),
+    ):
+        with pytest.raises(ValidationError, match="only blocked automation verdicts"):
+            validate_automation_verdict(
+                {
+                    **base,
+                    "status": status,
+                    "commands": commands,
+                    "first_failure": failure,
+                    "first_blocker": blocker,
+                },
+                tmp_path,
+            )
+
+
 def test_runner_rejects_empty_plan_without_creating_a_passed_run(tmp_path: Path) -> None:
     writer = EvidenceWriter(
         tmp_path / "evidence", "v1-rc-abc1234-20260811T193000Z", "run-empty-001"

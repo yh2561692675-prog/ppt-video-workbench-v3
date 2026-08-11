@@ -41,6 +41,7 @@ class CommandSpec:
     env: dict[str, str]
     timeout_seconds: int = 1800
     blocked_exit_codes: tuple[int, ...] = ()
+    blocked_reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -167,13 +168,13 @@ def run_plan(
     command_root = writer.run_root / "commands"
     results: list[CommandResult] = []
     first_failure: dict[str, Any] | None = None
-    blocked_commands: list[str] = []
+    blocked_results: list[tuple[CommandResult, CommandSpec]] = []
     for index, spec in enumerate(commands, start=1):
         result = execute_command(spec, command_root, index)
         results.append(result)
         if result.status == "failed" and first_failure is None:
             if result.exit_code in spec.blocked_exit_codes:
-                blocked_commands.append(result.name)
+                blocked_results.append((result, spec))
                 continue
             first_failure = {
                 "name": result.name,
@@ -182,7 +183,8 @@ def run_plan(
             }
             if stop_on_failure:
                 break
-    status = "failed" if first_failure else ("blocked" if blocked_commands else "passed")
+    status = "failed" if first_failure else ("blocked" if blocked_results else "passed")
+    blocked_paths = {result.result for result, _ in blocked_results}
     verdict = {
         "schema_version": "1.0",
         "candidate_id": writer.candidate_id,
@@ -199,15 +201,24 @@ def run_plan(
                 "exit_code": item.exit_code,
                 "status": item.status,
                 "result": item.result.relative_to(writer.run_root).as_posix(),
+                "blocked": item.result in blocked_paths,
             }
             for item in results
         ],
         "first_failure": first_failure,
+        "first_blocker": None,
     }
-    if blocked_commands:
+    if blocked_results and first_failure is None:
+        first_blocked, first_spec = blocked_results[0]
+        verdict["first_blocker"] = {
+            "name": first_blocked.name,
+            "exit_code": first_blocked.exit_code,
+            "result": first_blocked.result.relative_to(writer.run_root).as_posix(),
+            "reason": first_spec.blocked_reason or "command exited with a configured blocked code",
+        }
         verdict["notes"] = [
             "external CI evidence is required",
-            *[f"blocked command: {name}" for name in blocked_commands],
+            *[f"blocked command: {result.name}" for result, _ in blocked_results],
         ]
     validate_automation_verdict(verdict, writer.run_root)
     _write_new(writer.run_root / "automation-verdict.json", verdict)
@@ -247,6 +258,7 @@ def recover_automation(writer: EvidenceWriter) -> Path | None:
         "finished_at": utc_now(),
         "commands": [],
         "first_failure": None,
+        "first_blocker": None,
         "notes": ["recovered without overwriting the running run"],
     }
     validate_automation_verdict(verdict, writer.run_root)
@@ -300,6 +312,7 @@ def full_automation_plan(
         timeout_seconds: int,
         env: dict[str, str] | None = None,
         blocked_exit_codes: tuple[int, ...] = (),
+        blocked_reason: str | None = None,
     ) -> CommandSpec:
         return CommandSpec(
             name,
@@ -308,6 +321,7 @@ def full_automation_plan(
             env or {},
             timeout_seconds,
             blocked_exit_codes,
+            blocked_reason,
         )
 
     tool_preflight_command = [
@@ -420,5 +434,6 @@ def full_automation_plan(
             300,
             python_env,
             blocked_exit_codes=(2,),
+            blocked_reason="external Windows/Ubuntu CI evidence is required",
         ),
     )
