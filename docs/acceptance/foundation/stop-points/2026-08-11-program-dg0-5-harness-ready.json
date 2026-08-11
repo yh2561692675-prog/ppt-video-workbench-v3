@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects",
+  "gate": "DG0.5_HARNESS_READY",
+  "generated_at": "2026-08-11T19:45:00Z",
+  "decision": "passed",
+  "owner_line": "A-core-workbench",
+  "source_commit": "6f5030d",
+  "foundation_source_commit": "5a071cb95d9af8f91c978abac75d3df77a0910ab",
+  "worktree": "F:/ppt-video-workbench-v3/.worktrees/program-core-workbench",
+  "implemented": [
+    "CandidateManifestV1 schema and strict validator",
+    "Scenario, Run, Defect and Signoff schemas and validators",
+    "create-new append-only evidence writer with interrupted-run recovery",
+    "per-run workspace/cache/browser-profile/office-profile/port isolation",
+    "scenario registry and machine-readable CLI"
+  ],
+  "verification": [
+    {"command": "python -m ruff check scripts/debug_program tests/debug_program", "result": "pass"},
+    {"command": "python -m mypy --strict scripts/debug_program", "result": "pass"},
+    {"command": "python -m pytest -q tests/debug_program", "result": "5 passed"},
+    {"command": "parse five debug schema files and validate candidate-golden.json", "result": "pass"},
+    {"command": "python -m scripts.debug_program list-scenarios --matrix local-e2e", "result": "safe scenario returned"},
+    {"command": "python -m scripts.debug_program run --matrix release without authorization", "result": "blocked_external_authorization"}
+  ],
+  "append_only_guarantees": [
+    "run and attempt files use O_EXCL create semantics",
+    "retries create a new attempt directory",
+    "existing verdicts are never overwritten",
+    "interrupted attempts receive a separate interruption marker"
+  ],
+  "evidence_storage": {
+    "requested": "docs/acceptance/debug-program/",
+    "used": "docs/acceptance/foundation/stop-points/",
+    "evidence_storage_override": true,
+    "reason": "the protected recovery root denies creation of new docs/acceptance subdirectories; no ACL change was attempted"
+  },
+  "scope_boundary": {
+    "not_claimed": [
+      "clean release candidate build",
+      "Playwright product E2E",
+      "paid provider invocation",
+      "destructive Windows install/uninstall"
+    ]
+  },
+  "next_gate": "DG1_CLEAN_CANDIDATE_READY"
+}
