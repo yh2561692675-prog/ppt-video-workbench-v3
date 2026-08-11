@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -42,6 +43,7 @@ class CommandSpec:
     timeout_seconds: int = 1800
     blocked_exit_codes: tuple[int, ...] = ()
     blocked_reason: str | None = None
+    release_output_root: str | None = None
 
 
 @dataclass(frozen=True)
@@ -95,6 +97,11 @@ def execute_command(spec: CommandSpec, output_root: Path, index: int) -> Command
             "cwd": str(spec.cwd),
             "timeout_seconds": spec.timeout_seconds,
             "started_at": utc_now(),
+            **(
+                {"release_output_root": spec.release_output_root}
+                if spec.release_output_root is not None
+                else {}
+            ),
         },
     )
     status = "passed"
@@ -127,6 +134,20 @@ def execute_command(spec: CommandSpec, output_root: Path, index: int) -> Command
         for path in (stdout, stderr):
             if not path.exists():
                 path.write_bytes(b"")
+    release_output_evidence: Path | None = None
+    if status == "passed" and spec.release_output_root is not None:
+        release_output_evidence = command_root / "release-output.json"
+        try:
+            _write_release_output_evidence(
+                (spec.cwd / spec.release_output_root).resolve(),
+                release_output_evidence,
+                spec.release_output_root,
+            )
+        except (OSError, ValueError) as exc:
+            status = "failed"
+            exit_code = 1
+            error = f"release output capture failed: {exc}"
+            release_output_evidence = None
     record = {
         "name": spec.name,
         "argv": list(spec.argv),
@@ -148,8 +169,60 @@ def execute_command(spec: CommandSpec, output_root: Path, index: int) -> Command
     }
     if error is not None:
         record["error"] = error
+    if release_output_evidence is not None:
+        record["release_output"] = {
+            "path": release_output_evidence.name,
+            "sha256": sha256_file(release_output_evidence),
+        }
     _write_new(result_path, record)
     return CommandResult(spec.name, exit_code, status, stdout, stderr, result_path)
+
+
+def _write_release_output_evidence(
+    root: Path, evidence_path: Path, relative_root: str
+) -> None:
+    """Record hashes for every release output without copying long payload paths."""
+
+    root = root.resolve()
+    if not root.is_dir():
+        raise ValueError(f"release output root is missing: {root}")
+
+    required = (
+        root / "artifacts" / "release-artifacts.json",
+        root / "artifacts" / "ppt-video-workbench-setup.exe",
+        root / "payload" / "runtime-manifest.json",
+    )
+    inventory: list[dict[str, Any]] = []
+    paths: list[Path] = list(required)
+    for directory in (root / "payload" / "sbom", root / "payload" / "licenses"):
+        if not directory.is_dir():
+            raise ValueError(f"release output directory is missing: {directory}")
+        paths.extend(path for path in directory.rglob("*") if path.is_file())
+    for path in sorted(set(paths)):
+        resolved = path.resolve()
+        if resolved != root and root not in resolved.parents:
+            raise ValueError(f"release output escaped root: {path}")
+        if not resolved.is_file():
+            raise ValueError(f"release output file is missing: {path}")
+        inventory.append(
+            {
+                "path": resolved.relative_to(root).as_posix(),
+                "size": resolved.stat().st_size,
+                "sha256": sha256_file(resolved),
+            }
+        )
+    canonical = "\n".join(
+        f"{item['path']}\0{item['size']}\0{item['sha256']}" for item in inventory
+    ).encode("utf-8")
+    _write_new(
+        evidence_path,
+        {
+            "schema_version": "1.0",
+            "relative_root": relative_root,
+            "files": inventory,
+            "aggregate_sha256": hashlib.sha256(canonical).hexdigest(),
+        },
+    )
 
 
 def run_plan(
@@ -281,6 +354,14 @@ def new_run_id(candidate_id: str, matrix: str) -> str:
     return run_id
 
 
+def release_output_root(repo_root: Path, candidate_id: str, run_id: str) -> str:
+    """Return a short, unique release root under the debug evidence tree."""
+
+    artifact_id = f"{_slug(candidate_id)[:10]}-{_slug(run_id)[-12:]}"
+    relative = f"test-results/debug-program/release/{artifact_id}"
+    return _safe_release_output(repo_root, relative)
+
+
 def python_smoke_plan(repo_root: Path) -> tuple[CommandSpec, ...]:
     """Small, deterministic regression used to validate the runner itself."""
 
@@ -296,7 +377,10 @@ def python_smoke_plan(repo_root: Path) -> tuple[CommandSpec, ...]:
 
 
 def full_automation_plan(
-    repo_root: Path, candidate: Path | None = None
+    repo_root: Path,
+    candidate: Path | None = None,
+    *,
+    release_output_root: str,
 ) -> tuple[CommandSpec, ...]:
     """DP20-DP24 command plan; execution remains sequential and fail-closed."""
 
@@ -313,6 +397,7 @@ def full_automation_plan(
         env: dict[str, str] | None = None,
         blocked_exit_codes: tuple[int, ...] = (),
         blocked_reason: str | None = None,
+        release_output_root: str | None = None,
     ) -> CommandSpec:
         return CommandSpec(
             name,
@@ -322,6 +407,7 @@ def full_automation_plan(
             timeout_seconds,
             blocked_exit_codes,
             blocked_reason,
+            release_output_root,
         )
 
     tool_preflight_command = [
@@ -345,12 +431,13 @@ def full_automation_plan(
     if candidate is not None:
         tool_preflight_command.extend(("--candidate", str(candidate)))
         release_command.extend(("--candidate", str(candidate)))
-    release_root = _safe_release_output(
-        repo_root, "test-results/debug-program/release-payload"
-    )
-    installer_root = _safe_release_output(
-        repo_root, "test-results/debug-program/release-artifacts"
-    )
+    safe_release_root = _safe_release_output(repo_root, release_output_root)
+    if safe_release_root == "test-results/debug-program":
+        raise ValueError("release output root must be run-specific")
+    if (repo_root / safe_release_root).exists():
+        raise ValueError("release output root already exists")
+    release_root = _safe_release_output(repo_root, f"{safe_release_root}/payload")
+    installer_root = _safe_release_output(repo_root, f"{safe_release_root}/artifacts")
     return (
         spec("release-tool-preflight", tool_preflight_command, 300, python_env),
         spec(
@@ -382,6 +469,7 @@ def full_automation_plan(
             ],
             7200,
             {"CI": "true"},
+            release_output_root=safe_release_root,
         ),
         spec("python-full-tests", [python, "-m", "pytest", "-q"], 3600, python_env),
         spec(

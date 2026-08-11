@@ -16,6 +16,7 @@ from .runner import (
     new_run_id,
     python_smoke_plan,
     recover_automation,
+    release_output_root,
     run_plan,
 )
 
@@ -119,10 +120,17 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValidationError(f"unsupported automation matrix: {args.matrix}")
             run_id = new_run_id(candidate["candidate_id"], args.matrix)
             writer = EvidenceWriter(args.evidence_root, candidate["candidate_id"], run_id)
+            release_root = release_output_root(
+                args.repo_root.resolve(), candidate["candidate_id"], run_id
+            )
             plan = (
                 python_smoke_plan(args.repo_root.resolve())
                 if args.matrix == "python-smoke"
-                else full_automation_plan(args.repo_root.resolve(), args.candidate.resolve())
+                else full_automation_plan(
+                    args.repo_root.resolve(),
+                    args.candidate.resolve(),
+                    release_output_root=release_root,
+                )
             )
             verdict = run_plan(
                 writer=writer,

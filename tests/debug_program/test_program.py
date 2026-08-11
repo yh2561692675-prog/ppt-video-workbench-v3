@@ -28,6 +28,7 @@ from scripts.debug_program.runner import (
     full_automation_plan,
     new_run_id,
     recover_automation,
+    release_output_root,
     run_plan,
 )
 
@@ -478,6 +479,67 @@ def test_release_output_rejects_escape_and_absolute_paths(tmp_path: Path) -> Non
         _safe_release_output(tmp_path, "dist/release")
 
 
+def test_release_outputs_are_unique_and_run_specific(tmp_path: Path) -> None:
+    candidate_id = "v1-rc-abc1234-20260811T193000Z"
+    first_root = release_output_root(tmp_path, candidate_id, "run-first-001")
+    second_root = release_output_root(tmp_path, candidate_id, "run-second-002")
+    assert first_root != second_root
+    first_plan = full_automation_plan(
+        tmp_path, release_output_root=first_root
+    )
+    second_plan = full_automation_plan(
+        tmp_path, release_output_root=second_root
+    )
+    first_build = next(item for item in first_plan if item.name == "release-build")
+    second_build = next(item for item in second_plan if item.name == "release-build")
+    assert first_build.argv != second_build.argv
+    assert "release-payload" not in " ".join(first_build.argv)
+    assert "release-artifacts" not in " ".join(first_build.argv)
+
+    with pytest.raises(ValueError, match="relative path"):
+        full_automation_plan(tmp_path, release_output_root="../outside")
+
+
+def test_release_output_capture_records_artifact_hashes(tmp_path: Path) -> None:
+    root = tmp_path / "test-results" / "debug-program" / "release" / "short-id"
+    for relative in (
+        "artifacts/release-artifacts.json",
+        "artifacts/ppt-video-workbench-setup.exe",
+        "payload/runtime-manifest.json",
+        "payload/sbom/node-dependencies.json",
+        "payload/sbom/python-dependencies.json",
+        "payload/licenses/THIRD-PARTY-NOTICES.txt",
+    ):
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(relative.encode("utf-8"))
+    result = execute_command(
+        CommandSpec(
+            "release-output-capture",
+            (sys.executable, "-c", "pass"),
+            tmp_path,
+            {},
+            30,
+            release_output_root="test-results/debug-program/release/short-id",
+        ),
+        tmp_path / "evidence" / "commands",
+        1,
+    )
+    assert result.status == "passed"
+    record = json.loads(result.result.read_text(encoding="utf-8"))
+    evidence = result.result.parent / record["release_output"]["path"]
+    payload = json.loads(evidence.read_text(encoding="utf-8"))
+    assert payload["relative_root"] == "test-results/debug-program/release/short-id"
+    assert payload["aggregate_sha256"]
+    assert {item["path"] for item in payload["files"]} >= {
+        "artifacts/release-artifacts.json",
+        "artifacts/ppt-video-workbench-setup.exe",
+        "payload/runtime-manifest.json",
+        "payload/sbom/node-dependencies.json",
+        "payload/licenses/THIRD-PARTY-NOTICES.txt",
+    }
+
+
 def test_generated_run_id_is_accepted_by_verdict_validator(tmp_path: Path) -> None:
     run_id = new_run_id("v1-rc-abc1234-20260811T193000Z", "DP20_FULL")
     result = tmp_path / "result.json"
@@ -501,7 +563,12 @@ def test_generated_run_id_is_accepted_by_verdict_validator(tmp_path: Path) -> No
 
 
 def test_full_automation_plan_is_explicit_and_sequential(tmp_path: Path) -> None:
-    plan = full_automation_plan(tmp_path)
+    plan = full_automation_plan(
+        tmp_path,
+        release_output_root=release_output_root(
+            tmp_path, "v1-rc-abc1234-20260811T193000Z", "run-plan-001"
+        ),
+    )
     names = [item.name for item in plan]
     assert names[:6] == [
         "release-tool-preflight",
