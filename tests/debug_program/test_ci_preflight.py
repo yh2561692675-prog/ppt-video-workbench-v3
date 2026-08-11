@@ -14,6 +14,14 @@ from scripts.debug_program.models import ValidationError
 
 COMMIT = "a" * 40
 CANDIDATE_ID = "v1-rc-abc1234-20260811T193000Z"
+QUALITY_COMMANDS = (
+    "uv sync --frozen",
+    "uv run ruff check .",
+    "uv run mypy apps/api/src",
+    "uv run pytest",
+    "pnpm install --frozen-lockfile",
+    "pnpm check",
+)
 WORKFLOW = """name: CI
 jobs:
   quality:
@@ -60,26 +68,27 @@ def _fixture(tmp_path: Path) -> tuple[Path, Path, dict[str, Any]]:
     evidence_path = repo_root / "external-ci-evidence.json"
     jobs: list[dict[str, Any]] = []
     for platform in ("windows", "ubuntu"):
+        job_id = "1001" if platform == "windows" else "1002"
         jobs.append(
             {
                 "platform": platform,
-                "job_id": f"quality-{platform}",
+                "job_id": job_id,
                 "conclusion": "success",
                 "e2e": {"command": "pnpm e2e", "exit_code": 0, "conclusion": "success"},
                 "quality": [
-                    {
-                        "command": "pnpm check",
-                        "exit_code": 0,
-                        "conclusion": "success",
-                    },
-                    {
-                        "command": "uv run pytest",
-                        "exit_code": 0,
-                        "conclusion": "success",
-                    },
+                    {"command": command, "exit_code": 0, "conclusion": "success"}
+                    for command in QUALITY_COMMANDS
                 ],
-                "run_id": f"run-{platform}-123",
-                "url": f"https://ci.example.test/runs/{platform}-123",
+                "provider": "github-actions",
+                "repository": "openai/ppt-video-workbench-v3",
+                "run_id": "123456789",
+                "workflow_run_url": (
+                    "https://github.com/openai/ppt-video-workbench-v3/actions/runs/123456789"
+                ),
+                "job_url": (
+                    "https://github.com/openai/ppt-video-workbench-v3/actions/runs/123456789"
+                    f"/job/{job_id}"
+                ),
                 "started_at": "2026-08-11T20:00:00Z",
                 "finished_at": "2026-08-11T20:05:00Z",
                 "artifacts": [
@@ -149,11 +158,24 @@ def test_ci_preflight_without_external_evidence_is_blocked(tmp_path: Path) -> No
         lambda value: value["jobs"][0].update({"continue-on-error": True}),
         lambda value: value["jobs"][0].update({"timeout": True}),
         lambda value: value["jobs"][0].update({"cancelled": True}),
+        lambda value: value["jobs"][0]["quality"][0].update({"command": "echo ok"}),
+        lambda value: value["jobs"][0]["quality"].pop(),
+        lambda value: value["jobs"][0]["quality"][1].update(
+            {"command": value["jobs"][0]["quality"][0]["command"]}
+        ),
+        lambda value: value["jobs"][0]["quality"].append(
+            copy.deepcopy(value["jobs"][0]["quality"][0])
+        ),
         lambda value: value["jobs"][0]["quality"][0].update({"exit_code": 1}),
         lambda value: value["jobs"][0]["artifacts"][0].update({"extra": True}),
         lambda value: value["jobs"][0]["artifacts"][0].update({"sha256": "0" * 64}),
         lambda value: value["jobs"][0]["logs"][0].update({"path": "../outside.txt"}),
         lambda value: value["jobs"][0]["reports"][0].update({"path": "C:/outside.json"}),
+        lambda value: value["jobs"][1]["artifacts"].__setitem__(
+            0, copy.deepcopy(value["jobs"][0]["artifacts"][0])
+        ),
+        lambda value: value["jobs"][1].update({"job_url": value["jobs"][0]["job_url"]}),
+        lambda value: value["jobs"][1].update({"job_url": "https://evil.example/runs/1/job/2"}),
     ],
 )
 def test_external_ci_invalid_variants_are_rejected(
