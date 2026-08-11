@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "phase": "P1",
+  "gate": "G1",
+  "status": "passed",
+  "scope": "Unified durable long-running job execution framework",
+  "completed": [
+    "Schema v3 durable attempts, checkpoints, artifact publications, resource leases and workers",
+    "Generation-bound claim, heartbeat and terminal attempt transitions",
+    "Revision CAS for job writes and public pause/resume/cancel actions",
+    "Database-backed checkpoint mirror with the complete checkpoint envelope",
+    "Stale-attempt publication rejection and corrupted-publication reconciliation",
+    "Restart recovery that expires interrupted attempts before creating a new generation",
+    "Unified project-scoped job inspection and control API"
+  ],
+  "verification": {
+    "pytest": "75 passed; pytest cache write warning is caused by existing workspace permissions",
+    "ruff": "All checks passed",
+    "mypy": "Success: no issues found in 14 source files",
+    "diff_check": "No whitespace errors"
+  },
+  "next_phase": "P2 material derivatives and content-addressed cache",
+  "safe_resume": "Read this record, then implement only P2 contracts/object store/probe/executors against the durable job APIs."
+}

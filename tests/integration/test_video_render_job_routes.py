@@ -15,7 +15,8 @@ def test_render_job_preflight_block_returns_conflict(tmp_path) -> None:
     assert response.status_code == 409
 
 
-def test_render_job_get_supports_weak_etag(tmp_path) -> None:
+def test_render_job_get_supports_weak_etag(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WORKBENCH_ASYNC_RENDER_ENABLED", "false")
     app = create_app(tmp_path)
     project = app.state.project_service.create("async render")
     record = app.state.project_service.jobs.enqueue_or_get(

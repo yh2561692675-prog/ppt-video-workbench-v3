@@ -47,7 +47,9 @@ class CheckpointStore:
 
     def write(self, checkpoint: Checkpoint) -> Checkpoint:
         self.directory.mkdir(parents=True, exist_ok=True)
-        target = self.directory / f"{checkpoint.job_id}-{checkpoint.sequence:06d}.json"
+        target = self.path_for(checkpoint.job_id, checkpoint.sequence)
+        if target.exists():
+            raise FileExistsError(f"checkpoint sequence already exists: {checkpoint.sequence}")
         temporary = target.with_name(f".{target.name}.tmp")
         data = checkpoint.model_dump_json(indent=2)
         with temporary.open("w", encoding="utf-8", newline="\n") as handle:
@@ -57,6 +59,21 @@ class CheckpointStore:
             os.fsync(handle.fileno())
         os.replace(temporary, target)
         return checkpoint
+
+    def path_for(self, job_id: UUID, sequence: int) -> Path:
+        return self.directory / f"{job_id}-{sequence:06d}.json"
+
+    def checksum(self, checkpoint: Checkpoint) -> str:
+        path = self.path_for(checkpoint.job_id, checkpoint.sequence)
+        return _sha256(path)
+
+    def next_sequence(self, job_id: UUID) -> int:
+        sequences = [
+            int(match.group(1))
+            for path in self.directory.glob(f"{job_id}-*.json")
+            if (match := re.fullmatch(rf"{re.escape(str(job_id))}-(\d{{6}})\.json", path.name))
+        ]
+        return max(sequences, default=0) + 1
 
     def latest(self, job_id: UUID) -> Checkpoint | None:
         candidates = sorted(
@@ -72,12 +89,26 @@ class CheckpointStore:
         return None
 
     def restore(self, job_id: UUID, verify: bool = True) -> Checkpoint | None:
-        checkpoint = self.latest(job_id)
-        if checkpoint is None or checkpoint.job_id != job_id:
-            return None
-        if verify and not self._artifacts_valid(checkpoint):
-            return None
-        return checkpoint
+        for checkpoint in self.valid_checkpoints(job_id, verify=verify):
+            return checkpoint
+        return None
+
+    def valid_checkpoints(self, job_id: UUID, *, verify: bool = True) -> Iterable[Checkpoint]:
+        candidates = sorted(
+            self.directory.glob(f"{job_id}-*.json"),
+            key=lambda path: path.name,
+            reverse=True,
+        )
+        for path in candidates:
+            try:
+                checkpoint = Checkpoint.model_validate_json(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if checkpoint.job_id != job_id:
+                continue
+            if verify and not self._artifacts_valid(checkpoint):
+                continue
+            yield checkpoint
 
     def cleanup_temporary_paths(self, job_id: UUID) -> None:
         checkpoint = self.latest(job_id)
@@ -137,14 +168,13 @@ class JobContext:
     ) -> Checkpoint:
         if not 0.0 <= progress <= 1.0:
             raise ValueError("checkpoint progress must be between zero and one")
-        previous = self.store.latest(self.job_id)
         artifact_records = [_artifact(self.project_dir, path) for path in artifacts]
         sanitized = _sanitize(dict(payload))
         if not isinstance(sanitized, dict):
             raise ValueError("checkpoint payload must be an object")
         checkpoint = Checkpoint(
             job_id=self.job_id,
-            sequence=(previous.sequence + 1 if previous else 1),
+            sequence=self.store.next_sequence(self.job_id),
             progress=progress,
             stage=str(sanitized.get("stage", self.job_type.value)),
             payload=sanitized,

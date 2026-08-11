@@ -29,6 +29,7 @@ from workbench.api.environment import create_environment_router
 from workbench.api.export_presets import create_export_presets_router
 from workbench.api.fidelity import create_fidelity_router
 from workbench.api.heygen_settings import create_heygen_settings_router
+from workbench.api.jobs import create_jobs_router
 from workbench.api.matching import create_matching_router
 from workbench.api.material_collections import create_material_collections_router
 from workbench.api.materials import create_materials_router
@@ -424,6 +425,7 @@ def create_app(
         create_video_router(video_preview_service, video_export_service, render_job_service)
     )
     app.include_router(create_quality_router(quality_job_service))
+    app.include_router(create_jobs_router(service))
     app.include_router(create_assets_router(asset_registry_service))
     app.include_router(create_material_collections_router(material_collection_service))
     app.include_router(create_continuity_router(continuity_service))

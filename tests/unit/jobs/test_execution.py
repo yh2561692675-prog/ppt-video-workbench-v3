@@ -66,6 +66,8 @@ def test_pause_is_observed_at_safe_point_and_cancel_has_precedence(tmp_path: Pat
     with pytest.raises(RenderPauseRequested):
         context.pause_if_requested()
     assert repository.get(context.job_id).status is JobStatus.PAUSED
+    assert repository.latest_checkpoint(context.job_id) is not None
+    assert context.restore() is not None
 
     repository, context, _ = setup_context(tmp_path / "cancel")
     repository.request_pause(context.job_id)

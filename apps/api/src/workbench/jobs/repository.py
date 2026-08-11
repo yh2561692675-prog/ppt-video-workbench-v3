@@ -175,6 +175,19 @@ class JobRepository:
             rows = connection.execute(select(jobs).order_by(jobs.c.created_at)).mappings().all()
         return [_to_record(row) for row in rows]
 
+    def list_for_project(self, project_id: UUID) -> list[JobRecord]:
+        with self.database.connect() as connection:
+            rows = (
+                connection.execute(
+                    select(jobs)
+                    .where(jobs.c.project_id == str(project_id))
+                    .order_by(desc(jobs.c.created_at))
+                )
+                .mappings()
+                .all()
+            )
+        return [_to_record(row) for row in rows]
+
     def claim_next(
         self,
         job_type: JobType,
@@ -340,22 +353,28 @@ class JobRepository:
         checkpoint: Mapping[str, object],
         *,
         attempt_id: UUID | None = None,
+        sequence: int | None = None,
+        checkpoint_hash: str | None = None,
     ) -> JobCheckpointRecord:
         current = self.current_attempt(job_id)
         selected_attempt = attempt_id or (current.id if current is not None else None)
         if selected_attempt is None:
             raise JobTransitionConflict("cannot record checkpoint without an active attempt")
         existing = self.latest_checkpoint(job_id)
-        sequence = (existing.sequence + 1) if existing is not None else 1
+        selected_sequence = (
+            sequence if sequence is not None else (existing.sequence + 1 if existing else 1)
+        )
+        if existing is not None and selected_sequence <= existing.sequence:
+            raise JobTransitionConflict("checkpoint sequence must increase")
         payload = _encode_json(dict(checkpoint))
-        digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+        digest = checkpoint_hash or hashlib.sha256(payload.encode("utf-8")).hexdigest()
         now = _utc_now()
         with self.database.engine.begin() as connection:
             connection.execute(
                 insert(job_checkpoints).values(
                     job_id=str(job_id),
                     attempt_id=str(selected_attempt),
-                    sequence=sequence,
+                    sequence=selected_sequence,
                     checkpoint_json=payload,
                     checkpoint_hash=digest,
                     created_at=now,
@@ -365,7 +384,7 @@ class JobRepository:
                 update(job_attempts)
                 .where(job_attempts.c.id == str(selected_attempt))
                 .values(
-                    checkpoint_sequence=sequence,
+                    checkpoint_sequence=selected_sequence,
                     heartbeat_at=now,
                     revision=job_attempts.c.revision + 1,
                 )
@@ -373,25 +392,28 @@ class JobRepository:
         return JobCheckpointRecord(
             job_id=job_id,
             attempt_id=selected_attempt,
-            sequence=sequence,
+            sequence=selected_sequence,
             checkpoint=dict(checkpoint),
             checkpoint_hash=digest,
             created_at=datetime.fromisoformat(now),
         )
 
     def latest_checkpoint(self, job_id: UUID) -> JobCheckpointRecord | None:
+        history = self.list_checkpoints(job_id)
+        return history[0] if history else None
+
+    def list_checkpoints(self, job_id: UUID) -> list[JobCheckpointRecord]:
         with self.database.connect() as connection:
-            row = (
+            rows = (
                 connection.execute(
                     select(job_checkpoints)
                     .where(job_checkpoints.c.job_id == str(job_id))
                     .order_by(desc(job_checkpoints.c.sequence))
-                    .limit(1)
                 )
                 .mappings()
-                .first()
+                .all()
             )
-        return _to_checkpoint(row) if row is not None else None
+        return [_to_checkpoint(row) for row in rows]
 
     def reserve_publication(
         self,

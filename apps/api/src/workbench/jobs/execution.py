@@ -8,6 +8,7 @@ from uuid import UUID
 from workbench.domain.enums import JobStatus, JobType
 
 from .checkpoint import Checkpoint, CheckpointStore, JobContext
+from .recovery import CheckpointRecovery
 from .repository import JobRepository
 
 
@@ -102,7 +103,7 @@ class PersistentRenderExecutionContext:
             job_type,
             checkpoint_store=self.store,
         )
-        restored = self.store.latest(job_id)
+        restored = CheckpointRecovery(repository, self.store).restore(job_id)
         self._temporary_paths = set(restored.temporary_paths if restored is not None else [])
 
     @property
@@ -129,9 +130,12 @@ class PersistentRenderExecutionContext:
         if payload:
             data.update(payload)
         checkpoint = self._job_context.checkpoint(progress, data, artifacts)
+        checkpoint_hash = self.store.checksum(checkpoint)
         self.repository.record_checkpoint(
             self.job_id,
             checkpoint.model_dump(mode="json"),
+            sequence=checkpoint.sequence,
+            checkpoint_hash=checkpoint_hash,
         )
         self.repository.update_progress(
             self.job_id,
@@ -148,6 +152,12 @@ class PersistentRenderExecutionContext:
     def pause_if_requested(self) -> None:
         self.raise_if_cancelled()
         if self.repository.get(self.job_id).status is JobStatus.PAUSE_REQUESTED:
+            record = self.repository.get(self.job_id)
+            self.checkpoint(
+                stage=record.stage,
+                progress=record.progress,
+                message="safe checkpoint before pause",
+            )
             self.repository.mark_paused(self.job_id)
             raise RenderPauseRequested("render job pause requested")
 
@@ -168,4 +178,4 @@ class PersistentRenderExecutionContext:
         )
 
     def restore(self, verify: bool = True) -> Checkpoint | None:
-        return self.store.restore(self.job_id, verify=verify)
+        return CheckpointRecovery(self.repository, self.store).restore(self.job_id, verify=verify)
