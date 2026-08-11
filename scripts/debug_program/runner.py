@@ -238,7 +238,9 @@ def new_run_id(candidate_id: str, matrix: str) -> str:
     import secrets
     import time
 
-    run_id = f"{_slug(candidate_id)}-{_slug(matrix)}-{time.time_ns()}-{secrets.token_hex(3)}"
+    candidate_slug = _slug(candidate_id)[:16].rstrip("-")
+    matrix_slug = _slug(matrix)[:24].rstrip("-")
+    run_id = f"{candidate_slug}-{matrix_slug}-{time.time_ns()}-{secrets.token_hex(3)}"
     if _RUN_ID.fullmatch(run_id) is None:
         raise ValueError("generated run_id does not satisfy automation verdict contract")
     return run_id

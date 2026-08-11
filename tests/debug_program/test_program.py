@@ -318,6 +318,8 @@ def test_run_ids_are_unique_within_one_second() -> None:
     second = new_run_id("v1-rc-abc1234-20260811T193000Z", "python-smoke")
     assert first != second
     assert "T" not in first and "Z" not in first
+    assert len(first) <= 80
+    assert "_" not in first
 
 
 def test_generated_run_id_is_accepted_by_verdict_validator(tmp_path: Path) -> None:
