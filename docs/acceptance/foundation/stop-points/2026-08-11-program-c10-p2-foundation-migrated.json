@@ -1,0 +1,168 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects",
+  "wave": "W1",
+  "task": "C10",
+  "gate": "P2_FOUNDATION_MIGRATED",
+  "status": "passed",
+  "recorded_at": "2026-08-11T21:00:00+08:00",
+  "branch": "codex/program-platform-ecosystem",
+  "worktree": ".worktrees/program-platform-ecosystem",
+  "source": {
+    "foundation_commit": "5a071cb95d9af8f91c978abac75d3df77a0910ab",
+    "p2_source_branch": "codex/p2-platform-integration",
+    "p2_stop_point": "51cc325",
+    "p2_merge_base": "956929e7b75f80df8d17891420ccc812574a682e",
+    "p2_first_parent_commits_migrated": 91,
+    "c10_source_commit": "7896de035dd8e244c666f3d4ed6282184ec3327f",
+    "c10_source_tree": "2c6f801b8f3e1f48829b2901f60b8f3af69d5b20",
+    "changed_files_from_foundation": 127,
+    "source_tree_clean": true,
+    "migration_commits": [
+      "37762cee9525c743612d65b568946a8b0b467587",
+      "6b974ea96286cd13eb50d66baae2e5ff8ffa461d",
+      "8238a488aec9d13303194605570e7a67f726a006",
+      "35344386dfbeb0d78e14c5da4b6daffd0c6c0ba3",
+      "d41c0337e7a549627901a802ed067dfa73ac0732",
+      "7adb3a31126f7ffe6233087be6e417422bb3e844",
+      "84a1e6abe90ece33253b33a5d52542046cc86729",
+      "384da2f2553dd37aedcbb9f0540700b3bafdcdf9",
+      "c85de9dbb1fc027014e45999eebd9d54f35778e7",
+      "f08e09eadc3169577b42b884904f08e8fae675f0",
+      "9d13e302a370337f3a3d1505974baa455e06750c",
+      "1bb81fc04d8712a012d8ebaf93acb7f21e04ef71",
+      "2ec101d2a9b0cf91cf77d3c1d081ec9a75ce87a9",
+      "af3d633e940e337b34dbdbfb65ed7fd477565b1b",
+      "7896de035dd8e244c666f3d4ed6282184ec3327f"
+    ],
+    "migration_method": "audited first-parent cherry-pick sequence with conflict-scoped reconciliation; no whole-directory copy or whole-branch merge"
+  },
+  "a13_compatibility": {
+    "a13_source_commit": "f73faf64bcc877fc6fd13684d4225be5d7d620aa",
+    "a13_evidence_commit": "17fe50b",
+    "core_contract_set_sha256": "7c63aab737d6fe9281ce83cd8fec0e2ddf52f2148d51938f6be4f80ac55f5488",
+    "core_versions": {
+      "project": 1,
+      "asset": "1.0",
+      "material": "1.0",
+      "timeline": "1.0",
+      "subtitle": 2,
+      "continuity": 1,
+      "render_graph": "2.0",
+      "job": "1.0",
+      "export": "1.0",
+      "quality": "1.0"
+    },
+    "compatibility_policy": {
+      "unknown_fields": "reject",
+      "older_versions": "explicit_migration",
+      "invalid_enum": "reject"
+    },
+    "namespace_boundary": {
+      "p2_cloud_envelope_major": 1,
+      "core_job_schema_version": "1.0",
+      "core_asset_schema_version": "1.0",
+      "error_mapping_version": "1.0",
+      "implicit_version_conversion": false,
+      "statement": "P2/Cloud major 1 and core wire version 1.0 are independent namespaces; this bridge performs no normalization or implicit coercion."
+    },
+    "unknown_error_policy": "P2_UNMAPPED_ERROR is blocking and fail-closed"
+  },
+  "feature_flags": {
+    "provider_platform_enabled": false,
+    "platform_services_enabled": false,
+    "cloud_sync_enabled": false,
+    "default_behavior": "V1 local project, credential, path, rendering and execution defaults are unchanged; disabled composition creates no Provider or Cloud network client."
+  },
+  "artifacts": [
+    {
+      "path": "packages/contracts/p2-platform/core-compatibility.json",
+      "sha256": "d269f4e0dfe0681eddecba1ad3fe6db2106f9d17601f5887abfe18d2bee1cd2f"
+    },
+    {
+      "path": "packages/contracts/p2-platform/cloud-client.generated.ts",
+      "sha256": "8ca880c720261ee5936aed66a5b95d4708f32832b0da2ae7e30586cd72638ad4"
+    },
+    {
+      "path": "schemas/cloud/cloud-collaboration-v1.openapi.yaml",
+      "sha256": "195d6070e7f97f5e21ed70ea562eb34b75f418ffdae1cf28f567306618fc933e"
+    },
+    {
+      "path": "apps/api/src/workbench/contracts/core_compat.py",
+      "sha256": "7594d547717b1a6c05b2029f34f1fd77678159291cf551cb501eb97f01c46db0"
+    }
+  ],
+  "verification": {
+    "python_p2_contract_provider_platform_sync_cloud_integration_performance": {
+      "result": "passed",
+      "tests": 126,
+      "warnings": 1,
+      "warning_scope": "existing Pydantic UnsupportedFieldAttributeWarning in narration integration"
+    },
+    "mypy": {
+      "result": "passed",
+      "mode": "strict project configuration",
+      "source_files": 41
+    },
+    "ruff": {
+      "result": "passed"
+    },
+    "cloud_typescript_client_drift": {
+      "result": "passed",
+      "operations": 44
+    },
+    "p2_contract_typescript_standalone": {
+      "result": "passed",
+      "mode": "strict noEmit"
+    },
+    "web_full": {
+      "result": "passed",
+      "test_files": 46,
+      "tests": 87,
+      "typecheck": "passed",
+      "production_build": "passed",
+      "modules_transformed": 170,
+      "non_blocking_warning": "main bundle exceeds Vite 500 kB advisory threshold"
+    },
+    "git_diff_check": "passed",
+    "default_flag_matrix": "passed for all 8 combinations; all-disabled remains local-only and offline"
+  },
+  "runner_notes": [
+    "pnpm dependency-state check could not open its global SQLite store in the sandbox; no install was performed.",
+    "Tests, typecheck and build were rerun through the locked shared dependency tree linked into the isolated C worktree.",
+    "An initial missing Remotion dependency junction prevented two suites from loading; after the isolated dependency link was corrected, the full 46-file Web suite passed."
+  ],
+  "maturity": {
+    "provider_kernel": "opt-in foundation complete; real paid/vendor acceptance remains external",
+    "platform_services": "local adapters and contract matrix complete; real macOS/Linux media, credential-store and signed installer evidence remains pending",
+    "cloud": "local single-host prototype/beta only; production OIDC, PostgreSQL, object retention, PITR and security/SLO evidence remains pending",
+    "remote_executor": "contract and local prototype complete; production executor fleet acceptance remains pending"
+  },
+  "ownership": {
+    "owned_paths": [
+      "apps/api/src/workbench/contracts/p2_platform.py",
+      "apps/api/src/workbench/contracts/core_compat.py",
+      "apps/api/src/workbench/providers/",
+      "apps/api/src/workbench/platform/",
+      "apps/api/src/workbench/sync/",
+      "cloud_prototype/",
+      "packages/contracts/p2-platform/",
+      "schemas/cloud/"
+    ],
+    "shared_paths_touched": [
+      "apps/api/src/workbench/main.py",
+      "apps/web/src/api/client.ts",
+      "apps/web/src/app/",
+      "apps/web/src/features/projects/",
+      "packages/contracts/openapi.json"
+    ],
+    "will_write_again_before_g1": false,
+    "safe_resume": "G1 may integrate this C10 stop point after A12/A13 and B10/B11; preserve A13 core catalog and regenerate the combined OpenAPI snapshot after integration."
+  },
+  "next_gate": {
+    "name": "G1_INTEGRATION_READY",
+    "c10_ready": true,
+    "g1_passed": false,
+    "required_order": "A12/A13 -> B10/B11 -> C10"
+  }
+}
