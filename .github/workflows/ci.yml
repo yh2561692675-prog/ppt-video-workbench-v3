@@ -22,7 +22,7 @@ jobs:
         with:
           version: '11.7.0'
       - run: uv sync --frozen
-      - run: uv run ruff check apps tests
+      - run: uv run ruff check .
       - run: uv run mypy apps/api/src
       - run: uv run pytest
       - run: pnpm install --frozen-lockfile
