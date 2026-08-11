@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 from datetime import UTC, datetime
@@ -77,19 +78,39 @@ def _probe(command: str, *args: str) -> dict[str, Any]:
     path = shutil.which(command)
     if path is None:
         return {"available": False, "command": command}
+    return _probe_path(Path(path), command, *args)
+
+
+def _probe_path(path: Path, command: str, *args: str) -> dict[str, Any]:
     try:
         result = subprocess.run(
-            [path, *args], capture_output=True, text=True, timeout=20, check=False
+            [str(path), *args], capture_output=True, text=True, timeout=20, check=False
         )
         output = (result.stdout or result.stderr).splitlines()
+        identity = output[0][:240] if output else ""
+        available = result.returncode == 0 or (
+            command.lower() == "iscc.exe" and "inno setup" in identity.lower()
+        )
         return {
-            "available": result.returncode == 0,
-            "path": str(Path(path).resolve()),
+            "available": available,
+            "path": str(path.resolve()),
             "exit_code": result.returncode,
-            "version": output[0][:240] if output else "",
+            "version": identity,
         }
     except (OSError, subprocess.TimeoutExpired) as exc:
         return {"available": False, "path": str(Path(path).resolve()), "error": str(exc)}
+
+
+def resolve_iscc_path() -> Path | None:
+    configured = shutil.which("ISCC.exe")
+    if configured:
+        return Path(configured).resolve()
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        fallback = Path(local_app_data) / "Programs" / "Inno Setup 6" / "ISCC.exe"
+        if fallback.is_file():
+            return fallback.resolve()
+    return None
 
 
 def build_candidate(repo_root: Path, output_root: Path, candidate_id: str | None = None) -> Path:
@@ -129,7 +150,11 @@ def build_candidate(repo_root: Path, output_root: Path, candidate_id: str | None
         "pnpm": _probe("pnpm", "--version"),
         "ffmpeg": _probe("ffmpeg", "-version"),
         "ffprobe": _probe("ffprobe", "-version"),
-        "iscc": _probe("ISCC.exe", "/?"),
+        "iscc": (
+            _probe_path(iscc_path, "ISCC.exe", "/?")
+            if (iscc_path := resolve_iscc_path()) is not None
+            else {"available": False, "command": "ISCC.exe"}
+        ),
         "remotion_cli": {
             "available": (repo_root / "node_modules/.bin/remotion").is_file()
             or (repo_root / "remotion/node_modules/.bin/remotion").is_file()

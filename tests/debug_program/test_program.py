@@ -336,6 +336,18 @@ def test_release_preflight_resolves_user_local_iscc(
     assert resolve_iscc() == iscc.resolve()
 
 
+def test_candidate_runtime_probe_resolves_user_local_iscc(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    local_app_data = tmp_path / "LocalAppData"
+    iscc = local_app_data / "Programs" / "Inno Setup 6" / "ISCC.exe"
+    iscc.parent.mkdir(parents=True)
+    iscc.write_bytes(b"stub")
+    monkeypatch.setenv("LOCALAPPDATA", str(local_app_data))
+    monkeypatch.setattr(candidate_module.shutil, "which", lambda _: None)
+    assert candidate_module.resolve_iscc_path() == iscc.resolve()
+
+
 def test_release_output_rejects_escape_and_absolute_paths(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="relative path"):
         _safe_release_output(tmp_path, "../outside")
