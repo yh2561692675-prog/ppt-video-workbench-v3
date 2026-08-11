@@ -123,6 +123,40 @@ def test_runtime_manifest_rejects_a_secret_in_application_remotion_source(
     assert "development_secret_residue" in validation.codes
 
 
+def test_runtime_manifest_allows_risk_alert_css_identifiers(tmp_path: Path) -> None:
+    release, artifact, license_file = _bundle(tmp_path)
+    source = release / "runtime" / "remotion" / "src" / "effects" / "templates" / "RiskAlert.tsx"
+    source.parent.mkdir(parents=True)
+    source.write_text('<div className="risk-alert__title">Alert</div>', encoding="utf-8")
+    manifest = build_runtime_manifest(
+        release,
+        artifact_paths=[
+            (artifact, "python-runtime"),
+            (source, "renderer-runtime"),
+        ],
+        license_paths=[license_file],
+        version="1.0.0",
+    )
+
+    assert validate_runtime_manifest(release, manifest).valid is True
+
+
+def test_runtime_manifest_rejects_long_openai_style_key(tmp_path: Path) -> None:
+    release, artifact, license_file = _bundle(tmp_path)
+    artifact.write_text("sk-1234567890abcdefghijklmnop", encoding="utf-8")
+    manifest = build_runtime_manifest(
+        release,
+        artifact_paths=[(artifact, "python-runtime")],
+        license_paths=[license_file],
+        version="1.0.0",
+    )
+
+    validation = validate_runtime_manifest(release, manifest)
+
+    assert validation.valid is False
+    assert "development_secret_residue" in validation.codes
+
+
 def test_runtime_manifest_ignores_binary_runtime_signature_strings(tmp_path: Path) -> None:
     release, artifact, license_file = _bundle(tmp_path)
     binary = release / "runtime" / "ffmpeg" / "avformat-61.dll"

@@ -61,7 +61,10 @@ _SECRET_PATTERNS = (
     re.compile(rb"api[_-]?key\s*=", re.I),
     re.compile(rb"authorization\s*:", re.I),
     re.compile(rb"secret[_-]?key\s*=", re.I),
-    re.compile(rb"sk-[A-Za-z0-9_-]{12,}"),
+    # OpenAI-style keys have a long alphanumeric payload.  Requiring a word
+    # boundary and twenty characters avoids treating ordinary identifiers such
+    # as the packaged `risk-alert` CSS class as secret residue.
+    re.compile(rb"\bsk-[A-Za-z0-9]{20,}\b"),
 )
 
 _REQUIRED_RENDERER_RUNTIME_FILES: tuple[tuple[str, str, str], ...] = (
