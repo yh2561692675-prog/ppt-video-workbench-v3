@@ -4,6 +4,7 @@
   "title": "Multi-spec Export Plan v1",
   "type": "object",
   "required": [
+    "schema_version",
     "plan_id",
     "project_id",
     "revision",
@@ -16,6 +17,7 @@
     "content_hash"
   ],
   "properties": {
+    "schema_version": { "const": "1.0" },
     "plan_id": { "type": "string", "format": "uuid" },
     "project_id": { "type": "string", "format": "uuid" },
     "revision": { "type": "integer", "minimum": 1 },

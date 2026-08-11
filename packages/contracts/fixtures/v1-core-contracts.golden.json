@@ -1,0 +1,237 @@
+{
+  "schema_version": "1.0",
+  "contracts": {
+    "project": {
+      "schema_version": 1,
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "V1 contract fixture",
+      "project_dir": "v1_contract_fixture",
+      "created_at": "2026-08-11T00:00:00Z",
+      "updated_at": "2026-08-11T00:00:00Z",
+      "current_step": 1,
+      "status": "not_started",
+      "pages": [],
+      "jobs": []
+    },
+    "asset": {
+      "schema_version": "1.0",
+      "asset_id": "00000000-0000-4000-8000-000000000002",
+      "revision": 1,
+      "project_id": "00000000-0000-4000-8000-000000000001",
+      "kind": "image",
+      "content_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+      "relative_object_path": "objects/11/fixture.png",
+      "original_name": "fixture.png",
+      "mime_type": "image/png",
+      "size_bytes": 128,
+      "alpha_mode": "none",
+      "license": { "status": "unknown", "project_ids": [] },
+      "tags": ["contract-fixture"],
+      "created_at": "2026-08-11T00:00:00Z"
+    },
+    "material": {
+      "schema_version": "1.0",
+      "collection_id": "00000000-0000-4000-8000-000000000003",
+      "revision": 1,
+      "project_id": "00000000-0000-4000-8000-000000000001",
+      "documents": [],
+      "presentations": [],
+      "sections": [],
+      "page_sequence": [],
+      "outline_mode": "none",
+      "merge_policy": "manual",
+      "content_hash": "2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "timeline": {
+      "schema_version": "1.0",
+      "project_id": "00000000-0000-4000-8000-000000000001",
+      "revision": 1,
+      "fps": 30,
+      "width": 1920,
+      "height": 1080,
+      "duration_us": 0,
+      "tracks": [
+        {
+          "id": "00000000-0000-4000-8000-000000000010",
+          "kind": "slide",
+          "name": "Slides",
+          "order": 0,
+          "muted": false,
+          "locked": false,
+          "clips": []
+        }
+      ],
+      "markers": [],
+      "input_fingerprint": "3333333333333333333333333333333333333333333333333333333333333333",
+      "content_hash": "4444444444444444444444444444444444444444444444444444444444444444"
+    },
+    "subtitle": {
+      "version": 2,
+      "revision": 1,
+      "duration_ms": 0,
+      "render_mode": "soft",
+      "default_style": {
+        "id": "00000000-0000-4000-8000-000000000011",
+        "name": "Default",
+        "font_family": "Noto Sans CJK SC",
+        "font_size": 48,
+        "color": "#FFFFFF",
+        "outline_color": "#000000",
+        "outline_width": 2,
+        "background_color": "#000000",
+        "background_opacity": 0.55,
+        "position": "bottom",
+        "animation": "none",
+        "highlight_color": "#FFD54F"
+      },
+      "templates": [],
+      "tracks": [
+        {
+          "id": "00000000-0000-4000-8000-000000000012",
+          "language": "zh-CN",
+          "label": "中文",
+          "primary": true,
+          "visible": true,
+          "cues": []
+        }
+      ],
+      "updated_at": "2026-08-11T00:00:00Z",
+      "content_hash": "5555555555555555555555555555555555555555555555555555555555555555"
+    },
+    "continuity": {
+      "version": 1,
+      "revision": 1,
+      "project_id": "00000000-0000-4000-8000-000000000001",
+      "duration_ms": 1000,
+      "transitions": [
+        {
+          "id": "00000000-0000-4000-8000-000000000013",
+          "from_page_id": "00000000-0000-4000-8000-000000000020",
+          "to_page_id": "00000000-0000-4000-8000-000000000021",
+          "kind": "cut",
+          "duration_ms": 0,
+          "audio_mode": "cut",
+          "audio_offset_ms": 0,
+          "easing": "ease_in_out",
+          "enabled": true,
+          "chapter_boundary": false,
+          "parameters": {}
+        }
+      ],
+      "overlays": [],
+      "chapters": [],
+      "content_hash": "6666666666666666666666666666666666666666666666666666666666666666"
+    },
+    "render_graph": {
+      "schema_version": "2.0",
+      "graph_id": "00000000-0000-4000-8000-000000000014",
+      "project_id": "00000000-0000-4000-8000-000000000001",
+      "timeline_revision": 1,
+      "timeline_hash": "7777777777777777777777777777777777777777777777777777777777777777",
+      "compiler_version": "rendergraph-v2-contract",
+      "duration_us": 0,
+      "canvas": {
+        "width": 1920,
+        "height": 1080,
+        "fps": 30,
+        "fps_num": 30,
+        "fps_den": 1,
+        "duration_us": 0,
+        "background": "#000000",
+        "pixel_format": "yuv420p",
+        "aspect_ratio": "16:9"
+      },
+      "nodes": [],
+      "transitions": [],
+      "assets": [],
+      "audio_mix": {
+        "clips": [],
+        "ducking": [],
+        "loudness_target_lufs": -16,
+        "true_peak_db": -1
+      },
+      "subtitle_plan": {
+        "render_mode": "none",
+        "cues": [],
+        "default_style": {},
+        "languages": [],
+        "document_revision": 1,
+        "document_hash": "8888888888888888888888888888888888888888888888888888888888888888",
+        "tracks": []
+      },
+      "source_revisions": {},
+      "cache_dependencies": [],
+      "affected_ranges": [],
+      "content_hash": "9999999999999999999999999999999999999999999999999999999999999999"
+    },
+    "job": {
+      "schema_version": "1.0",
+      "id": "00000000-0000-4000-8000-000000000004",
+      "project_id": "00000000-0000-4000-8000-000000000001",
+      "job_type": "render_preview",
+      "status": "queued",
+      "cache_key": "v1-contract-job",
+      "page_id": null,
+      "progress": 0,
+      "attempts": 0,
+      "max_attempts": 3,
+      "paid": false,
+      "error": null,
+      "created_at": "2026-08-11T00:00:00Z",
+      "updated_at": "2026-08-11T00:00:00Z",
+      "input_fingerprint": null,
+      "idempotency_key": null,
+      "parent_job_id": null,
+      "payload": {},
+      "result": null,
+      "stage": "queued",
+      "message": "",
+      "error_code": null,
+      "revision": 1,
+      "priority": 0,
+      "current_attempt_id": null,
+      "heartbeat_at": null,
+      "started_at": null,
+      "finished_at": null
+    },
+    "export": {
+      "schema_version": "1.0",
+      "plan_id": "00000000-0000-4000-8000-000000000015",
+      "project_id": "00000000-0000-4000-8000-000000000001",
+      "revision": 1,
+      "created_at": "2026-08-11T00:00:00Z",
+      "preset": {
+        "id": "master-1080p-30",
+        "label": "Master 1080p",
+        "platform": "master",
+        "width": 1920,
+        "height": 1080,
+        "fps": 30,
+        "video_bitrate": "12M",
+        "audio_bitrate": "192k",
+        "container": "mp4",
+        "video_codec": "libx264",
+        "max_segment_seconds": null
+      },
+      "source_timeline_revision": 1,
+      "output_relative_path": "08_输出/v1-contract.mp4",
+      "segment_paths": [],
+      "ffmpeg_video_filter": "scale=1920:1080",
+      "execution_ready": true,
+      "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "quality": {
+      "schema_version": "1.0",
+      "project_id": "00000000-0000-4000-8000-000000000001",
+      "render_job_id": "00000000-0000-4000-8000-000000000004",
+      "report_id": "00000000-0000-4000-8000-000000000016",
+      "input_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "result": "pass",
+      "metrics": [],
+      "issues": [],
+      "analyzer_versions": { "quality-engine": "1.0" },
+      "sampled_frames": [],
+      "report_path": "07_质量/v1-contract-report.json"
+    }
+  }
+}

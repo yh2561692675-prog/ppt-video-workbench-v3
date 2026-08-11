@@ -38,6 +38,7 @@ class ExportPreset(ExportPresetModel):
 
 
 class ExportPlan(ExportPresetModel):
+    schema_version: Literal["1.0"] = "1.0"
     plan_id: UUID = Field(default_factory=uuid4)
     project_id: UUID
     revision: int = Field(default=1, ge=1)

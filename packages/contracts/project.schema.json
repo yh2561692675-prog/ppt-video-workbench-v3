@@ -1643,6 +1643,12 @@
           "title": "Revision",
           "type": "integer"
         },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
         "stage": {
           "default": "queued",
           "title": "Stage",

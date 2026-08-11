@@ -21,6 +21,7 @@ const plan: ContinuityPlanRecord = {
       easing: 'ease_in_out',
       enabled: true,
       chapter_boundary: false,
+      parameters: {},
     },
   ],
   overlays: [],

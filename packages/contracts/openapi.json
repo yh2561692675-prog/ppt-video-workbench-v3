@@ -5775,6 +5775,12 @@
             "title": "Revision",
             "type": "integer"
           },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
           "segment_paths": {
             "items": {
               "type": "string"
@@ -7266,6 +7272,12 @@
             "minimum": 1.0,
             "title": "Revision",
             "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
           },
           "stage": {
             "default": "queued",

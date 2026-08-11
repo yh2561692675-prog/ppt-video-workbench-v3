@@ -12,7 +12,13 @@ describe('QualityWorkspace', () => {
         onRun={vi.fn()}
         onRetry={onRetry}
         report={{
+          schema_version: '1.0',
+          project_id: 'project-1',
+          render_job_id: 'render-job-1',
+          report_id: 'report-1',
+          input_fingerprint: 'a'.repeat(64),
           result: 'blocked',
+          metrics: [],
           sampled_frames: [0, 500],
           analyzer_versions: { 'quality-engine': 'v1' },
           issues: [
@@ -25,6 +31,8 @@ describe('QualityWorkspace', () => {
               action: '检查页面素材',
               start_ms: 1000,
               end_ms: 2000,
+              evidence_refs: [],
+              retry_policy: 'rerender_page',
             },
           ],
         }}
@@ -46,7 +54,13 @@ describe('QualityWorkspace', () => {
         onRetry={onRetry}
         onConfirm={onConfirm}
         report={{
+          schema_version: '1.0',
+          project_id: 'project-1',
+          render_job_id: 'render-job-2',
+          report_id: 'report-2',
+          input_fingerprint: 'b'.repeat(64),
           result: 'pass_with_warnings',
+          metrics: [],
           sampled_frames: [],
           analyzer_versions: {},
           issues: [
@@ -55,6 +69,8 @@ describe('QualityWorkspace', () => {
               code: 'subtitle_density_high',
               severity: 'P2',
               scope: 'page',
+              evidence_refs: [],
+              retry_policy: 'none',
               message: '字幕过长',
               action: '拆分字幕',
             },

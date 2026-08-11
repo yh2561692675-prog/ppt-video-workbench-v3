@@ -6,6 +6,7 @@ import { AssetLibrary } from './AssetLibrary';
 
 const assets: AssetRecord[] = [
   {
+    schema_version: '1.0',
     asset_id: 'asset-image',
     revision: 1,
     project_id: 'project-1',
@@ -15,10 +16,13 @@ const assets: AssetRecord[] = [
     original_name: 'Logo.png',
     mime_type: 'image/png',
     size_bytes: 12,
+    alpha_mode: 'none',
     license: { status: 'confirmed', owner: 'brand' },
     tags: ['brand'],
+    created_at: '2026-08-11T00:00:00Z',
   },
   {
+    schema_version: '1.0',
     asset_id: 'asset-audio',
     revision: 2,
     project_id: 'project-1',
@@ -28,8 +32,10 @@ const assets: AssetRecord[] = [
     original_name: 'Music.wav',
     mime_type: 'audio/wav',
     size_bytes: 22,
+    alpha_mode: 'none',
     license: { status: 'unknown' },
     tags: ['music'],
+    created_at: '2026-08-11T00:00:00Z',
   },
 ];
 

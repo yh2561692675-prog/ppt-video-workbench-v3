@@ -113,6 +113,7 @@ class PageRecord(ContractModel):
 
 
 class JobRecord(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
     id: UUID
     project_id: UUID
     job_type: JobType

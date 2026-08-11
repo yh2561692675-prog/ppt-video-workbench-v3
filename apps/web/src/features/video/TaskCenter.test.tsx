@@ -9,6 +9,7 @@ describe('TaskCenter', () => {
   it('lists durable jobs and sends revision-guarded actions', async () => {
     vi.spyOn(api, 'listDurableJobs').mockResolvedValue([
       {
+        schema_version: '1.0',
         id: 'job-1',
         project_id: 'project-1',
         job_type: 'render_preview',

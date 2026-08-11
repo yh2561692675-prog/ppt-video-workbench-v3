@@ -20,7 +20,7 @@ export interface Project {
   current_step: number;
   status: NodeStatus;
   pages: NarrationPage[];
-  jobs: unknown[];
+  jobs: DurableJobRecord[];
   source_files: SourceFile[];
   audit_log: unknown[];
   matches: PageMatch[];
@@ -205,16 +205,30 @@ export interface QualityIssue {
   issue_id: string;
   code: string;
   severity: 'P0' | 'P1' | 'P2' | 'P3';
-  scope: string;
+  scope: 'project' | 'page' | 'time_range' | 'artifact';
   message: string;
   action: string;
   start_ms?: number | null;
   end_ms?: number | null;
   page_id?: string | null;
+  evidence_refs: Array<{
+    relative_path: string;
+    kind: 'frame' | 'audio' | 'log' | 'json';
+    page_id?: string | null;
+    start_ms?: number | null;
+    end_ms?: number | null;
+  }>;
+  retry_policy: 'none' | 'rerender_page' | 'reassemble' | 'recompile';
 }
 
 export interface QualityReport {
+  schema_version: '1.0';
+  project_id: string;
+  render_job_id: string;
+  report_id: string;
+  input_fingerprint: string;
   result: 'pass' | 'pass_with_warnings' | 'blocked';
+  metrics: Array<{ name: string; value: number | string | boolean; unit?: string | null }>;
   issues: QualityIssue[];
   sampled_frames: number[];
   analyzer_versions: Record<string, string>;
@@ -379,6 +393,7 @@ export interface DurableJobResult extends Record<string, unknown> {
 }
 
 export interface DurableJobRecord {
+  schema_version: '1.0';
   id: string;
   project_id: string;
   job_type: DurableJobType;
@@ -415,20 +430,38 @@ export interface DurableJobDetail {
 }
 
 export interface AssetRecord {
+  schema_version: '1.0';
   asset_id: string;
   revision: number;
   project_id: string;
-  kind: string;
+  kind:
+    | 'image'
+    | 'video'
+    | 'audio'
+    | 'document'
+    | 'presentation'
+    | 'logo'
+    | 'sticker'
+    | 'icon'
+    | 'font'
+    | 'lut';
   content_hash: string;
   relative_object_path: string;
   original_name: string;
   mime_type: string;
   size_bytes: number;
+  duration_us?: number | null;
+  width?: number | null;
+  height?: number | null;
+  fps_num?: number | null;
+  fps_den?: number | null;
+  alpha_mode: 'none' | 'straight' | 'premultiplied';
   license: { status: 'unknown' | 'confirmed' | 'expired' | 'blocked'; owner?: string | null };
   tags: string[];
   brand_pack_id?: string | null;
   derived_from?: string | null;
   operation?: string | null;
+  created_at: string;
 }
 
 export interface MaterialCollectionRecord {
@@ -610,7 +643,7 @@ export interface SubtitleWorkbenchRecord {
   version: number;
   revision: number;
   duration_ms: number;
-  render_mode: 'soft' | 'burn_in';
+  render_mode: 'soft' | 'burn_in' | 'both' | 'none';
   default_style: SubtitleStyleTemplateRecord;
   templates: SubtitleStyleTemplateRecord[];
   tracks: SubtitleWorkbenchTrackRecord[];
@@ -634,6 +667,7 @@ export interface ContinuityPlanRecord {
     easing: 'linear' | 'ease_in' | 'ease_out' | 'ease_in_out';
     enabled: boolean;
     chapter_boundary: boolean;
+    parameters: Record<string, unknown>;
   }>;
   overlays: Array<{
     id: string;
@@ -678,6 +712,7 @@ export interface ExportPresetRecord {
 }
 
 export interface ExportPlanRecord {
+  schema_version: '1.0';
   plan_id: string;
   project_id: string;
   revision: number;
