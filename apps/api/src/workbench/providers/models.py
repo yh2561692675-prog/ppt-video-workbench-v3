@@ -6,6 +6,7 @@ responses are normalized at the adapter boundary before they can enter a model.
 
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
@@ -111,6 +112,21 @@ class ProviderInvocationResultV1(_ContractModel):
     cache_identity: str
     provider_request_id: str | None = Field(default=None, max_length=255)
     warnings: list[str] = Field(default_factory=list, max_length=100)
+
+
+class ProviderAuditEventV1(_ContractModel):
+    schema_version: Literal[1] = 1
+    event_id: UUID
+    operation_id: UUID
+    tenant_id: UUID
+    project_id: str | None = Field(default=None, max_length=200)
+    provider_id: str
+    capability_id: str
+    event_kind: Literal["invoke", "cache_hit", "failure"]
+    status: str = Field(min_length=1, max_length=32)
+    billed_cost_minor: int = Field(ge=0)
+    occurred_at: datetime
+    error_code: str | None = Field(default=None, max_length=100)
 
 
 class ProviderHealthV1(_ContractModel):

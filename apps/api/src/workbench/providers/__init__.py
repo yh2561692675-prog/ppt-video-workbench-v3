@@ -9,6 +9,7 @@ from .broker import ProviderBroker, RouteRequest
 from .cache import ProviderCache, cache_identity
 from .credentials import CredentialMetadataV1, InMemoryCredentialStore
 from .models import (
+    ProviderAuditEventV1,
     ProviderCapabilityV1,
     ProviderDescriptorV1,
     ProviderHealthV1,
@@ -32,6 +33,7 @@ __all__ = [
     "ProviderApiState",
     "ProviderCache",
     "ProviderCapabilityV1",
+    "ProviderAuditEventV1",
     "ProviderDescriptorV1",
     "ProviderHealthV1",
     "ProviderInvocationResultV1",

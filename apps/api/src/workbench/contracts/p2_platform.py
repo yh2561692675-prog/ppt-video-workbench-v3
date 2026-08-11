@@ -1,8 +1,7 @@
 """Strict, dependency-light P2 platform contracts and canonical JSON helpers.
 
-The module is deliberately not wired into the current application composition root yet.
-That makes the foundation contract testable in isolation while the recovery worktree is
-still being reviewed.
+The contracts remain independently testable and are installed through the opt-in
+P2 composition root; legacy flags keep the existing application path unchanged.
 """
 
 from __future__ import annotations

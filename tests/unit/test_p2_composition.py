@@ -50,6 +50,19 @@ def test_enabled_composition_is_explicit_and_provider_routes_are_opt_in(tmp_path
         not str(item.get("executable_ref", "")).startswith(("/", "\\"))
         for item in payload["platform"]["tools"]
     )
+    assert payload["privacy_scan"] == {
+        "status": "pass",
+        "finding_codes": [],
+        "finding_count": 0,
+    }
+    assert payload["cloud"] == {
+        "status": "disabled",
+        "production_auth": "not_configured",
+    }
+    assert payload["executor"] == {
+        "status": "not_registered",
+        "capability_labels": [],
+    }
 
 
 def test_cloud_sync_flag_creates_only_the_opt_in_outbox(tmp_path: Path) -> None:

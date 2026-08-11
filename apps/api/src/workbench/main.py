@@ -103,6 +103,7 @@ from workbench.providers.upstream import (
     BrokerPageRenderer,
     BrokerSpeechSynthesizer,
     BrokerTranscriptionBackend,
+    BuiltinHandler,
     create_llm_handler,
 )
 from workbench.runtime.layout import RuntimeComponentMissingError, RuntimeLayout
@@ -166,6 +167,7 @@ def create_app(
     presenter_probe: PresenterProbe | None = None,
     presenter_audio_extractor: Callable[[Path, Path], AnalysisAudio] | None = None,
     p2_flags: P2FeatureFlags | None = None,
+    provider_handlers: dict[str, BuiltinHandler] | None = None,
 ) -> FastAPI:
     configured_root = workspace_root or Path(
         os.environ.get("WORKBENCH_WORKSPACE", Path.cwd() / "workspace-data")
@@ -208,10 +210,15 @@ def create_app(
     audio_gate = AudioGateService(audio_service)
     llm_client = LlmClient(transport=llm_transport)
     heygen_client = HeyGenClient(transport=heygen_transport)
+    configured_provider_handlers: dict[str, BuiltinHandler] = {
+        "builtin-llm": create_llm_handler(llm_client, profile_store)
+    }
+    if provider_handlers:
+        configured_provider_handlers.update(provider_handlers)
     p2_composition = P2Composition.build(
         configured_root,
         flags=p2_flags,
-        provider_handlers={"builtin-llm": create_llm_handler(llm_client, profile_store)},
+        provider_handlers=configured_provider_handlers,
     )
     p2_composition.install(app)
     completion_factory: Callable[[UUID], BrokerCompletionClient] | None = None

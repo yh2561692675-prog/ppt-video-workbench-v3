@@ -14,6 +14,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 
+from workbench.diagnostics.p2_privacy import scan_p2_summary
 from workbench.platform.composition import create_platform_services
 from workbench.platform.credentials import PlatformCredentialStore, UnavailableCredentialBackend
 from workbench.platform.local import LocalPlatformServices
@@ -169,7 +170,7 @@ class P2Composition:
                 else []
             )
             sync_state = self.sync_client.state().__dict__ if self.sync_client is not None else None
-            return {
+            payload = {
                 "schema_version": 1,
                 "generated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
                 "flags": self.flags.__dict__,
@@ -177,7 +178,24 @@ class P2Composition:
                 "platform_details": platform_details,
                 "providers": providers,
                 "sync": sync_state,
+                "cloud": {
+                    "status": "local_outbox_enabled"
+                    if self.sync_client is not None
+                    else "disabled",
+                    "production_auth": "not_configured",
+                },
+                "executor": {
+                    "status": "not_registered",
+                    "capability_labels": [],
+                },
             }
+            findings = scan_p2_summary(payload)
+            payload["privacy_scan"] = {
+                "status": "pass" if not findings else "fail",
+                "finding_codes": sorted({item.code for item in findings}),
+                "finding_count": len(findings),
+            }
+            return payload
 
         if self.provider_state is not None:
             app.include_router(create_provider_router(self.provider_state), prefix="/api")

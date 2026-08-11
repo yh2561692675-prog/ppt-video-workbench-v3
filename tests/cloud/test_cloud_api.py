@@ -193,10 +193,15 @@ def test_cloud_prototype_validates_objects_and_supports_review_lease_job(tmp_pat
                 "platform": "windows",
                 "capabilities": ["render"],
                 "region": "local",
+                "capability_snapshot": {
+                    "fingerprint": "sha256:" + "a" * 64,
+                    "tools": ["media.encode"],
+                },
             },
             headers=headers,
         )
         assert executor.status_code == 201
+        assert executor.json()["capability_snapshot"]["fingerprint"] == "sha256:" + "a" * 64
         assert (
             client.get(f"/v1/workspaces/{workspace_id}/executors", headers=headers).json()["items"][
                 0
@@ -311,9 +316,19 @@ def test_cloud_executor_result_is_hash_checked_and_idempotent(tmp_path: Path) ->
         ).json()
         job = client.post(
             f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}/jobs",
-            json={"revision_id": project["current_revision_id"], "kind": "render"},
+            json={
+                "revision_id": project["current_revision_id"],
+                "kind": "render",
+                "fingerprints": {
+                    "provider_policy": "sha256:" + "1" * 64,
+                    "platform": "sha256:" + "2" * 64,
+                    "runtime": "sha256:" + "3" * 64,
+                    "input": "sha256:" + "4" * 64,
+                },
+            },
             headers=headers,
         ).json()
+        fingerprints = job["fingerprints"]
         result = {"media_type": "video/mp4", "duration_ms": 1000}
         output_object = "sha256:" + "b" * 64
         result_url = (
@@ -329,6 +344,7 @@ def test_cloud_executor_result_is_hash_checked_and_idempotent(tmp_path: Path) ->
                 "result": result,
                 "result_sha256": canonical_sha256(result),
                 "output_refs": ["artifact://" + output_object],
+                "fingerprints": fingerprints,
             },
             headers=headers,
         )
@@ -360,6 +376,7 @@ def test_cloud_executor_result_is_hash_checked_and_idempotent(tmp_path: Path) ->
             "result": result,
             "result_sha256": canonical_sha256(result),
             "output_refs": ["artifact://" + output_object],
+            "fingerprints": fingerprints,
         }
         completed = client.post(result_url, json=report, headers=headers)
         assert completed.status_code == 200
@@ -372,6 +389,14 @@ def test_cloud_executor_result_is_hash_checked_and_idempotent(tmp_path: Path) ->
         ).json()
         assert job_after["result"]["result_sha256"] == report["result_sha256"]
         assert job_after["result"]["output_refs"] == report["output_refs"]
+        assert job_after["result"]["fingerprints"] == fingerprints
+
+        mismatch = dict(report)
+        mismatch["attempt_id"] = str(uuid4())
+        mismatch["fingerprints"] = {**fingerprints, "runtime": "sha256:" + "9" * 64}
+        rejected = client.post(result_url, json=mismatch, headers=headers)
+        assert rejected.status_code == 422
+        assert rejected.json()["detail"] == "job_fingerprint_mismatch"
 
 
 def test_cloud_job_dispatch_matches_required_executor_capabilities(tmp_path: Path) -> None:
@@ -386,9 +411,27 @@ def test_cloud_job_dispatch_matches_required_executor_capabilities(tmp_path: Pat
             json={"name": "Course"},
             headers=headers,
         ).json()
+        unsafe_executor = client.post(
+            f"/v1/workspaces/{workspace_id}/executors",
+            json={
+                "platform": "windows",
+                "capabilities": ["render"],
+                "region": "local",
+                "capability_snapshot": {
+                    "tools": [{"executable_ref": r"C:\secret\ffmpeg.exe"}]
+                },
+            },
+            headers=headers,
+        )
+        assert unsafe_executor.status_code == 422
         client.post(
             f"/v1/workspaces/{workspace_id}/executors",
-            json={"platform": "windows", "capabilities": ["render"], "region": "local"},
+            json={
+                "platform": "windows",
+                "capabilities": ["render"],
+                "region": "local",
+                "capability_snapshot": {"fingerprint": "sha256:" + "b" * 64},
+            },
             headers=headers,
         )
         capable = client.post(

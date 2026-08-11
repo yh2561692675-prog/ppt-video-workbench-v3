@@ -210,7 +210,12 @@ def test_provider_api_applies_rate_limit_and_records_project_usage() -> None:
         first = client.post("/api/providers/fake-a/invoke", json=payload)
         second = client.post("/api/providers/fake-a/invoke", json=payload)
         usage = client.get(f"/api/providers/projects/project-a/usage?tenant_id={tenant}")
+        audit = client.get(f"/api/providers/audit?tenant_id={tenant}&project_id=project-a")
     assert first.status_code == 200
     assert second.status_code == 429
     assert int(second.headers["retry-after"]) >= 1
     assert usage.json()["billed_minor"] == 1
+    assert audit.status_code == 200
+    assert audit.json()[0]["event_kind"] == "invoke"
+    assert audit.json()[0]["billed_cost_minor"] == 1
+    assert "input_refs" not in audit.text

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Literal
 
 from pydantic import Field
 
-from workbench.contracts.p2_platform import _ContractModel
+from workbench.contracts.p2_platform import _ContractModel, canonical_sha256
 
 from .models import ProviderDescriptorV1
 
@@ -83,6 +84,30 @@ class ProviderPolicyEvaluator:
     @staticmethod
     def _classification_rank(value: DataClassification) -> int:
         return {"public": 0, "internal": 1, "sensitive": 2, "restricted": 3}[value]
+
+
+def local_first_policy(provider_ids: Iterable[str] = ()) -> ProviderPolicyV1:
+    """Build a deterministic additive policy for legacy local projects.
+
+    The policy is returned to the caller and is never written into a project
+    manifest implicitly. Remote HTTPS is disabled and failover is conservative;
+    an explicit project or organization policy can opt into a broader route.
+    """
+
+    normalized = sorted(
+        {provider_id.strip() for provider_id in provider_ids if provider_id.strip()}
+    )
+    return ProviderPolicyV1(
+        allowed_provider_ids=normalized or None,
+        allow_remote_https=False,
+        allow_failover=False,
+    )
+
+
+def policy_fingerprint(policy: ProviderPolicyV1) -> str:
+    """Return the stable policy identity used by diagnostics and cache keys."""
+
+    return canonical_sha256(policy.model_dump(mode="json"))
 
 
 def failover_allowed(

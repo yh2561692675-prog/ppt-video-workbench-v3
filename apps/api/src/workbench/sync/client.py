@@ -80,8 +80,17 @@ class SyncClient:
             db.execute(
                 "CREATE TABLE IF NOT EXISTS remote_operations ("
                 "operation_id TEXT PRIMARY KEY, payload_json TEXT NOT NULL, "
-                "cursor TEXT NOT NULL, applied_at TEXT NOT NULL)"
+                "cursor TEXT NOT NULL, applied_at TEXT NOT NULL, "
+                "status TEXT NOT NULL DEFAULT 'pending')"
             )
+            remote_columns = {
+                str(row[1]) for row in db.execute("PRAGMA table_info(remote_operations)")
+            }
+            if "status" not in remote_columns:
+                db.execute(
+                    "ALTER TABLE remote_operations ADD COLUMN status TEXT NOT NULL "
+                    "DEFAULT 'pending'"
+                )
             db.execute(
                 "CREATE TABLE IF NOT EXISTS sync_state ("
                 "key TEXT PRIMARY KEY, value TEXT NOT NULL)"
@@ -222,6 +231,35 @@ class SyncClient:
                     (next_cursor,),
                 )
         return accepted
+
+    def pending_remote_operations(self, limit: int = 100) -> list[dict[str, Any]]:
+        self._require_enabled()
+        if limit < 1 or limit > 100:
+            raise ValueError("limit must be between 1 and 100")
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT operation_id, payload_json, cursor FROM remote_operations "
+                "WHERE status='pending' ORDER BY applied_at, operation_id LIMIT ?",
+                (limit,),
+            ).fetchall()
+        return [
+            {
+                "operation_id": row["operation_id"],
+                "payload": json.loads(row["payload_json"]),
+                "cursor": row["cursor"],
+            }
+            for row in rows
+        ]
+
+    def mark_remote_applied(self, operation_id: str) -> None:
+        self._require_enabled()
+        with self._lock, self._connect() as db:
+            db.execute(
+                "UPDATE remote_operations SET status='applied' WHERE operation_id=?",
+                (operation_id,),
+            )
+            if db.total_changes == 0:
+                raise KeyError(operation_id)
 
     def stage_object(self, object_id: str, content: bytes, staging_root: Path) -> Path:
         self._require_enabled()

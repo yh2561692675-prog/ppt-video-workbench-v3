@@ -11,7 +11,7 @@ from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, FastAPI, Header, HTTPException, Query, Request, Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from workbench.contracts.p2_platform import canonical_sha256
 
 
@@ -31,6 +31,15 @@ _SENSITIVE_KEYS = {
     "password",
     "secret",
     "token",
+}
+_PATH_KEYS = {
+    "path",
+    "source_path",
+    "file",
+    "file_path",
+    "directory",
+    "directory_path",
+    "executable_ref",
 }
 
 
@@ -53,7 +62,10 @@ def _assert_portable_document(value: object, *, field: str = "document") -> None
     if not isinstance(value, str):
         return
     lowered = field.lower()
-    if not lowered.endswith(("path", "_path", "file", "_file", "directory", "_dir")):
+    key = lowered.rsplit(".", 1)[-1].rsplit("]", 1)[-1]
+    if key not in _PATH_KEYS and not lowered.endswith(
+        ("path", "_path", "file", "_file", "directory", "_dir")
+    ):
         return
     if value.startswith(("/", "\\")) or re.match(r"^[A-Za-z]:[\\/]", value):
         raise HTTPException(status_code=422, detail="absolute_path_rejected")
@@ -63,6 +75,18 @@ def _assert_portable_document(value: object, *, field: str = "document") -> None
 
 class CloudModel(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+
+_FINGERPRINT_KEY = re.compile(r"^[a-z][a-z0-9_.-]{0,63}$")
+_FINGERPRINT_VALUE = re.compile(r"^sha256:[0-9a-f]{64}$")
+
+
+def _validate_fingerprints(value: dict[str, str]) -> dict[str, str]:
+    if any(not _FINGERPRINT_KEY.fullmatch(key) for key in value):
+        raise ValueError("fingerprint keys must be lowercase contract identifiers")
+    if any(not _FINGERPRINT_VALUE.fullmatch(item) for item in value.values()):
+        raise ValueError("fingerprints must be sha256 references")
+    return dict(value)
 
 
 class WorkspaceCreate(CloudModel):
@@ -134,6 +158,9 @@ class JobCreate(CloudModel):
     revision_id: UUID
     kind: Literal["render", "transcribe", "export"]
     parameters: dict[str, Any] = Field(default_factory=dict)
+    fingerprints: dict[str, str] = Field(default_factory=dict, max_length=16)
+
+    _fingerprints = field_validator("fingerprints")(_validate_fingerprints)
 
 
 class JobResultReport(CloudModel):
@@ -143,6 +170,9 @@ class JobResultReport(CloudModel):
     result: dict[str, Any] = Field(default_factory=dict)
     result_sha256: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     output_refs: list[str] = Field(default_factory=list, max_length=1000)
+    fingerprints: dict[str, str] = Field(default_factory=dict, max_length=16)
+
+    _fingerprints = field_validator("fingerprints")(_validate_fingerprints)
 
 
 class ExecutorRegister(CloudModel):
@@ -151,6 +181,7 @@ class ExecutorRegister(CloudModel):
     capabilities: list[str] = Field(min_length=1, max_length=100)
     region: str = Field(min_length=1, max_length=64)
     ttl_seconds: int = Field(default=120, ge=30, le=900)
+    capability_snapshot: dict[str, Any] = Field(default_factory=dict, max_length=128)
 
 
 @dataclass(frozen=True)
@@ -288,30 +319,49 @@ class CloudRepository:
                     id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id),
                     revision_id TEXT NOT NULL, actor_id TEXT NOT NULL, kind TEXT NOT NULL,
                     parameters_json TEXT NOT NULL, status TEXT NOT NULL,
-                    executor_id TEXT, created_at TEXT NOT NULL
+                    executor_id TEXT, created_at TEXT NOT NULL,
+                    fingerprints_json TEXT NOT NULL DEFAULT '{}'
                 );
                 CREATE TABLE IF NOT EXISTS job_results (
                     attempt_id TEXT PRIMARY KEY, job_id TEXT NOT NULL REFERENCES jobs(id),
                     status TEXT NOT NULL, result_sha256 TEXT NOT NULL,
                     result_json TEXT NOT NULL, output_refs_json TEXT NOT NULL DEFAULT '[]',
-                    created_at TEXT NOT NULL
+                    created_at TEXT NOT NULL, fingerprints_json TEXT NOT NULL DEFAULT '{}'
                 );
                 CREATE TABLE IF NOT EXISTS executors (
                     id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL REFERENCES workspaces(id),
                     actor_id TEXT NOT NULL, platform TEXT NOT NULL, capabilities_json TEXT NOT NULL,
-                    region TEXT NOT NULL, status TEXT NOT NULL, expires_at TEXT NOT NULL
+                    region TEXT NOT NULL, status TEXT NOT NULL, expires_at TEXT NOT NULL,
+                    capability_snapshot_json TEXT NOT NULL DEFAULT '{}'
                 );
                 """
             )
             columns = {row["name"] for row in db.execute("PRAGMA table_info(jobs)")}
             if "executor_id" not in columns:
                 db.execute("ALTER TABLE jobs ADD COLUMN executor_id TEXT")
+            if "fingerprints_json" not in columns:
+                db.execute(
+                    "ALTER TABLE jobs ADD COLUMN fingerprints_json TEXT NOT NULL DEFAULT '{}'"
+                )
             result_columns = {
                 row["name"] for row in db.execute("PRAGMA table_info(job_results)")
             }
             if "output_refs_json" not in result_columns:
                 db.execute(
                     "ALTER TABLE job_results ADD COLUMN output_refs_json TEXT NOT NULL DEFAULT '[]'"
+                )
+            if "fingerprints_json" not in result_columns:
+                db.execute(
+                    "ALTER TABLE job_results ADD COLUMN fingerprints_json TEXT NOT NULL "
+                    "DEFAULT '{}'"
+                )
+            executor_columns = {
+                row["name"] for row in db.execute("PRAGMA table_info(executors)")
+            }
+            if "capability_snapshot_json" not in executor_columns:
+                db.execute(
+                    "ALTER TABLE executors ADD COLUMN capability_snapshot_json TEXT NOT NULL "
+                    "DEFAULT '{}'"
                 )
 
     def create_workspace(self, actor_id: str, name: str) -> dict[str, Any]:
@@ -803,11 +853,15 @@ class CloudRepository:
     def register_executor(
         self, workspace_id: str, actor_id: str, request: ExecutorRegister
     ) -> dict[str, Any]:
+        _assert_portable_document(request.capability_snapshot, field="executor.capability_snapshot")
         with self._connect() as db:
             self._workspace_access(db, workspace_id, actor_id)
             expires_at = _expires(request.ttl_seconds)
             db.execute(
-                "INSERT OR REPLACE INTO executors VALUES (?, ?, ?, ?, ?, ?, 'active', ?)",
+                "INSERT OR REPLACE INTO executors "
+                "(id, workspace_id, actor_id, platform, capabilities_json, region, status, "
+                "expires_at, capability_snapshot_json) "
+                "VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?)",
                 (
                     str(request.executor_id),
                     workspace_id,
@@ -816,6 +870,7 @@ class CloudRepository:
                     json.dumps(sorted(set(request.capabilities))),
                     request.region,
                     expires_at,
+                    json.dumps(request.capability_snapshot, ensure_ascii=False, sort_keys=True),
                 ),
             )
         return {
@@ -826,6 +881,7 @@ class CloudRepository:
             "region": request.region,
             "status": "active",
             "expires_at": expires_at,
+            "capability_snapshot": request.capability_snapshot,
         }
 
     def executors(self, workspace_id: str, actor_id: str) -> list[dict[str, Any]]:
@@ -848,6 +904,7 @@ class CloudRepository:
                     else "expired"
                 ),
                 "expires_at": row["expires_at"],
+                "capability_snapshot": json.loads(row["capability_snapshot_json"]),
             }
             for row in rows
         ]
@@ -895,7 +952,9 @@ class CloudRepository:
                 set(required_raw),
             )
             db.execute(
-                "INSERT INTO jobs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO jobs "
+                "(id, project_id, revision_id, actor_id, kind, parameters_json, status, "
+                "executor_id, created_at, fingerprints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     job_id,
                     project_id,
@@ -906,6 +965,7 @@ class CloudRepository:
                     "dispatched" if executor_id else "queued",
                     executor_id,
                     created_at,
+                    json.dumps(request.fingerprints, sort_keys=True),
                 ),
             )
         return {
@@ -915,6 +975,7 @@ class CloudRepository:
             "kind": request.kind,
             "status": "dispatched" if executor_id else "queued",
             "executor_id": executor_id,
+            "fingerprints": request.fingerprints,
             "created_at": created_at,
         }
 
@@ -923,11 +984,16 @@ class CloudRepository:
         with self._connect() as db:
             rows = db.execute(
                 "SELECT id, project_id, revision_id, kind, status, executor_id, "
-                "created_at FROM jobs "
+                "created_at, fingerprints_json FROM jobs "
                 "WHERE project_id=? ORDER BY created_at, id",
                 (project_id,),
             ).fetchall()
-        return [dict(row) for row in rows]
+        result: list[dict[str, Any]] = []
+        for row in rows:
+            item = dict(row)
+            item["fingerprints"] = json.loads(item.pop("fingerprints_json"))
+            result.append(item)
+        return result
 
     def get_job(
         self, workspace_id: str, project_id: str, job_id: str, actor_id: str
@@ -936,19 +1002,20 @@ class CloudRepository:
         with self._connect() as db:
             row = db.execute(
                 "SELECT id, project_id, revision_id, kind, status, executor_id, "
-                "created_at FROM jobs "
+                "created_at, fingerprints_json FROM jobs "
                 "WHERE id=? AND project_id=?",
                 (job_id, project_id),
             ).fetchone()
             result = db.execute(
                 "SELECT attempt_id, status, result_sha256, result_json, created_at, "
-                "output_refs_json FROM job_results WHERE job_id=? "
+                "output_refs_json, fingerprints_json FROM job_results WHERE job_id=? "
                 "ORDER BY created_at DESC LIMIT 1",
                 (job_id,),
             ).fetchone()
         if row is None:
             raise HTTPException(status_code=404, detail="job_not_found")
         payload = dict(row)
+        payload["fingerprints"] = json.loads(payload.pop("fingerprints_json"))
         if result is not None:
             payload["result"] = {
                 "attempt_id": result["attempt_id"],
@@ -956,6 +1023,7 @@ class CloudRepository:
                 "result_sha256": result["result_sha256"],
                 "result": json.loads(result["result_json"]),
                 "output_refs": json.loads(result["output_refs_json"]),
+                "fingerprints": json.loads(result["fingerprints_json"]),
                 "created_at": result["created_at"],
             }
         return payload
@@ -973,6 +1041,8 @@ class CloudRepository:
             raise HTTPException(status_code=403, detail="executor_scope_mismatch")
         if job["status"] == "cancelled":
             raise HTTPException(status_code=409, detail="job_cancelled")
+        if report.fingerprints != job.get("fingerprints", {}):
+            raise HTTPException(status_code=422, detail="job_fingerprint_mismatch")
         if canonical_sha256(report.result) != report.result_sha256:
             raise HTTPException(status_code=422, detail="result_hash_mismatch")
         _assert_portable_document(report.result, field="job.result")
@@ -996,7 +1066,10 @@ class CloudRepository:
             ).fetchone()
             if existing is None:
                 db.execute(
-                    "INSERT INTO job_results VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO job_results "
+                    "(attempt_id, job_id, status, result_sha256, result_json, "
+                    "output_refs_json, created_at, fingerprints_json) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         str(report.attempt_id),
                         job_id,
@@ -1005,6 +1078,7 @@ class CloudRepository:
                         json.dumps(report.result, ensure_ascii=False, sort_keys=True),
                         json.dumps(report.output_refs, ensure_ascii=False),
                         created_at,
+                        json.dumps(report.fingerprints, sort_keys=True),
                     ),
                 )
                 db.execute(

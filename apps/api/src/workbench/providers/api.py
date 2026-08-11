@@ -23,7 +23,7 @@ from .billing import ProviderRateLimiter
 from .broker import ProviderBroker, ProviderBrokerError, RouteRequest
 from .cache import ProviderCache
 from .credentials import CredentialMetadataV1, CredentialStore, CredentialStoreError
-from .models import ProviderCostEstimateV1
+from .models import ProviderAuditEventV1, ProviderCostEstimateV1
 from .policy import ProviderPolicyV1
 from .probe import CapabilityProbeService, ProbeMode
 from .registry import ProviderRegistry
@@ -89,6 +89,7 @@ class ProviderApiState:
     policies: dict[tuple[str, str], ProviderPolicyV1] = field(default_factory=dict)
     usage_minor: dict[tuple[str, str], int] = field(default_factory=dict)
     health: dict[tuple[str, str], object] = field(default_factory=dict)
+    audit_events: list[ProviderAuditEventV1] = field(default_factory=list)
     broker: ProviderBroker | None = None
     credential_store: CredentialStore | None = None
     rate_limiter: ProviderRateLimiter = field(default_factory=ProviderRateLimiter)
@@ -237,8 +238,39 @@ def create_provider_router(state: ProviderApiState) -> APIRouter:
                 billed = routed.result.billed_cost or 0
                 key = (str(request.tenant_id), request.project_id)
                 state.usage_minor[key] = state.usage_minor.get(key, 0) + int(billed)
+            _record_audit(
+                state,
+                ProviderAuditEventV1(
+                    event_id=uuid4(),
+                    operation_id=context.operation_id,
+                    tenant_id=request.tenant_id,
+                    project_id=request.project_id,
+                    provider_id=provider_id,
+                    capability_id=request.capability_id,
+                    event_kind="cache_hit" if routed.cache_hit else "invoke",
+                    status=routed.result.status,
+                    billed_cost_minor=int(routed.result.billed_cost or 0),
+                    occurred_at=datetime.now(UTC),
+                ),
+            )
             return routed.result
         except ProviderBrokerError as error:
+            _record_audit(
+                state,
+                ProviderAuditEventV1(
+                    event_id=uuid4(),
+                    operation_id=context.operation_id,
+                    tenant_id=request.tenant_id,
+                    project_id=request.project_id,
+                    provider_id=provider_id,
+                    capability_id=request.capability_id,
+                    event_kind="failure",
+                    status="failed",
+                    billed_cost_minor=0,
+                    occurred_at=datetime.now(UTC),
+                    error_code=error.error.code,
+                ),
+            )
             raise HTTPException(
                 status_code=502,
                 detail=error.error.model_dump(mode="json"),
@@ -300,7 +332,23 @@ def create_provider_router(state: ProviderApiState) -> APIRouter:
             "currency": "USD",
         }
 
+    @router.get("/audit", response_model=list[ProviderAuditEventV1])
+    async def list_audit_events(
+        tenant_id: UUID, project_id: str | None = None
+    ) -> list[ProviderAuditEventV1]:
+        return [
+            event
+            for event in state.audit_events
+            if event.tenant_id == tenant_id
+            and (project_id is None or event.project_id == project_id)
+        ]
+
     return router
+
+
+def _record_audit(state: ProviderApiState, event: ProviderAuditEventV1) -> None:
+    state.audit_events.append(event)
+    del state.audit_events[:-1000]
 
 
 def _context(tenant_id: UUID, request_kind: str, timeout_ms: int) -> OperationContextV1:

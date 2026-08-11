@@ -21,12 +21,12 @@ Run from the integration worktree with the repository virtual environment:
 ```powershell
 $py = 'F:\ppt-video-workbench-v3\.venv\Scripts\python.exe'
 $env:PYTHONPATH = 'apps/api/src'
-& $py -m pytest tests/contract/test_p2_platform_contracts.py tests/unit/providers tests/unit/platform_foundation tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/integration/test_narration_generation_api.py tests/cloud tests/platform -q
-& $py -m mypy apps/api/src/workbench/p2.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype
-& $py -m ruff check apps/api/src/workbench/p2.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype tests/contract/test_p2_platform_contracts.py tests/unit/providers tests/unit/platform_foundation tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/integration/test_narration_generation_api.py tests/cloud tests/platform
+& $py -m pytest tests/contract/test_p2_platform_contracts.py tests/unit/providers tests/unit/platform_foundation tests/unit/cache/test_p2_matrix.py tests/unit/diagnostics/test_p2_privacy.py tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/integration/test_narration_generation_api.py tests/cloud tests/platform -q
+& $py -m mypy apps/api/src/workbench/p2.py apps/api/src/workbench/contracts/p2_platform.py apps/api/src/workbench/cache apps/api/src/workbench/diagnostics/p2_privacy.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype
+& $py -m ruff check apps/api/src/workbench/p2.py apps/api/src/workbench/contracts/p2_platform.py apps/api/src/workbench/cache apps/api/src/workbench/diagnostics/p2_privacy.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype tests/contract/test_p2_platform_contracts.py tests/unit/providers tests/unit/platform_foundation tests/unit/cache/test_p2_matrix.py tests/unit/diagnostics/test_p2_privacy.py tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/integration/test_narration_generation_api.py tests/cloud tests/platform
 ```
 
-Current result: **74 tests passed**, mypy reports no issues in 24 source files,
+Current result: **81 tests passed**, mypy reports no issues in 32 source files,
 and Ruff reports no violations.
 
 The web workspace also passes TypeScript `--noEmit` and all 28 Vitest files
@@ -47,3 +47,15 @@ The web workspace also passes TypeScript `--noEmit` and all 28 Vitest files
 - Provider migration is intentionally incremental: reviewed LLM/ASR/TTS/avatar/OCR/
   renderer bridge facades and opt-in create_app wiring are verified; real vendor
   and remote acceptance evidence still requires its upstream business windows.
+- P2 cache invalidation now has an explicit matrix for provider, platform/runtime,
+  cloud revision, price, review and comment changes; diagnostics expose only a
+  pass/fail privacy summary with finding codes.
+- Legacy projects have a deterministic local-first Provider policy helper that is
+  additive and never writes policy fields implicitly.
+- The cloud prototype has an HTTP-level two-device evidence test covering A's
+  outbox, B's cursor pull/acknowledgement, and stale-base conflict handling.
+- Remote jobs now persist provider-policy/platform/runtime/input fingerprints;
+  result publication rejects a mismatched executor fingerprint set.
+- Provider invocations now expose a bounded tenant/project-scoped audit stream
+  containing operation status and billed cost only; request inputs and secrets
+  are never persisted in the audit payload.

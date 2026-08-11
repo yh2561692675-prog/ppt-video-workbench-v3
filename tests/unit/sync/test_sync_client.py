@@ -98,6 +98,15 @@ def test_sync_client_pulls_operations_atomically_and_resumes(tmp_path: Path) -> 
     transport = Transport()
     assert client.pull(transport) == [{"operation_id": "op-1", "kind": "page.insert"}]
     assert client.state().remote_operations == 1
+    assert client.pending_remote_operations() == [
+        {
+            "operation_id": "op-1",
+            "payload": {"kind": "page.insert", "operation_id": "op-1"},
+            "cursor": "op-1",
+        }
+    ]
+    client.mark_remote_applied("op-1")
+    assert client.pending_remote_operations() == []
     assert client.pull(transport) == []
     assert transport.cursors == [None, "op-1"]
 
