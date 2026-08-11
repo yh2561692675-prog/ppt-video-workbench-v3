@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [string]$ProjectRoot = "F:\ppt-video-workbench-v3",
+  [string]$ProjectRoot = "",
   [string]$StandardVideo = "",
   [string]$LongVideo = "",
   [string]$EvidenceRoot = "",
@@ -10,6 +10,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+  $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+}
 if (-not (Test-Path -LiteralPath $ProjectRoot -PathType Container)) {
   throw "Project root does not exist: $ProjectRoot"
 }

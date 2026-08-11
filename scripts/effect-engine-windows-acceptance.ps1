@@ -1,15 +1,21 @@
 [CmdletBinding()]
 param(
-  [string]$ProjectRoot = "F:\ppt-video-workbench-v3",
-  [string]$ReferenceVideo = "D:\xwechat_files\wxid_vwiv5x4loccs22_022f\msg\video\2026-08\383a9d3f7e55836a06ae49292ddaf54b.mp4",
+  [string]$ProjectRoot = "",
+  [string]$ReferenceVideo = "",
   [switch]$PlanOnly,
   [switch]$ConfirmManualAcceptance
 )
 
 $ErrorActionPreference = "Stop"
 
+if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+  $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+}
 if (-not (Test-Path -LiteralPath $ProjectRoot -PathType Container)) {
   throw "Project root does not exist: $ProjectRoot"
+}
+if ([string]::IsNullOrWhiteSpace($ReferenceVideo)) {
+  throw "ReferenceVideo is required and must point to an operator-supplied local fixture."
 }
 if (-not (Test-Path -LiteralPath $ReferenceVideo -PathType Leaf)) {
   throw "Reference video is missing: $ReferenceVideo"
