@@ -1,0 +1,163 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects-program",
+  "wave": "W1",
+  "gate": "DG1_AUTOMATION_GREEN",
+  "status": "BLOCKED_EXTERNAL_CI",
+  "generated_at": "2026-08-11T17:22:46Z",
+  "branch": "codex/program-integration-v1",
+  "source_commit": "2bf3c1c2fe477d129050a2d1610f89a393e53488",
+  "candidate": {
+    "candidate_id": "v1-rc-2bf3c1c-20260812T005412Z",
+    "manifest": "test-results/debug-program/phase11-candidates/v1-rc-2bf3c1c-20260812T005412Z/candidate-manifest.json",
+    "manifest_sha256": "f9f2d29c33808e06cc1195dc5e2c553fdc3c23f513734053316550f9db3d4987",
+    "source_commit": "2bf3c1c2fe477d129050a2d1610f89a393e53488",
+    "dirty": false,
+    "contract_set_sha256": "de55cc1090e49b0ab4d7fb6375b4509cb878d5888e8bef54fd00407a34fbebf6",
+    "lock_hashes": {
+      "uv.lock": "6b28c859afdb99e2f2c6d14bb07b0d69ec01e327be6644015a4930fbc0ab50d1",
+      "pnpm-lock.yaml": "8b9b10351200fd168a4b3c088732dc208913949ea0bb190cc778591d4833a4f3"
+    }
+  },
+  "runtime": {
+    "ffmpeg_sha256": "c8abc49e7be62dde8e12972af373959e0076a7b8dc8040eb45978e0608f8781e",
+    "ffprobe_sha256": "28ac860611e8f42ccfe7a59eb4a2f9dbfb9a5eb15d14af284401d1083be426e6",
+    "node_sha256": "3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237",
+    "remotion_cli_sha256": "33af44c8c817b4af3b1e5801bd52d4d47772e7a4cb5ba19f3e582e9bf5ff7c3f",
+    "iscc_path": "C:/Users/HanYu/AppData/Local/Programs/Inno Setup 6/ISCC.exe",
+    "iscc_probe": {
+      "candidate_manifest_available": true,
+      "release_input_preflight_available": false,
+      "exit_code": 1,
+      "same_resolved_path": true,
+      "release_build": "passed using the shared user-local resolver"
+    }
+  },
+  "command_matrix": {
+    "matrix": "dp20-full",
+    "commands": [
+      "release-tool-preflight",
+      "prepare-runtime",
+      "release-input-preflight",
+      "release-build",
+      "python-full-tests",
+      "python-ruff",
+      "python-mypy",
+      "root-lint",
+      "root-typecheck",
+      "root-tests",
+      "root-build",
+      "contract-migration-regression",
+      "export-contracts-check",
+      "cloud-client-check",
+      "ci-wiring-check"
+    ],
+    "run_1_exit_codes": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+    "run_2_exit_codes": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+    "dp23": {
+      "export_contracts_check": "passed",
+      "cloud_client_check": "passed"
+    },
+    "dp24": {
+      "ci_wiring_check": "blocked_external_ci",
+      "required_evidence": "Windows and Ubuntu external runners were not executed"
+    }
+  },
+  "runs": [
+    {
+      "run_id": "v1-rc-2bf3c1c-20-dp20-full-1786467291921994700-abf073",
+      "run_root": "test-results/debug-program/phase11-runs/v1-rc-2bf3c1c-20260812T005412Z/v1-rc-2bf3c1c-20-dp20-full-1786467291921994700-abf073",
+      "status": "blocked",
+      "verdict_sha256": "99489583630a03c18f9322893b8e9e31b9f84388e60ce4bc99c51e8b30b57421",
+      "evidence_manifest_sha256": "79811774df410dee363304f6e509bee3f25631c36a608744fce022254b8bdceb",
+      "first_failure": null,
+      "first_blocker": {
+        "name": "ci-wiring-check",
+        "exit_code": 2,
+        "result": "commands/015-ci-wiring-check/result.json",
+        "reason": "external Windows/Ubuntu CI evidence is required"
+      }
+    },
+    {
+      "run_id": "v1-rc-2bf3c1c-20-dp20-full-1786468022519871600-c58ed7",
+      "run_root": "test-results/debug-program/phase11-runs2/v1-rc-2bf3c1c-20260812T005412Z/v1-rc-2bf3c1c-20-dp20-full-1786468022519871600-c58ed7",
+      "status": "blocked",
+      "verdict_sha256": "538be961825c1878d3f8a14b08d5995272d847a9dd7d94b1229e2f21127750ea",
+      "evidence_manifest_sha256": "9ccf347f16a325bf27b4eb02b935c0baf1c04cf419e4ed816c13178f16be8c42",
+      "first_failure": null,
+      "first_blocker": {
+        "name": "ci-wiring-check",
+        "exit_code": 2,
+        "result": "commands/015-ci-wiring-check/result.json",
+        "reason": "external Windows/Ubuntu CI evidence is required"
+      }
+    }
+  ],
+  "release_output_comparison": {
+    "run_1": {
+      "relative_root": "test-results/debug-program/release/v1-rc-2bf3-94700-abf073",
+      "evidence": "commands/004-release-build/release-output.json",
+      "evidence_sha256": "353340289e7d052d1f03fc4c18d4bada8d2f8e4f3622a1aa6669facf250a112f",
+      "aggregate_sha256": "b56188402f40b723338afcbf86769bf25be5b90a83b3ff940264feb859eddf99",
+      "files": {
+        "artifacts/ppt-video-workbench-setup.exe": { "sha256": "bb3629c7cd3f0dbe19f06a266176ed9f3c6a6d3a857be58fe32c7a75eeeecf3f", "size": 172092737 },
+        "artifacts/release-artifacts.json": { "sha256": "a9fdab0ebc23e1aa3d1bda243b372c71c229f31dd87c485ba5058de087c02b0a", "size": 964 },
+        "payload/runtime-manifest.json": { "sha256": "53d7261b71245b11b207e2f94e46f50f4a1bf5151631bc64c1986fb7191c7d2e", "size": 2154421 },
+        "payload/sbom/node-dependencies.json": { "sha256": "a7bb6777b5c74b5f0d8776e64e924321a4f280ee8fcf320fbfe87b4fec18e423", "size": 540 },
+        "payload/sbom/python-dependencies.json": { "sha256": "3dd1a1dd2bf2f2bdcf74483c4b50ccec369cc4191991d7f1a298b9c9f5214c6c", "size": 1869 },
+        "payload/licenses/THIRD-PARTY-NOTICES.txt": { "sha256": "82f948b4c9f38e6ced11c8627b101c995cfc71630dd6d28fb6c017f968e841d4", "size": 175 }
+      }
+    },
+    "run_2": {
+      "relative_root": "test-results/debug-program/release/v1-rc-2bf3-71600-c58ed7",
+      "evidence": "commands/004-release-build/release-output.json",
+      "evidence_sha256": "bf135b69225b1b80df75e8dc45263e98cf4a4c3f01b3db75b6b5be39077193a5",
+      "aggregate_sha256": "7c8509de6e0fe18cdf9a05a986d91e06029ebfabe8ea8c4f45caea25ee162748",
+      "files": {
+        "artifacts/ppt-video-workbench-setup.exe": { "sha256": "4ee914f3fcc567ab8f4204286ddf24f6341bb3b71953cc8bbf90e3887352723e", "size": 172111866 },
+        "artifacts/release-artifacts.json": { "sha256": "27f842b4ccbaf5fcd4da0d081ae4f10a47a520554b463850de30eb27d17c4428", "size": 964 },
+        "payload/runtime-manifest.json": { "sha256": "edbaa8c4431b2211d8eb02d8dfb3aa65f3126a8d941e4ac29798e595eb8a6beb", "size": 2154421 },
+        "payload/sbom/node-dependencies.json": { "sha256": "a7bb6777b5c74b5f0d8776e64e924321a4f280ee8fcf320fbfe87b4fec18e423", "size": 540 },
+        "payload/sbom/python-dependencies.json": { "sha256": "3dd1a1dd2bf2f2bdcf74483c4b50ccec369cc4191991d7f1a298b9c9f5214c6c", "size": 1869 },
+        "payload/licenses/THIRD-PARTY-NOTICES.txt": { "sha256": "82f948b4c9f38e6ced11c8627b101c995cfc71630dd6d28fb6c017f968e841d4", "size": 175 }
+      }
+    },
+    "comparison": {
+      "relative_file_set_equal": true,
+      "file_count_each": 6,
+      "exact_hash_matches": [
+        "payload/sbom/node-dependencies.json",
+        "payload/sbom/python-dependencies.json",
+        "payload/licenses/THIRD-PARTY-NOTICES.txt"
+      ],
+      "allowed_nondeterminism": [
+        "installer bytes/size: Inno Setup compression/build metadata differs",
+        "release-artifacts.json: generated candidate id and artifact paths/hashes differ",
+        "runtime-manifest.json: built_at and output artifact paths differ; 8412/8415 runtime entries have identical hash+size, while only api/workbench.exe and two pnpm metadata files differ"
+      ]
+    }
+  },
+  "sole_blocker": {
+    "type": "external_ci",
+    "status": "blocked_external_ci",
+    "name": "ci-wiring-check",
+    "exit_code": 2,
+    "reason": "Windows and Ubuntu external CI runners were not executed",
+    "not_claimed": "DG1_AUTOMATION_GREEN"
+  },
+  "worktree": {
+    "path": "F:/ppt-video-workbench-v3/.worktrees/program-integration-v1",
+    "head": "2bf3c1c2fe477d129050a2d1610f89a393e53488",
+    "status": "clean"
+  },
+  "scope_boundary": {
+    "not_claimed": [
+      "DG1_AUTOMATION_GREEN",
+      "DP24 external Windows/Ubuntu CI pass",
+      "W2 capability gates"
+    ],
+    "preserved_prior_failures": [
+      "phase9 blocked verdict without first_blocker remains append-only at test-results/debug-program/phase9-runs"
+    ]
+  }
+}
