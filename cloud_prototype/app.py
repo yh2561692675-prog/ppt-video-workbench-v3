@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import re
 import sqlite3
+import tempfile
 import threading
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -71,6 +75,24 @@ def _assert_portable_document(value: object, *, field: str = "document") -> None
         raise HTTPException(status_code=422, detail="absolute_path_rejected")
     if value.startswith("../") or value.startswith("..\\") or value == "..":
         raise HTTPException(status_code=422, detail="path_escape_rejected")
+
+
+def _validate_uploaded_content(media_type: str, content: bytes) -> None:
+    """Apply small deterministic container checks in the local object gateway."""
+
+    lowered = media_type.lower()
+    if lowered == "image/png" and not content.startswith(b"\x89PNG\r\n\x1a\n"):
+        raise HTTPException(status_code=422, detail="content_type_mismatch")
+    if lowered == "application/pdf" and not content.startswith(b"%PDF-"):
+        raise HTTPException(status_code=422, detail="content_type_mismatch")
+    if lowered in {"audio/wav", "audio/x-wav"} and not (
+        content.startswith(b"RIFF") and content[8:12] == b"WAVE"
+    ):
+        raise HTTPException(status_code=422, detail="content_type_mismatch")
+    if lowered == "video/mp4" and b"ftyp" not in content[:64]:
+        raise HTTPException(status_code=422, detail="content_type_mismatch")
+    if lowered in {"text/html", "application/xhtml+xml"} and b"<script" in content.lower():
+        raise HTTPException(status_code=422, detail="malicious_content_rejected")
 
 
 class CloudModel(BaseModel):
@@ -646,10 +668,69 @@ class CloudRepository:
                     "part_number": 1,
                     "method": "PUT",
                     "url": f"https://object.invalid/upload/{upload_id}/1",
+                    "local_endpoint": (
+                        f"/v1/workspaces/{workspace_id}/projects/{project_id}/"
+                        f"objects/uploads/{upload_id}/parts/1"
+                    ),
                     "expires_at": expires_at,
                 }
             ],
             "expires_at": expires_at,
+        }
+
+    def upload_part(
+        self,
+        workspace_id: str,
+        project_id: str,
+        actor_id: str,
+        upload_id: str,
+        part_number: int,
+        content: bytes,
+    ) -> dict[str, Any]:
+        """Store one upload part in a private staging area."""
+
+        self.project(workspace_id, project_id, actor_id)
+        if part_number < 1 or part_number > 10_000:
+            raise HTTPException(status_code=422, detail="invalid_part_number")
+        if len(content) > 64 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="upload_part_too_large")
+        with self._connect() as db:
+            upload = db.execute(
+                "SELECT * FROM uploads WHERE id=? AND project_id=?", (upload_id, project_id)
+            ).fetchone()
+        if upload is None or upload["status"] != "pending":
+            raise HTTPException(status_code=404, detail="upload_not_found")
+        if datetime.fromisoformat(upload["expires_at"].replace("Z", "+00:00")) <= datetime.now(
+            UTC
+        ):
+            raise HTTPException(status_code=409, detail="upload_expired")
+        if not re.fullmatch(r"[0-9a-f-]{36}", upload_id):
+            raise HTTPException(status_code=422, detail="invalid_upload_id")
+        root = self.object_root.resolve()
+        upload_root = (root / ".uploads" / upload_id).resolve()
+        upload_root.mkdir(parents=True, exist_ok=True)
+        target = (upload_root / f"{part_number:08d}.part").resolve()
+        try:
+            target.relative_to(root)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail="invalid_upload_path") from error
+        handle, temporary_name = tempfile.mkstemp(prefix=".part-", dir=upload_root)
+        try:
+            with os.fdopen(handle, "wb") as stream:
+                stream.write(content)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary_name, target)
+        except BaseException:
+            with suppress(FileNotFoundError):
+                os.unlink(temporary_name)
+            raise
+        digest = "sha256:" + hashlib.sha256(content).hexdigest()
+        return {
+            "upload_id": upload_id,
+            "part_number": part_number,
+            "size_bytes": len(content),
+            "etag": digest,
         }
 
     def complete_upload(
@@ -696,10 +777,54 @@ class CloudRepository:
                     declared_sizes.append(part_size)
             if declared_sizes and sum(declared_sizes) != upload["size_bytes"]:
                 raise HTTPException(status_code=422, detail="upload_size_mismatch")
+            if not re.fullmatch(r"[0-9a-f-]{36}", upload_id):
+                raise HTTPException(status_code=422, detail="invalid_upload_id")
+            root = self.object_root.resolve()
+            upload_root = (root / ".uploads" / upload_id).resolve()
+            try:
+                upload_root.relative_to(root)
+            except ValueError as error:
+                raise HTTPException(status_code=422, detail="invalid_upload_path") from error
+            part_paths: list[Path] = []
+            for part in sorted(parts, key=lambda item: int(item.get("part_number", 0))):
+                part_number = int(part.get("part_number", 0))
+                candidate = (upload_root / f"{part_number:08d}.part").resolve()
+                try:
+                    candidate.relative_to(upload_root)
+                except ValueError as error:
+                    raise HTTPException(status_code=422, detail="invalid_upload_path") from error
+                if candidate.exists():
+                    content = candidate.read_bytes()
+                    expected_etag = "sha256:" + hashlib.sha256(content).hexdigest()
+                    if str(part.get("etag", "")) != expected_etag:
+                        raise HTTPException(status_code=422, detail="upload_part_hash_mismatch")
+                    part_paths.append(candidate)
+                elif upload["size_bytes"] > 0:
+                    raise HTTPException(status_code=422, detail="upload_content_missing")
+            content = b"".join(path.read_bytes() for path in part_paths)
+            if len(content) != upload["size_bytes"]:
+                raise HTTPException(status_code=422, detail="upload_size_mismatch")
+            content_digest = "sha256:" + hashlib.sha256(content).hexdigest()
+            if content_digest != upload["object_id"]:
+                raise HTTPException(status_code=422, detail="upload_hash_mismatch")
+            _validate_uploaded_content(upload["media_type"], content)
             object_path = self._object_path(project_id, upload["object_id"])
             storage_key = f"{project_id}/{upload['object_id'].removeprefix('sha256:')}"
             object_path.parent.mkdir(parents=True, exist_ok=True)
-            object_path.touch(exist_ok=True)
+            if not object_path.exists():
+                handle, temporary_name = tempfile.mkstemp(
+                    prefix=".object-", dir=object_path.parent
+                )
+                try:
+                    with os.fdopen(handle, "wb") as stream:
+                        stream.write(content)
+                        stream.flush()
+                        os.fsync(stream.fileno())
+                    os.replace(temporary_name, object_path)
+                except BaseException:
+                    with suppress(FileNotFoundError):
+                        os.unlink(temporary_name)
+                    raise
             db.execute("UPDATE uploads SET status='complete' WHERE id=?", (upload_id,))
             db.execute(
                 "INSERT OR IGNORE INTO objects VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -725,6 +850,26 @@ class CloudRepository:
             "classification": row["classification"],
             "storage_key": f"{project_id}/{row['id']}",
         }
+
+    def read_object(
+        self, workspace_id: str, project_id: str, actor_id: str, object_id: str
+    ) -> tuple[bytes, str]:
+        self.project(workspace_id, project_id, actor_id)
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT * FROM objects WHERE id=? AND project_id=?", (object_id, project_id)
+            ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="object_not_found")
+        path = self._object_path(project_id, object_id)
+        try:
+            content = path.read_bytes()
+        except OSError as error:
+            raise HTTPException(status_code=404, detail="object_content_not_found") from error
+        digest = "sha256:" + hashlib.sha256(content).hexdigest()
+        if len(content) != row["size_bytes"] or digest != object_id:
+            raise HTTPException(status_code=500, detail="object_integrity_failed")
+        return content, str(row["media_type"])
 
     def authorize_download(
         self, workspace_id: str, project_id: str, actor_id: str, object_id: str
@@ -1258,6 +1403,24 @@ def create_cloud_app(
             workspace_id(request), project_id(request), actor(x_actor_id), payload.object
         )
 
+    @router.put(
+        "/workspaces/{workspaceId}/projects/{projectId}/objects/uploads/{uploadId}/parts/{partNumber}"
+    )
+    async def upload_part(
+        request: Request,
+        uploadId: str,
+        partNumber: int,
+        x_actor_id: str | None = Header(default=None),
+    ) -> dict[str, Any]:
+        return repository.upload_part(
+            workspace_id(request),
+            project_id(request),
+            actor(x_actor_id),
+            uploadId,
+            partNumber,
+            await request.body(),
+        )
+
     @router.post(
         "/workspaces/{workspaceId}/projects/{projectId}/objects/uploads/{uploadId}/complete",
         status_code=201,
@@ -1279,6 +1442,17 @@ def create_cloud_app(
         return repository.authorize_download(
             workspace_id(request), project_id(request), actor(x_actor_id), objectId
         )
+
+    @router.get("/workspaces/{workspaceId}/projects/{projectId}/objects/{objectId}/content")
+    def download_object_content(
+        request: Request, objectId: str, x_actor_id: str | None = Header(default=None)
+    ) -> Response:
+        content, media_type = repository.read_object(
+            workspace_id(request), project_id(request), actor(x_actor_id), objectId
+        )
+        response = Response(content=content, media_type=media_type)
+        response.headers["ETag"] = objectId
+        return response
 
     @router.get("/workspaces/{workspaceId}/projects/{projectId}/comments")
     def list_comments(

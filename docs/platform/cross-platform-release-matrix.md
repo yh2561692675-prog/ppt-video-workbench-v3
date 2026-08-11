@@ -12,7 +12,7 @@ targets until evidence is produced on those operating systems.
 | process timeout/cancel | implemented | contract-tested only | contract-tested only | child-process and cancellation logs |
 | FFmpeg/FFprobe discovery | supported-system or bundled | PoC pending | PoC pending | signed runtime fingerprint |
 | Office rendering | PowerPoint/LibreOffice adapters upstream | LibreOffice PoC pending | LibreOffice PoC pending | 8-page and portrait MP4 hash |
-| credentials | Windows store adapter boundary | Keychain adapter pending | Secret Service adapter pending | redaction and revoke evidence |
+| credentials | Windows store adapter boundary | optional Keychain adapter with fail-closed fallback | optional Secret Service adapter with fail-closed fallback | redaction, revoke and native-store evidence |
 | installer/update | existing Windows packaging | notarized bundle pending | AppImage/package pending | install, upgrade, rollback, uninstall |
 
 The capability snapshot must report `unsupported`, `missing`,

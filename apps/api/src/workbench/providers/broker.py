@@ -128,6 +128,8 @@ class ProviderBroker:
                 self._idempotency[key] = broker_result
                 return broker_result
             max_cost_minor = request.max_cost_minor
+            if max_cost_minor is None:
+                max_cost_minor = invocation.operation.budget.max_cost_minor
             if max_cost_minor is None and request.policy is not None:
                 max_cost_minor = request.policy.max_cost_minor
             estimate_error = await self._check_budget(adapter, invocation, max_cost_minor)

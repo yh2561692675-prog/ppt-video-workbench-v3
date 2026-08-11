@@ -735,6 +735,12 @@ components:
         application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
+    Forbidden:
+      description: The authenticated principal is not allowed to perform this action
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
     NotFound:
       description: Resource does not exist or is not visible to the current principal
       content:

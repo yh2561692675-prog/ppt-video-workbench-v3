@@ -143,6 +143,18 @@ def test_provider_api_never_returns_credential_value() -> None:
             json={"tenant_id": tenant, "capability_id": "synthesize.speech", "mode": "sample"},
         )
         assert sample.status_code == 409
+        health_probe = client.post(
+            "/api/providers/fake-a/probe",
+            json={"tenant_id": tenant, "capability_id": "synthesize.speech", "mode": "health"},
+        )
+        assert health_probe.status_code == 200
+        health = client.get("/api/providers/health")
+        assert health.status_code == 200
+        assert health.headers["etag"].startswith("sha256:")
+        cached_health = client.get(
+            "/api/providers/health", headers={"If-None-Match": health.headers["etag"]}
+        )
+        assert cached_health.status_code == 304
         policy = client.put(
             "/api/providers/projects/project-a/policy?tenant_id=" + tenant,
             json={"policy": {"allowed_provider_ids": ["fake-a"]}},
@@ -219,3 +231,24 @@ def test_provider_api_applies_rate_limit_and_records_project_usage() -> None:
     assert audit.json()[0]["event_kind"] == "invoke"
     assert audit.json()[0]["billed_cost_minor"] == 1
     assert "input_refs" not in audit.text
+
+
+def test_provider_health_api_supports_etag_revalidation() -> None:
+    fake = DeterministicFakeProvider(descriptor("fake-a"))
+    state = ProviderApiState(ProviderRegistry([fake.descriptor]), {"fake-a": fake})
+    app = FastAPI()
+    app.include_router(create_provider_router(state), prefix="/api")
+    tenant = str(uuid4())
+    with TestClient(app) as client:
+        probe = client.post(
+            "/api/providers/fake-a/probe",
+            json={"tenant_id": tenant, "capability_id": "synthesize.speech", "mode": "health"},
+        )
+        assert probe.status_code == 200
+        first = client.get("/api/providers/health")
+        assert first.status_code == 200
+        assert first.headers["etag"].startswith("sha256:")
+        second = client.get(
+            "/api/providers/health", headers={"If-None-Match": first.headers["etag"]}
+        )
+    assert second.status_code == 304

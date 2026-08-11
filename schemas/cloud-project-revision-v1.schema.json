@@ -1,30 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ppt-video-workbench.local/schemas/cloud-project-revision-v1.schema.json",
-  "title": "CloudProjectRevisionV1",
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["schema_version", "revision_id", "project_id", "workspace_id", "parent_revision_ids", "manifest_sha256", "content_sha256", "objects", "created_at", "created_by"],
-  "properties": {
-    "schema_version": {"const": 1}, "revision_id": {"$ref": "#/$defs/uuid"}, "project_id": {"$ref": "#/$defs/uuid"}, "workspace_id": {"$ref": "#/$defs/uuid"},
-    "parent_revision_ids": {"type": "array", "maxItems": 2, "uniqueItems": true, "items": {"$ref": "#/$defs/uuid"}},
-    "manifest_sha256": {"$ref": "#/$defs/sha256"}, "content_sha256": {"$ref": "#/$defs/sha256"},
-    "objects": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/object_ref"}},
-    "created_at": {"$ref": "#/$defs/timestamp"}, "created_by": {"$ref": "#/$defs/uuid"}, "message": {"type": "string", "maxLength": 500}
-  },
-  "$defs": {
-    "uuid": {"type": "string", "format": "uuid", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"},
-    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-    "timestamp": {"type": "string", "format": "date-time", "pattern": "Z$"},
-    "object_ref": {
-      "type": "object", "additionalProperties": false,
-      "required": ["schema_version", "object_id", "sha256", "size_bytes", "media_type", "logical_path"],
-      "properties": {
-        "schema_version": {"const": 1}, "object_id": {"$ref": "#/$defs/sha256"}, "sha256": {"$ref": "#/$defs/sha256"},
-        "size_bytes": {"type": "integer", "minimum": 0, "maximum": 1099511627776}, "media_type": {"type": "string", "minLength": 1, "maxLength": 255},
-        "logical_path": {"type": "string", "minLength": 1, "maxLength": 1024, "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)(?!.*\\u0000)[^/]+(?:/[^/]+)*$"}
-      }
-    }
-  }
+  "title": "CloudProjectRevisionV1 alias",
+  "$ref": "cloud/cloud-project-revision-v1.schema.json"
 }
-

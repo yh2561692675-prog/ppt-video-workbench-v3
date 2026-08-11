@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "provider_id": "builtin-tts",
+  "display_name": "Built-in TTS",
+  "kind": "tts",
+  "adapter_version": "1.0.0",
+  "execution_mode": "in_process_builtin",
+  "capabilities": [
+    {
+      "schema_version": 1,
+      "capability_id": "tts.synthesize",
+      "modalities": ["audio"],
+      "languages": ["zh-CN", "en-US"],
+      "models": ["builtin-default"],
+      "supports_streaming": false,
+      "supports_cancellation": true,
+      "supports_idempotency": true,
+      "supports_cost_estimate": true,
+      "data_regions": ["local"]
+    }
+  ],
+  "credential_schema_id": null,
+  "privacy_policy_ref": "policy://local-tts-v1",
+  "enabled": true,
+  "trust": "builtin_signed"
+}

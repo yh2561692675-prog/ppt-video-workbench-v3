@@ -16,10 +16,10 @@ from fastapi import FastAPI
 
 from workbench.diagnostics.p2_privacy import scan_p2_summary
 from workbench.platform.composition import create_platform_services
-from workbench.platform.credentials import PlatformCredentialStore, UnavailableCredentialBackend
 from workbench.platform.local import LocalPlatformServices
 from workbench.providers.adapter import ProviderAdapterError
 from workbench.providers.api import ProviderApiState, create_provider_router
+from workbench.providers.credentials import InMemoryCredentialStore
 from workbench.providers.registry import ProviderRegistry
 from workbench.providers.upstream import (
     BuiltinArtifactStore,
@@ -117,7 +117,7 @@ class P2Composition:
                 credential_store=(
                     platform.credentials
                     if platform is not None
-                    else PlatformCredentialStore(UnavailableCredentialBackend())
+                    else InMemoryCredentialStore()
                 ),
             )
             if configured.provider_platform_enabled

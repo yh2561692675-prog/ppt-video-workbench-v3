@@ -13,7 +13,7 @@ import time
 import webbrowser
 from collections.abc import Sequence
 from contextlib import suppress
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path, PurePosixPath
 from typing import Literal
 from urllib.parse import urlparse
@@ -240,11 +240,12 @@ class LocalToolDiscoveryService:
             source: Literal["bundled", "supported_system"] = (
                 "bundled" if bundled and executable == bundled else "supported_system"
             )
+            logical_source = "runtime" if source == "bundled" else "system"
             version, capabilities = self._probe(executable, name)
             result = ToolInfoV1(
                 name=name,
                 available=True,
-                executable_ref=str(executable),
+                executable_ref=f"{logical_source}://{name}",
                 source=source,
                 version=version,
                 sha256=self._hash_file(executable),
@@ -451,4 +452,7 @@ class LocalPlatformServices:
             tools=tools,
             fingerprint=fingerprint,
             generated_at=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            expires_at=(datetime.now(UTC) + timedelta(minutes=15))
+            .isoformat()
+            .replace("+00:00", "Z"),
         )

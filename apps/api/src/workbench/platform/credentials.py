@@ -7,8 +7,10 @@ credential references and metadata.
 
 from __future__ import annotations
 
+import importlib
+import re
 from datetime import UTC, datetime
-from typing import Protocol
+from typing import Any, Protocol
 
 from workbench.providers.credentials import (
     CredentialMetadataV1,
@@ -63,27 +65,130 @@ class UnavailableCredentialBackend:
         raise CredentialStoreError("system credential service unavailable")
 
 
-class WindowsCredentialBackend(UnavailableCredentialBackend):
+_CREDENTIAL_REF = re.compile(r"^[a-z][a-z0-9_.:-]{0,127}$")
+_NATIVE_BACKEND_MARKERS = {
+    "windows": ("keyring.backends.windows", "keyring.backends.winvault"),
+    "macos": ("keyring.backends.macos",),
+    "linux": ("keyring.backends.secretservice",),
+}
+
+
+def _validate_credential_ref(credential_ref: str) -> None:
+    if _CREDENTIAL_REF.fullmatch(credential_ref) is None:
+        raise CredentialStoreError("invalid credential_ref")
+
+
+class KeyringCredentialBackend(UnavailableCredentialBackend):
+    """Adapter for an OS keyring selected by the optional ``keyring`` package.
+
+    The adapter accepts only platform-native keyring implementations.  It
+    deliberately rejects fail/null/file backends so an absent desktop keyring
+    never degrades into plaintext persistence.
+    """
+
+    def __init__(self, keyring_api: Any | None, *, name: str, service_name: str) -> None:
+        self.name = name
+        self._keyring = keyring_api
+        self._service_name = service_name
+        self.available = keyring_api is not None
+
+    def set_secret(self, credential_ref: str, secret: str) -> None:
+        if not secret:
+            raise CredentialStoreError("secret must not be empty")
+        keyring = self._require_keyring()
+        self._operate(
+            credential_ref,
+            lambda: keyring.set_password(self._service_name, credential_ref, secret),
+        )
+
+    def get_secret(self, credential_ref: str) -> str:
+        keyring = self._require_keyring()
+        value = self._operate(
+            credential_ref,
+            lambda: keyring.get_password(self._service_name, credential_ref),
+        )
+        if not isinstance(value, str) or not value:
+            raise CredentialStoreError("credential not found")
+        return value
+
+    def delete_secret(self, credential_ref: str) -> None:
+        keyring = self._require_keyring()
+        self._operate(
+            credential_ref,
+            lambda: keyring.delete_password(self._service_name, credential_ref),
+        )
+
+    def _require_keyring(self) -> Any:
+        if not self.available or self._keyring is None:
+            raise CredentialStoreError("system credential service unavailable")
+        return self._keyring
+
+    def _operate(self, credential_ref: str, operation: Any) -> Any:
+        _validate_credential_ref(credential_ref)
+        if not self.available or self._keyring is None:
+            raise CredentialStoreError("system credential service unavailable")
+        try:
+            return operation()
+        except CredentialStoreError:
+            raise
+        except Exception as error:
+            raise CredentialStoreError("system credential operation failed") from error
+
+
+class WindowsCredentialBackend(KeyringCredentialBackend):
     name = "windows-credential-manager"
 
+    def __init__(self, keyring_api: Any | None = None) -> None:
+        super().__init__(
+            keyring_api,
+            name=self.name,
+            service_name="ppt-video-workbench",
+        )
 
-class MacOSKeychainBackend(UnavailableCredentialBackend):
+
+class MacOSKeychainBackend(KeyringCredentialBackend):
     name = "macos-keychain"
 
+    def __init__(self, keyring_api: Any | None = None) -> None:
+        super().__init__(
+            keyring_api,
+            name=self.name,
+            service_name="ppt-video-workbench",
+        )
 
-class LinuxSecretServiceBackend(UnavailableCredentialBackend):
+
+class LinuxSecretServiceBackend(KeyringCredentialBackend):
     name = "linux-secret-service"
+
+    def __init__(self, keyring_api: Any | None = None) -> None:
+        super().__init__(
+            keyring_api,
+            name=self.name,
+            service_name="ppt-video-workbench",
+        )
+
+
+def _native_keyring(platform_name: str) -> Any | None:
+    try:
+        keyring = importlib.import_module("keyring")
+        backend = keyring.get_keyring()
+    except Exception:
+        return None
+    identity = f"{type(backend).__module__}.{type(backend).__name__}".lower()
+    if not any(marker in identity for marker in _NATIVE_BACKEND_MARKERS[platform_name]):
+        return None
+    return keyring
 
 
 def system_credential_backend(platform_name: str) -> CredentialBackend:
-    """Select the OS boundary; real bindings are installed separately."""
+    """Select a native OS boundary, failing closed when its optional binding is absent."""
 
     if platform_name == "windows":
-        return WindowsCredentialBackend()
+        return WindowsCredentialBackend(_native_keyring(platform_name))
     if platform_name == "macos":
-        return MacOSKeychainBackend()
+        return MacOSKeychainBackend(_native_keyring(platform_name))
     if platform_name == "linux":
-        return LinuxSecretServiceBackend()
+        return LinuxSecretServiceBackend(_native_keyring(platform_name))
     raise ValueError("unsupported platform credential backend")
 
 

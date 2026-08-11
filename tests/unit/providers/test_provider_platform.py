@@ -34,7 +34,7 @@ def descriptor(provider_id: str, *, kind: str = "tts") -> ProviderDescriptorV1:
     )
 
 
-def context(*, timeout_ms: int = 1000) -> OperationContextV1:
+def context(*, timeout_ms: int = 1000, max_cost_minor: int | None = None) -> OperationContextV1:
     now = datetime.now(UTC)
     return OperationContextV1(
         operation_id=uuid4(),
@@ -44,7 +44,11 @@ def context(*, timeout_ms: int = 1000) -> OperationContextV1:
         request_kind="provider.invoke",
         started_at=now,
         deadline_at=now + timedelta(seconds=5),
-        budget=BudgetV1(timeout_ms=timeout_ms, max_attempts=3),
+        budget=BudgetV1(
+            timeout_ms=timeout_ms,
+            max_attempts=3,
+            max_cost_minor=max_cost_minor,
+        ),
     )
 
 
@@ -153,6 +157,16 @@ async def test_budget_gate_rejects_unknown_cost_before_invoke() -> None:
     with pytest.raises(ProviderBrokerError) as raised:
         await broker.invoke(request(context(), max_cost_minor=10))
     assert raised.value.error.code == "provider.cost_unknown"
+    assert fake.calls == []
+
+
+@pytest.mark.asyncio
+async def test_operation_budget_is_checked_before_provider_invoke() -> None:
+    fake = DeterministicFakeProvider(descriptor("fake-a"))
+    broker = ProviderBroker(ProviderRegistry([fake.descriptor]), {"fake-a": fake})
+    with pytest.raises(ProviderBrokerError) as raised:
+        await broker.invoke(request(context(max_cost_minor=0)))
+    assert raised.value.error.code == "provider.budget_exceeded"
     assert fake.calls == []
 
 

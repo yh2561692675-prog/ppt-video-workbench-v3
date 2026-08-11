@@ -72,3 +72,29 @@ def test_cloud_sync_flag_creates_only_the_opt_in_outbox(tmp_path: Path) -> None:
     )
     assert composition.sync_client is not None
     assert (tmp_path / ".sync" / "outbox.db").exists()
+
+
+def test_provider_flag_alone_uses_non_persistent_fake_credentials(tmp_path: Path) -> None:
+    composition = P2Composition.build(
+        tmp_path,
+        flags=P2FeatureFlags(provider_platform_enabled=True),
+    )
+    assert composition.platform is None
+    assert composition.provider_state is not None
+    app = FastAPI()
+    composition.install(app)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/providers/credentials",
+            json={
+                "credential_ref": "fake.main",
+                "provider_id": "builtin-llm",
+                "secret": "memory-only",
+                "scope": "test",
+            },
+        )
+        listed = client.get("/api/providers/credentials")
+    assert response.status_code == 201
+    assert listed.status_code == 200
+    assert listed.json()[0]["credential_ref"] == "fake.main"
+    assert not (tmp_path / "credentials.json").exists()

@@ -1005,6 +1005,7 @@ export interface P2Diagnostics {
   generated_at: string;
   flags: Record<string, boolean>;
   platform: {
+    schema_version: 1;
     info: { platform: string; architecture: string; runtime_version: string; app_version: string };
     capabilities: string[];
     capability_states: P2CapabilityState[];
@@ -1017,6 +1018,8 @@ export interface P2Diagnostics {
       capabilities: string[];
     }>;
     fingerprint: string;
+    generated_at: string;
+    expires_at: string;
   } | null;
   platform_details: {
     media: Record<string, unknown>;

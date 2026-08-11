@@ -1,32 +1,52 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ppt-video-workbench.local/schemas/platform-capability-v1.schema.json",
-  "title": "PlatformCapabilityV1",
+  "title": "PlatformCapabilitySnapshotV1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "platform", "runtime_version", "capabilities", "tools"],
+  "required": ["schema_version", "info", "fingerprint", "generated_at", "expires_at"],
   "properties": {
     "schema_version": {"const": 1},
-    "platform": {"type": "string", "enum": ["windows", "macos", "linux"]},
-    "runtime_version": {"type": "string", "minLength": 1, "maxLength": 100},
-    "capabilities": {"type": "array", "maxItems": 200, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,99}$"}},
+    "info": {"$ref": "#/$defs/platform_info"},
+    "capabilities": {"type": "array", "maxItems": 200, "items": {"type": "string"}},
     "capability_states": {"type": "array", "maxItems": 200, "items": {"$ref": "#/$defs/capability_state"}},
     "tools": {"type": "array", "maxItems": 100, "items": {"$ref": "#/$defs/tool"}},
-    "diagnostic_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+    "fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "generated_at": {"type": "string"},
+    "expires_at": {"type": "string"}
   },
   "$defs": {
-    "tool": {
-      "type": "object", "additionalProperties": false,
-      "required": ["name", "available"],
+    "platform_info": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "platform", "architecture", "runtime_version", "app_version"],
       "properties": {
+        "schema_version": {"const": 1},
+        "platform": {"type": "string", "enum": ["windows", "macos", "linux"]},
+        "architecture": {"type": "string", "minLength": 1, "maxLength": 64},
+        "runtime_version": {"type": "string", "minLength": 1, "maxLength": 100},
+        "app_version": {"type": "string", "minLength": 1, "maxLength": 100}
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "name", "available", "source"],
+      "properties": {
+        "schema_version": {"const": 1},
         "name": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,63}$"},
-        "available": {"type": "boolean"}, "version": {"type": ["string", "null"], "maxLength": 100},
-        "capabilities": {"type": "array", "maxItems": 100, "uniqueItems": true, "items": {"type": "string"}}
+        "available": {"type": "boolean"},
+        "executable_ref": {"type": ["string", "null"], "maxLength": 1024, "pattern": "^(?:runtime|system|unavailable|unknown)://[a-z0-9_.-]+$"},
+        "version": {"type": ["string", "null"], "maxLength": 100},
+        "source": {"type": "string", "enum": ["bundled", "supported_system", "unavailable", "unknown"]},
+        "sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+        "capabilities": {"type": "array", "maxItems": 100, "items": {"type": "string"}}
       }
     },
     "capability_state": {
-      "type": "object", "additionalProperties": false,
-      "required": ["capability_id", "status"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "capability_id", "status"],
       "properties": {
         "schema_version": {"const": 1},
         "capability_id": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,99}$"},
@@ -36,4 +56,3 @@
     }
   }
 }
-

@@ -131,20 +131,27 @@ def test_cloud_prototype_validates_objects_and_supports_review_lease_job(tmp_pat
             f"/v1/workspaces/{workspace_id}/projects", json={"name": "Course"}, headers=headers
         ).json()
         project_id, revision_id = project["project_id"], project["current_revision_id"]
-        object_id = "sha256:" + hashlib.sha256(b"asset").hexdigest()
+        content = b"asset"
+        object_id = "sha256:" + hashlib.sha256(content).hexdigest()
         upload = client.post(
             f"/v1/workspaces/{workspace_id}/projects/{project_id}/objects/uploads",
             json={
                 "object": {
                     "object_id": object_id,
                     "size_bytes": 5,
-                    "media_type": "image/png",
+                    "media_type": "application/octet-stream",
                     "classification": "internal",
                 }
             },
             headers=headers,
         )
         assert upload.status_code == 201
+        part = client.put(
+            upload.json()["parts"][0]["local_endpoint"],
+            content=content,
+            headers=headers,
+        )
+        assert part.status_code == 200
         invalid_complete = client.post(
             f"/v1/workspaces/{workspace_id}/projects/{project_id}/objects/uploads/{upload.json()['upload_id']}/complete",
             json={"parts": [{"part_number": 1, "etag": "etag", "size_bytes": 4}]},
@@ -154,7 +161,15 @@ def test_cloud_prototype_validates_objects_and_supports_review_lease_job(tmp_pat
         assert invalid_complete.json()["detail"] == "upload_size_mismatch"
         completed = client.post(
             f"/v1/workspaces/{workspace_id}/projects/{project_id}/objects/uploads/{upload.json()['upload_id']}/complete",
-            json={"parts": [{"part_number": 1, "etag": "etag"}]},
+            json={
+                "parts": [
+                    {
+                        "part_number": 1,
+                        "etag": part.json()["etag"],
+                        "size_bytes": len(content),
+                    }
+                ]
+            },
             headers=headers,
         )
         assert completed.status_code == 201
@@ -169,6 +184,12 @@ def test_cloud_prototype_validates_objects_and_supports_review_lease_job(tmp_pat
             ).status_code
             == 200
         )
+        downloaded = client.get(
+            f"/v1/workspaces/{workspace_id}/projects/{project_id}/objects/{object_id}/content",
+            headers=headers,
+        )
+        assert downloaded.status_code == 200
+        assert downloaded.content == content
         comment = client.post(
             f"/v1/workspaces/{workspace_id}/projects/{project_id}/comments",
             json={"body": "Review", "anchor": {"revision_id": revision_id}},
@@ -330,7 +351,8 @@ def test_cloud_executor_result_is_hash_checked_and_idempotent(tmp_path: Path) ->
         ).json()
         fingerprints = job["fingerprints"]
         result = {"media_type": "video/mp4", "duration_ms": 1000}
-        output_object = "sha256:" + "b" * 64
+        output_content = b"output"
+        output_object = "sha256:" + hashlib.sha256(output_content).hexdigest()
         result_url = (
             f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}"
             f"/jobs/{job['job_id']}/result"
@@ -355,18 +377,24 @@ def test_cloud_executor_result_is_hash_checked_and_idempotent(tmp_path: Path) ->
             json={
                 "object": {
                     "object_id": output_object,
-                    "size_bytes": 0,
-                    "media_type": "video/mp4",
+                    "size_bytes": len(output_content),
+                    "media_type": "application/octet-stream",
                     "classification": "internal",
                 }
             },
             headers=headers,
         )
         assert upload.status_code == 201
+        output_part = client.put(
+            upload.json()["parts"][0]["local_endpoint"],
+            content=output_content,
+            headers=headers,
+        )
+        assert output_part.status_code == 200
         assert client.post(
             f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}"
             f"/objects/uploads/{upload.json()['upload_id']}/complete",
-            json={"parts": [{"part_number": 1, "etag": "empty"}]},
+            json={"parts": [{"part_number": 1, "etag": output_part.json()["etag"]}]},
             headers=headers,
         ).status_code == 201
         report = {

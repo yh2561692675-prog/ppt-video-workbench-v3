@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install project dependencies
-        run: python -m pip install -e apps/api -e peripheral-platform pytest ruff mypy
+        run: python -m pip install -e "apps/api[platform]" -e peripheral-platform pytest ruff mypy
       - name: Platform contract tests
         shell: pwsh
         run: |
@@ -49,4 +49,7 @@ jobs:
           for artifact in install.json upgrade.json rollback.json uninstall.json runtime.json signature.json; do
             test -s "$evidence_root/$artifact"
           done
+          python scripts/verify_platform_evidence.py \
+            --root . \
+            --platform "${{ matrix.platform }}"
           echo "Verified real signing, install, upgrade, rollback and uninstall evidence for ${{ matrix.platform }}."

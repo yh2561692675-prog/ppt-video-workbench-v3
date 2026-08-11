@@ -4,15 +4,15 @@
   "title": "ProviderInvocationV1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "provider_id", "operation", "context", "input_sha256"],
+  "required": ["schema_version", "operation", "provider_id", "capability_id", "expected_output_schema"],
   "properties": {
     "schema_version": {"const": 1},
-    "provider_id": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,63}$"},
-    "operation": {"type": "string", "enum": ["probe", "estimate", "invoke", "cancel"]},
-    "context": {"$ref": "operation-context-v1.schema.json"},
-    "input_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-    "input_media_type": {"type": "string", "maxLength": 255},
-    "requested_capability": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,99}$"}
+    "operation": {"$ref": "operation-context-v1.schema.json"},
+    "provider_id": {"type": "string"},
+    "capability_id": {"type": "string"},
+    "model": {"type": ["string", "null"], "maxLength": 200},
+    "input_refs": {"type": "array", "maxItems": 10000, "items": {"type": "string"}},
+    "parameters": {"type": "object", "maxProperties": 128},
+    "expected_output_schema": {"type": "string", "minLength": 1, "maxLength": 200}
   }
 }
-

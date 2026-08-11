@@ -25,7 +25,7 @@ from .cache import ProviderCache
 from .credentials import CredentialMetadataV1, CredentialStore, CredentialStoreError
 from .models import ProviderAuditEventV1, ProviderCostEstimateV1
 from .policy import ProviderPolicyV1
-from .probe import CapabilityProbeService, ProbeMode
+from .probe import CapabilityProbeService, ProbeMode, ProbeSnapshotV1
 from .registry import ProviderRegistry
 
 
@@ -88,7 +88,7 @@ class ProviderApiState:
     probe_service: CapabilityProbeService = field(default_factory=CapabilityProbeService)
     policies: dict[tuple[str, str], ProviderPolicyV1] = field(default_factory=dict)
     usage_minor: dict[tuple[str, str], int] = field(default_factory=dict)
-    health: dict[tuple[str, str], object] = field(default_factory=dict)
+    health: dict[tuple[str, str], ProbeSnapshotV1] = field(default_factory=dict)
     audit_events: list[ProviderAuditEventV1] = field(default_factory=list)
     broker: ProviderBroker | None = None
     credential_store: CredentialStore | None = None
@@ -155,8 +155,16 @@ def create_provider_router(state: ProviderApiState) -> APIRouter:
         return snapshot
 
     @router.get("/health")
-    async def list_health() -> list[object]:
-        return list(state.health.values())
+    async def list_health(
+        response: Response, if_none_match: str | None = Header(default=None)
+    ) -> object:
+        snapshots = list(state.health.values())
+        payload = [_probe_snapshot_json(item) for item in snapshots]
+        etag = canonical_sha256({"health": payload})
+        response.headers["ETag"] = etag
+        if if_none_match == etag:
+            return Response(status_code=304, headers={"ETag": etag})
+        return payload
 
     @router.get("/credentials", response_model=list[CredentialMetadataV1])
     async def list_credentials() -> list[CredentialMetadataV1]:
@@ -349,6 +357,19 @@ def create_provider_router(state: ProviderApiState) -> APIRouter:
 def _record_audit(state: ProviderApiState, event: ProviderAuditEventV1) -> None:
     state.audit_events.append(event)
     del state.audit_events[:-1000]
+
+
+def _probe_snapshot_json(snapshot: ProbeSnapshotV1) -> dict[str, object]:
+    return {
+        "provider_id": snapshot.provider_id,
+        "capability_id": snapshot.capability_id,
+        "mode": snapshot.mode,
+        "health": snapshot.health.model_dump(mode="json"),
+        "observed_at": snapshot.observed_at.isoformat().replace("+00:00", "Z"),
+        "expires_at": snapshot.expires_at.isoformat().replace("+00:00", "Z"),
+        "billed_probe": snapshot.billed_probe,
+        "evidence_sha256": snapshot.evidence_sha256,
+    }
 
 
 def _context(tenant_id: UUID, request_kind: str, timeout_ms: int) -> OperationContextV1:

@@ -4,18 +4,45 @@
   "title": "ProviderDescriptorV1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "provider_id", "kind", "display_name", "adapter_version", "capabilities", "trust"],
+  "required": ["schema_version", "provider_id", "display_name", "kind", "adapter_version", "execution_mode", "capabilities"],
   "properties": {
     "schema_version": {"const": 1},
-    "provider_id": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,63}$"},
-    "kind": {"type": "string", "enum": ["llm", "tts", "asr", "ocr", "avatar", "renderer"]},
+    "provider_id": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-z][a-z0-9_.-]{0,63}$"},
     "display_name": {"type": "string", "minLength": 1, "maxLength": 200},
+    "kind": {"type": "string", "enum": ["llm", "tts", "asr", "ocr", "avatar", "renderer"]},
     "adapter_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
-    "capabilities": {"type": "array", "minItems": 1, "maxItems": 100, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,99}$"}},
-    "regions": {"type": "array", "maxItems": 100, "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Za-z0-9_-]{2,32}$"}},
-    "trust": {"type": "string", "enum": ["builtin_signed", "builtin_local_process"]},
-    "credential_ref": {"type": "string", "pattern": "^[a-z][a-z0-9_.:-]{0,127}$"},
-    "data_policy": {"type": "string", "enum": ["local_only", "user_content_required", "metadata_only"]}
+    "execution_mode": {"type": "string", "enum": ["in_process_builtin", "local_process", "remote_https"]},
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {"$ref": "#/$defs/provider_capability"}
+    },
+    "credential_schema_id": {"type": ["string", "null"], "maxLength": 128},
+    "privacy_policy_ref": {"type": ["string", "null"], "maxLength": 512},
+    "enabled": {"type": "boolean", "default": true},
+    "trust": {"type": "string", "enum": ["builtin_signed", "builtin_local_process"], "default": "builtin_signed"}
+  },
+  "$defs": {
+    "provider_capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "capability_id", "modalities"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "capability_id": {"type": "string", "minLength": 1, "maxLength": 100},
+        "modalities": {"type": "array", "minItems": 1, "maxItems": 32, "items": {"type": "string"}},
+        "languages": {"type": "array", "maxItems": 256, "items": {"type": "string"}},
+        "models": {"type": "array", "maxItems": 256, "items": {"type": "string"}},
+        "max_input_bytes": {"type": ["integer", "null"], "minimum": 0, "maximum": 1099511627776},
+        "max_duration_us": {"type": ["integer", "null"], "minimum": 0, "maximum": 86400000000},
+        "supports_streaming": {"type": "boolean", "default": false},
+        "supports_cancellation": {"type": "boolean", "default": false},
+        "supports_idempotency": {"type": "boolean", "default": true},
+        "supports_word_timestamps": {"type": ["boolean", "null"]},
+        "supports_cost_estimate": {"type": "boolean", "default": false},
+        "data_regions": {"type": "array", "maxItems": 100, "items": {"type": "string"}}
+      }
+    }
   }
 }
-

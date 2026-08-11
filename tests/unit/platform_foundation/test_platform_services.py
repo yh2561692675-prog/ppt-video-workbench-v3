@@ -11,7 +11,7 @@ from workbench.platform.local import (
     LocalProcessService,
     LocalToolDiscoveryService,
 )
-from workbench.platform.models import PlatformPathError
+from workbench.platform.models import PlatformPathError, ToolInfoV1
 
 
 def test_logical_paths_are_portable_and_contained(tmp_path: Path) -> None:
@@ -56,6 +56,7 @@ def test_composition_root_returns_capability_snapshot(tmp_path: Path) -> None:
     snapshot = services.capabilities()
     assert snapshot.info.platform in {"windows", "macos", "linux"}
     assert snapshot.fingerprint.startswith("sha256:")
+    assert snapshot.expires_at > snapshot.generated_at
     statuses = {item.capability_id: item.status for item in snapshot.capability_states}
     assert statuses["paths"] == "supported"
     assert all("\\" not in (item.detail or "") for item in snapshot.capability_states)
@@ -68,8 +69,21 @@ def test_tool_discovery_rejects_path_injection_and_reports_safe_metadata(tmp_pat
         tools.find("../ffmpeg")
     python_tool = tools.find(Path(sys.executable).name)
     assert python_tool.available is True
-    assert python_tool.executable_ref
+    assert python_tool.executable_ref in {
+        f"runtime://{Path(sys.executable).name}",
+        f"system://{Path(sys.executable).name}",
+    }
     assert python_tool.sha256 and python_tool.sha256.startswith("sha256:")
+
+
+def test_tool_contract_rejects_absolute_executable_references(tmp_path: Path) -> None:
+    with pytest.raises(ValueError):
+        ToolInfoV1(
+            name="ffmpeg",
+            available=True,
+            executable_ref=r"C:\\secret\\ffmpeg.exe",
+            source="supported_system",
+        )
 
 
 def test_media_and_office_snapshots_do_not_include_absolute_project_inputs(tmp_path: Path) -> None:

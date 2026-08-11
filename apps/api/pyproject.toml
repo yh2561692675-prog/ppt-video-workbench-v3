@@ -26,6 +26,10 @@ ocr = [
     "paddleocr>=3.2,<4",
     "paddlepaddle>=3.2,<4",
 ]
+platform = [
+    "keyring>=25,<26",
+    "secretstorage>=3.3,<4; sys_platform == 'linux'",
+]
 
 [build-system]
 requires = ["hatchling"]
