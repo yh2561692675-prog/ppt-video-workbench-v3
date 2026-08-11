@@ -18,3 +18,15 @@ __pycache__/
 .env
 workspace-data/
 tests/.e2e-workspace/
+
+# Local recovery, build, cache, and diagnostic artifacts. Evidence intended for
+# review is kept under docs/acceptance rather than staged from these locations.
+.pnpm-store/
+.tmp/
+.tmp-*/
+cache/acceptance-*/
+backup/
+release/
+release-effect-v2/
+*.zip
+*.log
