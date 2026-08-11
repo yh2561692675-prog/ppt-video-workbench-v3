@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects-program",
+  "wave": "W1",
+  "task": "A13",
+  "gate": "V1_CORE_CONTRACTS_FROZEN",
+  "status": "passed",
+  "recorded_at": "2026-08-11T20:24:29+08:00",
+  "owner_line": "A Core Workbench",
+  "branch": "codex/program-core-workbench",
+  "source_commit": "f73faf64bcc877fc6fd13684d4225be5d7d620aa",
+  "foundation_source_commit": "5a071cb95d9af8f91c978abac75d3df77a0910ab",
+  "a12_evidence_commit": "06d6df0",
+  "contract_catalog": "packages/contracts/v1-contract-catalog.json",
+  "golden_fixture": "packages/contracts/fixtures/v1-core-contracts.golden.json",
+  "contract_set_sha256": "7c63aab737d6fe9281ce83cd8fec0e2ddf52f2148d51938f6be4f80ac55f5488",
+  "contracts": [
+    "project",
+    "asset",
+    "material",
+    "timeline",
+    "subtitle",
+    "continuity",
+    "render_graph",
+    "job",
+    "export",
+    "quality"
+  ],
+  "mirrors": [
+    "Python Pydantic models",
+    "TypeScript exported interfaces and types",
+    "JSON Schema",
+    "OpenAPI components"
+  ],
+  "compatibility_policy": {
+    "unknown_fields": "reject",
+    "older_versions": "explicit_migration",
+    "invalid_enum": "reject"
+  },
+  "verification": [
+    {
+      "command": "pytest tests/contracts tests/contract -q",
+      "result": "28 passed"
+    },
+    {
+      "command": "ruff check changed Python contract files",
+      "result": "passed"
+    },
+    {
+      "command": "mypy --strict domain/models.py exports/presets.py",
+      "result": "passed"
+    },
+    {
+      "command": "tsc -p apps/web/tsconfig.json --noEmit",
+      "result": "passed"
+    },
+    {
+      "command": "vitest run --passWithNoTests from apps/web",
+      "result": "43 files and 84 tests passed"
+    },
+    {
+      "command": "vite build from apps/web",
+      "result": "production build passed; size advisory only"
+    },
+    {
+      "command": "validate the shared golden fixture against all ten authoritative Python models",
+      "result": "10 of 10 passed"
+    }
+  ],
+  "environment_notes": [
+    "The A worktree used explicit PYTHONPATH=apps/api/src because the shared root virtual environment is editable against the recovery root.",
+    "Node dependency directories were read-only junctions to the already locked root installation; pnpm store access was unavailable, so verification invoked the locked tsc, vitest and vite binaries directly."
+  ],
+  "scope_boundary": {
+    "not_claimed": [
+      "B10 or B11 render and release integration",
+      "C10 P2 foundation migration",
+      "G1 integration candidate",
+      "DP20 clean candidate automation"
+    ]
+  },
+  "next_task": "Complete B10/B11 and C10, then integrate A13 -> B10/B11 -> C10 at Gate G1"
+}
