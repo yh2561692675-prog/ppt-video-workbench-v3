@@ -1,0 +1,114 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects",
+  "wave": "W0",
+  "task": "A00",
+  "generated_at": "2026-08-11T16:27:45.5009457+08:00",
+  "evidence_storage": {
+    "requested": "docs/acceptance/program/wave-0",
+    "actual": "docs/acceptance/foundation/stop-points",
+    "reason": "The existing docs/acceptance ACL denied creation of a new program subdirectory; permissions were not changed or bypassed."
+  },
+  "repository": {
+    "path": "F:/ppt-video-workbench-v3",
+    "branch": "recovery/root-snapshot-20260810",
+    "head": "117fb60cbb0ca877c0920a26f5ceb31d8e42e901",
+    "source_state": "dirty_uncommitted_recovery_root"
+  },
+  "origin": {
+    "thread_id": "019fec23-1884-72d1-a362-7298042ed8e0",
+    "classification": "recovered_root_implementation",
+    "safe_resume": "Do not copy the root directory. Rebuild a foundation commit from the recorded owned paths after G0."
+  },
+  "stop_points": [
+    {
+      "phase": "P1",
+      "gate": "G1",
+      "status": "passed",
+      "file": "docs/acceptance/foundation/stop-points/2026-08-11-p1-durable-jobs-g1.json",
+      "sha256": "73260b68823cb04c3b26f778b79b1a21fbf13d139a3c4f3de5ee566be97a26e9",
+      "baseline_head": null,
+      "completed_items": 7,
+      "scope": "durable jobs, attempts, checkpoints, publications, leases and restart recovery",
+      "source_classification": "tracked_and_untracked_root_changes",
+      "warning": "The stop point does not record baseline_head; bind the implementation to the reconstructed foundation commit before integration."
+    },
+    {
+      "phase": "P2",
+      "gate": "G2",
+      "status": "passed",
+      "file": "docs/acceptance/foundation/stop-points/2026-08-11-p2-asset-derivatives-g2.json",
+      "sha256": "f37456d0eebacb5295afa6b7e1b17dc00cfe61eda670f4db44bac760abeff3f3",
+      "baseline_head": "117fb60cbb0ca877c0920a26f5ceb31d8e42e901",
+      "completed_items": 9,
+      "scope": "asset derivatives, media probe and content-addressed cache",
+      "source_classification": "tracked_and_untracked_root_changes"
+    },
+    {
+      "phase": "P3",
+      "gate": "G3",
+      "status": "passed",
+      "file": "docs/acceptance/foundation/stop-points/2026-08-11-p3-authoritative-preview-g3.json",
+      "sha256": "6e5a8bf3c2793d26f00c524a76e7b1d25c87f04e2517f50e7d224b4e9312f6ba",
+      "baseline_head": "117fb60cbb0ca877c0920a26f5ceb31d8e42e901",
+      "completed_items": 8,
+      "scope": "authoritative range preview, durable preview job and Web panel",
+      "source_classification": "tracked_and_untracked_root_changes"
+    },
+    {
+      "phase": "P4",
+      "gate": "G4",
+      "status": "passed",
+      "file": "docs/acceptance/foundation/stop-points/2026-08-11-p4-cache-invalidation-g4.json",
+      "sha256": "9463d516a76c9aa519b9d15aaee0a4d61404ea3e8d6c4d2701a76b39b0f6c017",
+      "baseline_head": "117fb60cbb0ca877c0920a26f5ceb31d8e42e901",
+      "completed_items": 11,
+      "scope": "cache dependencies, selective invalidation and protected concurrent GC",
+      "source_classification": "tracked_and_untracked_root_changes"
+    },
+    {
+      "phase": "P5",
+      "gate": "G5",
+      "status": "passed",
+      "file": "docs/acceptance/foundation/stop-points/2026-08-11-p5-legacy-migration-g5.json",
+      "sha256": "61c4f279bd991f7f579df7d31a8206df65a11b6fb0fd45784c9cfc89532e4ac7",
+      "baseline_head": "117fb60cbb0ca877c0920a26f5ceb31d8e42e901",
+      "completed_items": 11,
+      "scope": "legacy adaptation, migration journal, dual read and rollback",
+      "source_classification": "tracked_and_untracked_root_changes"
+    }
+  ],
+  "owned_path_groups": [
+    "apps/api/src/workbench/jobs",
+    "apps/api/src/workbench/assets",
+    "apps/api/src/workbench/cache",
+    "apps/api/src/workbench/rendering/preview.py",
+    "apps/api/src/workbench/rendering/preview_service.py",
+    "apps/api/src/workbench/rendering/range_projection.py",
+    "apps/api/src/workbench/rendering/legacy_adapter.py",
+    "apps/api/src/workbench/rendering/project_reader.py",
+    "apps/api/src/workbench/migrations",
+    "apps/api/src/workbench/api/migrations.py",
+    "apps/web/src/features/video/AuthoritativePreviewPanel.tsx",
+    "apps/web/src/features/video/TaskCenter.tsx",
+    "docs/acceptance/foundation/stop-points"
+  ],
+  "shared_path_groups": [
+    "apps/api/src/workbench/main.py",
+    "apps/api/src/workbench/storage",
+    "apps/api/src/workbench/rendering/compiler.py",
+    "apps/api/src/workbench/rendering/export_pipeline.py",
+    "apps/web/src/api/client.ts",
+    "apps/web/src/features/workflow/WorkflowShell.tsx",
+    "schemas",
+    "packages/contracts"
+  ],
+  "known_gaps": [
+    "The implementation is not represented by one clean source commit.",
+    "G1 lacks a baseline_head field.",
+    "Several owned modules and G2-G5 stop points are untracked in the recovery root.",
+    "Shared paths overlap Windows, RenderGraph and V1 closure work and require line-by-line integration review.",
+    "P6 Web integration and P7 production resource scheduling are not covered by a completed foundation stop point."
+  ],
+  "next_action": "Wait for B00-B02 and C00, then reconstruct and verify foundation_source_commit during G0/A10."
+}

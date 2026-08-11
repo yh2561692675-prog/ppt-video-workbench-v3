@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects",
+  "wave": "W0",
+  "task": "B01",
+  "generated_at": "2026-08-11T16:56:00+08:00",
+  "source": {
+    "worktree": "F:/ppt-video-workbench-v3/.worktrees/rendergraph-v2-closure",
+    "branch": "codex/rendergraph-v2-closure",
+    "head": "1bef20823c27562b85fa1d142f1f794319879147",
+    "commit_subject": "fix(release): preserve runtime directories in staging",
+    "source_status": "clean",
+    "generated_artifact_status": "release/ is intentionally untracked"
+  },
+  "verification": {
+    "release_regression_tests": "22/22 passed",
+    "remotion_tests": "33/33 passed",
+    "web_tests": "76/76 passed",
+    "production_builds": "API and Web production builds passed",
+    "lint": "pnpm lint passed",
+    "release_payload": "passed; node/, ffmpeg/ and remotion/ directory structure preserved",
+    "runtime_capabilities": "real FFmpeg, FFprobe and required filters verified"
+  },
+  "artifact": {
+    "path": "F:/ppt-video-workbench-v3/.worktrees/rendergraph-v2-closure/release/ppt-video-workbench-setup.exe",
+    "size_bytes": 262232775,
+    "last_write_time": "2026-08-11T16:35:58.0163593+08:00",
+    "sha256": "0035982FE0C2136CA63A831DAEAD16A8BAE6B2F5986B074867EB68463495FBCE"
+  },
+  "environment_note": {
+    "finding": "The ffprobe.exe found on the system PATH was a mispackaged FFmpeg binary.",
+    "resolution": "The release verifier rejected it and the build used a validated complete FFmpeg 9.0 runtime."
+  },
+  "stop_point": {
+    "status": "closed",
+    "source_ready_for_selective_integration": true,
+    "whole_branch_merge_allowed": false,
+    "integration_strategy": "After foundation_source_commit is fixed, transplant the owned release-script fix and RenderGraph/final-render changes by reviewed commits; never merge generated release/."
+  },
+  "next_action": "Freeze this worktree while B00 and B02 finish; include the owned commits in A10 foundation reconstruction."
+}

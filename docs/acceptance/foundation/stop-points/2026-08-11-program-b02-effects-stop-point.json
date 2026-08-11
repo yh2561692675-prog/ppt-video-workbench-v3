@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects",
+  "wave": "W0",
+  "task": "B02",
+  "generated_at": "2026-08-11T18:02:47.3654126+08:00",
+  "source": {
+    "worktree": "F:/ppt-video-workbench-v3/.worktrees/effects-task18-25-recovery",
+    "branch": "codex/effects-task18-25-recovery",
+    "head": "fc41bdfe0997f842d718ab50353841d70809bf34",
+    "commit_subject": "recovery(freeze): publish audited Task 18-25 baseline",
+    "status": "clean",
+    "checkpoint_tag": "checkpoint/effects-task18-25-source-20260811",
+    "checkpoint_head": "a76052c"
+  },
+  "verification": {
+    "python": "697/697 passed",
+    "web": "38 files, 74/74 tests passed; typecheck passed",
+    "remotion": "12 files, 32/32 tests passed; typecheck passed",
+    "static_acceptance": "30 pages, 90 frames; P0=0, P1=0, P2=0, P3=32",
+    "windows_p01": "install, first launch, restart, uninstall and workspace retention passed",
+    "source_checkpoint_rehearsal": "detached checkout clean; 72/72 key contracts passed",
+    "freeze_index_integrity": "integrity_valid=true; independent verifier and 10 focused tests passed",
+    "ruff_and_mypy": "passed"
+  },
+  "release_candidate": {
+    "payload_source_commit": "3e5f310",
+    "test_stabilization_commit": "a76052c",
+    "installer_size_bytes": 217125865,
+    "installer_sha256": "91c3cd8d7812af200eb889d5f97bfeb1d90fe8ed6227a6273390cd918121b9ea",
+    "manifest_valid": true,
+    "effects_v2_default_enabled": false
+  },
+  "evidence": {
+    "freeze_index": "docs/acceptance/effects-task18-25-recovery/task18-25-freeze-index.json",
+    "freeze_index_sha256": "b3ecd7651e14d44ad9b4135fc2b5be56dc5740bd0e6d013885cafcaa70cb9255",
+    "recovery_report": "docs/effects/task18-25-recovery-report.md",
+    "recovery_report_sha256": "b7d2226b86f40025fae7fb1a48ceb2152ced41bce290fca4ff82544f757af5d3"
+  },
+  "stop_point": {
+    "status": "closed_with_explicit_blockers",
+    "trustworthy_for_g0": true,
+    "total_freeze_decision": "blocked",
+    "whole_branch_merge_allowed": false,
+    "source_ready_for_selective_integration": true
+  },
+  "blockers": [
+    "The original claimed Task 18-25 Git commits were not found.",
+    "The original sample ZIP with claimed SHA-256 2811bf09acc09478514b153c2bb39f90cd07d6423c2fb64e41970011fdc20294 was not found.",
+    "The same RC has not completed Windows dynamic preview, caption/effect inspection and final video export for the frozen 30-page set."
+  ],
+  "next_action": "Preserve this clean source checkpoint. In the program B line, selectively integrate the contracts and schedule the missing 30-page dynamic Windows evidence before the release gate that claims Effects V2 readiness."
+}

@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "phase": "P3",
+  "gate": "G3",
+  "status": "passed",
+  "baseline_head": "117fb60cbb0ca877c0920a26f5ceb31d8e42e901",
+  "scope": "Authoritative range preview execution and Web control surface",
+  "completed": [
+    "Frozen preview plan including graph id, graph hash, timeline range, runtime version and deterministic cache key",
+    "Range-specific RenderGraph projection for visual nodes, transitions, source-in offsets, audio clips, subtitles and word timings",
+    "Durable render_preview submission, worker checkpoints, atomic publication and exactly-once artifact manifest",
+    "Explicit authoritative-preview execution mode propagated through the export pipeline into Remotion props",
+    "FFprobe validation for video stream, audio stream, frame rate, canvas and one-frame duration tolerance",
+    "Canonical preview.mp4 cache artifact with valid-cache reuse and corrupted-cache rebuild",
+    "Manifest provenance for source revision, projected graph, runtime, subtitle mode, probe version and content hash",
+    "Web range controls, durable job polling and authoritative video playback wired to the current RenderGraph V2 snapshot"
+  ],
+  "verification": {
+    "backend_gate": "41 passed",
+    "web_gate": "22 passed",
+    "targeted_pytest": "12 passed",
+    "ruff": "All checks passed",
+    "mypy": "Success: no issues found in 6 source files",
+    "prettier": "Changed files formatted successfully",
+    "known_warnings": [
+      "Pytest cache writes remain denied by existing workspace permissions",
+      "jsdom does not provide AudioContext for the existing Remotion Player test",
+      "Full Web typecheck is blocked only by concurrently modified PreflightWorkspace.test.tsx fixtures missing five PreflightReport fields"
+    ]
+  },
+  "next_phase": "P4 incremental dependency invalidation and cache lifecycle",
+  "safe_resume": "Use graph affected ranges, durable job records, preview manifests and the P2 cache repository as the frozen inputs for dependency invalidation."
+}

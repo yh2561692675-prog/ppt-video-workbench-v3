@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "phase": "P4",
+  "gate": "G4",
+  "status": "passed",
+  "baseline_head": "117fb60cbb0ca877c0920a26f5ceb31d8e42e901",
+  "scope": "Incremental dependency invalidation and persistent cache lifecycle",
+  "completed": [
+    "Frozen CacheDependency V1 domain, artifact, stale reason and invalidation contracts with Python, TypeScript, schema and fixture mirrors",
+    "RenderGraph compiler output for visual, audio, transition, overlay, subtitle, layout, asset and compiler dependencies",
+    "Compiler-version-bound node cache keys and normalized dependency ordering",
+    "Merged affected ranges preserving every reason and range-projected cache dependencies",
+    "Workspace schema v4 cache_entries and cache_dependencies tables with indexed reverse lookup",
+    "Manifest, file hash, file size, runtime and license validated cache lookup",
+    "Domain, source and time-range selective invalidation that marks stale without deleting artifacts",
+    "Read leases and quarantine-before-delete GC protocol preventing lookup/delete races",
+    "Dry-run and executable persistent GC preserving protected and actively leased artifacts",
+    "Authoritative preview publication registered in the persistent cache index",
+    "Randomized exact-invalidation evidence and indexed 1000-node reverse dependency benchmark"
+  ],
+  "verification": {
+    "backend_gate": "64 passed",
+    "web_gate": "22 passed",
+    "ruff": "All checks passed",
+    "mypy": "Success: no issues found in 31 source files",
+    "web_typecheck": "tsc --noEmit passed",
+    "diff_check": "No whitespace errors; existing CRLF conversion warnings only",
+    "known_warning": "Pytest cache writes remain denied by existing workspace permissions"
+  },
+  "next_phase": "P5 legacy project migration and compatibility reads",
+  "safe_resume": "Use workspace schema v4, RenderGraph cache_dependencies, persistent cache lookup/invalidation and quarantine GC as frozen foundations."
+}

@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects",
+  "wave": "W0",
+  "task": "C00",
+  "generated_at": "2026-08-11T16:37:20.9248432+08:00",
+  "source": {
+    "worktree": "F:/ppt-video-workbench-v3/.worktrees/p2-platform-integration",
+    "branch": "codex/p2-platform-integration",
+    "head": "51cc32542bd64c758413bf3cbc8fa065070f5aa6",
+    "status": "clean",
+    "merge_base_with_recovery_lineage": "956929e7b75f80df8d17891420ccc812574a682e",
+    "baseline_evidence": "docs/acceptance/p2-platform-baseline.md",
+    "baseline_evidence_sha256": "ce02a6b7d4971cbbacdb4c337cbf238ca307172c1b5d8acc828233ff3166e1d9"
+  },
+  "feature_flags": {
+    "provider_platform_enabled": false,
+    "platform_services_enabled": false,
+    "cloud_sync_enabled": false,
+    "default_network_behavior": "no provider or cloud clients are created when flags are disabled"
+  },
+  "verification": {
+    "cloud_client_drift": "verified 44 Cloud operations",
+    "platform_contract_tests": "22 passed",
+    "provider_and_opt_in_tests": "52 passed, 1 existing Pydantic warning",
+    "composition_cloud_and_performance_tests": "47 passed",
+    "focused_test_total": "121 passed",
+    "mypy": "Success: no issues found in 33 source files",
+    "ruff": "All checks passed",
+    "worktree_after_tests": "clean"
+  },
+  "environment_note": {
+    "first_attempt": "Integration test collection failed because the imported application tried to open the default SQLite workspace under a path rejected by the current ACL.",
+    "resolution": "The identical tests were rerun with WORKBENCH_WORKSPACE and WORKBENCH_DIAGNOSTIC_ROOT set to a dedicated writable temp workspace.",
+    "classification": "environment isolation issue, not a P2 logic failure"
+  },
+  "contract_drift": {
+    "comparison_target": "recovery/root-snapshot-20260810@117fb60cbb0ca877c0920a26f5ceb31d8e42e901",
+    "shared_path_changes": 57,
+    "risk": "high",
+    "findings": [
+      "The P2 branch was built from an older common ancestor and does not contain later G1-G5, RenderGraph and P1 files.",
+      "A whole-branch merge would present later core job handlers and many V1 schemas as deletions.",
+      "main.py, workspace migrations, Job files, Web client, WorkflowShell, OpenAPI and project schema overlap the current V1 integration owner.",
+      "P2-specific contracts and adapters are reproducible, but shared wiring must be selectively reapplied onto the future foundation source."
+    ],
+    "whole_branch_merge_allowed": false,
+    "integration_strategy": "Selectively transplant P2-specific commits/files after A13 freezes V1 contracts; reimplement shared wiring against the new API instead of resolving by directory preference."
+  },
+  "completed_foundation": [
+    "Provider Kernel contracts and opt-in composition",
+    "PlatformServices contracts and multi-platform evidence verifier",
+    "Cloud OpenAPI and generated TypeScript client",
+    "Offline outbox, conflict, comments, review and remote job prototype",
+    "Provider budgets, audit records, cache invalidation and privacy diagnostics"
+  ],
+  "explicitly_remaining": [
+    "Real vendor adapters and paid acceptance",
+    "Production OIDC validation and tenant deployment",
+    "PostgreSQL PITR and object-retention evidence",
+    "Signed macOS/Linux installer and rollback evidence",
+    "Selective integration onto the G1-G5/V1 foundation source"
+  ],
+  "next_action": "Hold the clean P2 branch unchanged until G0/A10 determines foundation_source_commit, then execute C10 selective migration."
+}

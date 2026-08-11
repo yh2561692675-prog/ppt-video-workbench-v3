@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "phase": "P2",
+  "gate": "G2",
+  "status": "passed",
+  "baseline_head": "117fb60cbb0ca877c0920a26f5ceb31d8e42e901",
+  "scope": "Material derivatives and content-addressed cache",
+  "completed": [
+    "Strict frozen derivative request and artifact contracts with deterministic fingerprints",
+    "Staged content-addressed object storage with containment and integrity verification",
+    "Unified FFprobe metadata parser with structured failures",
+    "Image crop, thumbnail and format conversion executors",
+    "Video proxy, transcode and thumbnail command executor with post-render probing",
+    "PCM waveform peak and RMS generation at multiple resolutions",
+    "Persistent cache index and lease-aware protected LRU garbage collection",
+    "Durable derive_asset and build_waveform jobs with deterministic asset identity and exactly-once publication",
+    "Project asset API endpoint for derivative job submission"
+  ],
+  "verification": {
+    "pytest": "67 passed",
+    "ruff": "All checks passed",
+    "mypy": "Success: no issues found in 19 source files",
+    "diff_check": "No whitespace errors; existing CRLF conversion warnings only",
+    "known_warning": "Pytest cache writes remain denied by existing workspace permissions"
+  },
+  "next_phase": "P3 authoritative range preview executor",
+  "safe_resume": "Use the durable render_preview job, frozen graph snapshots, range projection, media probe and publication APIs."
+}

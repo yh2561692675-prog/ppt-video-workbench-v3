@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects",
+  "wave": "W0",
+  "task": "B00",
+  "generated_at": "2026-08-11T18:16:00+08:00",
+  "source": {
+    "worktree": "F:/ppt-video-workbench-v3",
+    "branch": "recovery/root-snapshot-20260810",
+    "head": "e81b455c4903889ac25697a4a030e523adb7650f",
+    "commit_subject": "fix(windows): stabilize launcher and full-flow acceptance",
+    "windows_commit_scope": "47 files, 3763 insertions, 89 deletions",
+    "staging_area_after_commit": "empty",
+    "shared_root_status": "dirty with 128 unrelated or later-program paths; none are part of the committed B00 scope"
+  },
+  "verification": {
+    "web": "43 files, 84 tests passed",
+    "remotion": "12 files, 32 tests passed",
+    "windows_and_office_focused": "12 tests passed",
+    "ruff_and_format": "passed",
+    "release_manifest": "RELEASE_ARTIFACTS_VERIFY=PASS",
+    "release_build": "exit code 0; 828.2 seconds",
+    "full_flow": "install, launch, PPT/DOCX import, narration, audio, preflight, page render, batch render, interruption recovery, final mux, restart recovery, rollback, shutdown and uninstall passed",
+    "playback": "Edge CDP currentTime 0 to 16.063997; ended=true; readyState=4; no media error or JavaScript exception",
+    "process_cleanup": "0 owned Workbench/launcher processes; final candidate install directory removed"
+  },
+  "release_candidate": {
+    "candidate_id": "rc-d8848a2-20260811T095432Z",
+    "installer_path": "release/ppt-video-workbench-setup.exe",
+    "installer_size_bytes": 273875909,
+    "installer_sha256": "656c527d7cd6be327f0612ace108c173c24c94e65214c3e150bb603028dadd0c",
+    "payload_manifest_sha256": "408981c49ada7a23b7513edd1021416e327253bee1951f28f5ac16f8c411c205",
+    "final_video_sha256": "613bb98836f24e99a4243ad20297850d65e9410c5e74a197fc0fe6681ff0bc34",
+    "final_video_size_bytes_after_uninstall": 1625250
+  },
+  "evidence": {
+    "report": "docs/acceptance/windows-full-flow-2026-08-11.md",
+    "report_sha256": "18a94bb24ee5b6767459efc7a2057c3124c3512b8f662cb5dac199d78e251061"
+  },
+  "stop_point": {
+    "status": "closed_with_explicit_blockers",
+    "trustworthy_for_g0": true,
+    "engineering_full_flow": "passed",
+    "formal_single_candidate_freeze": "blocked",
+    "source_ready_for_foundation_reconstruction": true
+  },
+  "blockers": [
+    "The business full-flow run completed on rc-d8848a2-20260811T083238Z, while the shutdown fix and final install/restart/uninstall regression completed on rc-d8848a2-20260811T095432Z; this is not one continuous schema 2.0 evidence bundle for a single candidate_id.",
+    "The acceptance flow used a deterministic transcript injector for known audio because no usable offline production ASR model was configured; it does not prove real ASR download and inference."
+  ],
+  "safe_resume": "Configure a real ASR provider/model, then run one continuous schema 2.0 A0-A9 acceptance bundle on rc-d8848a2-20260811T095432Z (or its exact rebuilt successor) before setting the formal release freeze to PASS."
+}

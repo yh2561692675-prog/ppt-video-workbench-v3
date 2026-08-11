@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "phase": "P5",
+  "gate": "G5",
+  "status": "passed",
+  "baseline_head": "117fb60cbb0ca877c0920a26f5ceb31d8e42e901",
+  "scope": "Legacy project read-only adaptation, migration, dual read and rollback",
+  "completed": [
+    "Anonymized single-file golden fixture covering missing fields, absolute paths, duplicate pages, missing media and protected source/media/final hashes",
+    "Deterministic read-only LegacyProjectAdapter producing stable timeline clips, legacy content-addressed assets and SubtitleRenderPlan",
+    "Explicit V2-exclusive fallback prohibition",
+    "Deterministic migration preview with actions, disk estimate, blocking/confirmation issues, backup instructions, rollback instructions and plan hash",
+    "Reentrant prepare, snapshot, write, validate and commit journal with staging cleanup on interruption",
+    "Atomic V2 pointer publication without overwriting legacy manifest, subtitle, media or final artifacts",
+    "Rollback that reactivates legacy entry while preserving the V2 diagnostic bundle",
+    "Dual reader preferring a valid V2 bundle and auditing every compatibility fallback reason",
+    "Migration preview, execute, rollback and render-source compatibility APIs for raw legacy manifests",
+    "Video preflight compatibility hook and graph id/hash-bound V2 render jobs",
+    "Disk-shortage, damaged-media, interrupted-write, restart, repeated execution, invalid-V2 fallback and rollback tests"
+  ],
+  "verification": {
+    "backend_gate": "58 passed",
+    "targeted_migration_gate": "16 passed",
+    "ruff": "All checks passed",
+    "mypy": "Success: no issues found in 9 source files",
+    "web_typecheck": "tsc --noEmit passed",
+    "prettier": "Golden fixture check passed",
+    "diff_check": "No whitespace errors; existing CRLF conversion warnings only",
+    "known_warning": "Pytest cache writes remain denied by existing workspace permissions"
+  },
+  "next_phase": "P6 Web end-to-end integration and unified task center",
+  "safe_resume": "Use migration APIs, ProjectRenderSource dual read, graph identity-bound jobs and G1 durable job inspection as frozen contracts."
+}

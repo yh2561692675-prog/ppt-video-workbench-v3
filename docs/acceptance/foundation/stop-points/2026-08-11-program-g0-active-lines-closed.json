@@ -1,0 +1,124 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects",
+  "wave": "W0",
+  "gate": "G0_ACTIVE_LINES_CLOSED",
+  "generated_at": "2026-08-11T18:35:01.0535055+08:00",
+  "decision": "passed",
+  "requirements": {
+    "windows_rendergraph_effects_closed_or_trustworthy": true,
+    "g1_g5_and_p2_sources_resolved": true,
+    "process_port_install_and_worktree_owners_recorded": true,
+    "no_active_w0_writer": true,
+    "root_destructive_cleanup_performed": false
+  },
+  "active_line_status": [
+    {
+      "id": "B00-Windows",
+      "thread_id": "019feed6-db8a-7d90-b3ef-90be11667084",
+      "thread_status": "idle",
+      "head": "e81b455c4903889ac25697a4a030e523adb7650f",
+      "stop_point": "closed_with_explicit_blockers",
+      "formal_release_freeze": "blocked and deferred to a later release gate",
+      "active_goal": false
+    },
+    {
+      "id": "B01-RenderGraph",
+      "thread_id": "019feb46-9d8c-75a2-b88a-950aa70c5a41",
+      "thread_status": "inactive/notLoaded",
+      "head": "1bef20823c27562b85fa1d142f1f794319879147",
+      "stop_point": "closed",
+      "active_goal": false
+    },
+    {
+      "id": "B02-Effects",
+      "thread_id": "019fef31-ec5f-7263-aedb-eed75703da14",
+      "thread_status": "idle",
+      "head": "fc41bdfe0997f842d718ab50353841d70809bf34",
+      "stop_point": "closed_with_explicit_blockers",
+      "formal_effects_freeze": "blocked and deferred to a later B-line release gate",
+      "active_goal": false,
+      "previous_goal_terminal_state": "blocked"
+    }
+  ],
+  "source_stop_points": [
+    {
+      "task": "A00",
+      "path": "docs/acceptance/foundation/stop-points/2026-08-11-program-a00-g1-g5-source-inventory.json",
+      "sha256": "ab5aa2d3e5af7c24326474f5d6a65cacde19daa0de3623ea7f5c883e7e1914cb"
+    },
+    {
+      "task": "B00",
+      "path": "docs/acceptance/foundation/stop-points/2026-08-11-program-b00-windows-stop-point.json",
+      "sha256": "698be53804f8eb01d932188760dc8c1f7073447503d73b2bbe3e9fa22ba32234"
+    },
+    {
+      "task": "B01",
+      "path": "docs/acceptance/foundation/stop-points/2026-08-11-program-b01-rendergraph-stop-point.json",
+      "sha256": "da1b5179f9de5413eecf314084fb1c6d07bb773089188e01c37e139e0ba3fd59"
+    },
+    {
+      "task": "B02",
+      "path": "docs/acceptance/foundation/stop-points/2026-08-11-program-b02-effects-stop-point.json",
+      "sha256": "ed57de8fd92848388434f97e69966e93086d2041ef326f26eed42c92861e854e"
+    },
+    {
+      "task": "C00",
+      "path": "docs/acceptance/foundation/stop-points/2026-08-11-program-c00-p2-platform-baseline.json",
+      "sha256": "22839df45030175ead5375a87f45e1d099bdf69f11bb9ec9626a0f4d703ffad6"
+    }
+  ],
+  "worktree_owners": [
+    {
+      "path": "F:/ppt-video-workbench-v3",
+      "branch": "recovery/root-snapshot-20260810",
+      "head": "e81b455c4903889ac25697a4a030e523adb7650f",
+      "state": "protected dirty recovery source",
+      "tracked_dirty_paths": 46,
+      "untracked_files": 99,
+      "staged_paths": 0,
+      "unmerged_index_entries": 0,
+      "owner": "A10 foundation reconstruction",
+      "policy": "no reset, clean, bulk checkout or overwrite"
+    },
+    {
+      "path": "F:/ppt-video-workbench-v3/.worktrees/rendergraph-v2-closure",
+      "branch": "codex/rendergraph-v2-closure",
+      "head": "1bef20823c27562b85fa1d142f1f794319879147",
+      "state": "source clean; release/ intentionally untracked generated artifact",
+      "owner": "frozen B01 source"
+    },
+    {
+      "path": "F:/ppt-video-workbench-v3/.worktrees/effects-task18-25-recovery",
+      "branch": "codex/effects-task18-25-recovery",
+      "head": "fc41bdfe0997f842d718ab50353841d70809bf34",
+      "state": "clean",
+      "owner": "frozen B02 source"
+    },
+    {
+      "path": "F:/ppt-video-workbench-v3/.worktrees/p2-platform-integration",
+      "branch": "codex/p2-platform-integration",
+      "head": "51cc32542bd64c758413bf3cbc8fa065070f5aa6",
+      "state": "clean",
+      "owner": "frozen C00 source"
+    }
+  ],
+  "runtime_inventory": {
+    "matching_workbench_launcher_soffice_ffmpeg_processes": 0,
+    "expected_listen_ports": [18080, 18180, 18280, 18380, 5173, 8000, 8010, 8020, 8030],
+    "expected_listen_port_count": 0,
+    "windows_final_candidate_install_directory": "removed after successful uninstall",
+    "effects_acceptance_install_directory": "removed after cleanup",
+    "external_acceptance_workspaces": "preserved as evidence owners; not source inputs"
+  },
+  "deferred_release_boundaries": [
+    "Run one continuous schema 2.0 A0-A9 bundle on one final Windows candidate with a real ASR configuration.",
+    "Run frozen 30-page Effects V2 dynamic Windows preview, caption/effect inspection and final export on the same RC.",
+    "Original Effects Task 18-25 commits and the claimed original sample ZIP remain unavailable; provenance stays explicit."
+  ],
+  "released_development_gates": [
+    "A10_FOUNDATION_SOURCE_RECONSTRUCTION",
+    "DP10_CANDIDATE_MANIFEST_V1"
+  ],
+  "next_action": "Execute A10 on the protected recovery source. Do not create the three long-lived program worktrees until FOUNDATION_SOURCE_READY is reproducible and clean."
+}
