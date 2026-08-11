@@ -128,6 +128,85 @@ def _validate_fingerprints(value: dict[str, str]) -> dict[str, str]:
     return dict(value)
 
 
+def _sync_target_keys(kind: str, payload: dict[str, Any]) -> list[str]:
+    explicit = payload.get("targets")
+    if explicit is not None:
+        if not isinstance(explicit, list) or any(
+            not isinstance(item, str)
+            or not item
+            or len(item) > 256
+            or not re.fullmatch(r"[a-z][a-z0-9_.-]*:[A-Za-z0-9_.:@/-]+", item)
+            for item in explicit
+        ):
+            raise HTTPException(status_code=422, detail="invalid_sync_targets")
+        return sorted(set(explicit))
+    identity_fields = (
+        ("clip_id", "clip"),
+        ("asset_id", "asset"),
+        ("page_id", "page"),
+        ("material_id", "material"),
+    )
+    targets = [
+        f"{prefix}:{payload[field]}"
+        for field, prefix in identity_fields
+        if payload.get(field)
+    ]
+    if kind == "project.metadata.set":
+        metadata = payload.get("metadata")
+        if isinstance(metadata, dict):
+            targets.extend(f"project.metadata:{key}" for key in metadata)
+        else:
+            targets.extend(
+                f"project.metadata:{key}"
+                for key in payload
+                if key not in {"targets", "client_note"}
+            )
+    if kind == "page.move":
+        targets.append("page-order:root")
+    if not targets:
+        targets.append(f"{kind}:root")
+    if any(len(item) > 256 for item in targets):
+        raise HTTPException(status_code=422, detail="invalid_sync_targets")
+    return sorted(set(targets))
+
+
+def _sync_conflict_kind(
+    incoming_kind: str, incoming_targets: set[str], intervening: list[tuple[str, set[str]]]
+) -> str:
+    if "page-order:root" in incoming_targets:
+        return "page_order"
+    if incoming_kind.endswith(".remove") or any(
+        kind.endswith(".remove") and incoming_targets & targets for kind, targets in intervening
+    ):
+        return "delete_modify"
+    return "same_field"
+
+
+def _apply_sync_operation(
+    manifest: dict[str, Any], kind: str, payload: dict[str, Any], targets: list[str]
+) -> dict[str, Any]:
+    updated = cast(dict[str, Any], json.loads(json.dumps(manifest, ensure_ascii=False)))
+    objects = updated.setdefault("sync_objects", {})
+    if not isinstance(objects, dict):
+        raise HTTPException(status_code=409, detail="incompatible_sync_manifest")
+    if kind == "project.metadata.set":
+        metadata = updated.setdefault("metadata", {})
+        if not isinstance(metadata, dict):
+            raise HTTPException(status_code=409, detail="incompatible_sync_manifest")
+        metadata_values = payload.get("metadata")
+        values: dict[str, Any] = metadata_values if isinstance(metadata_values, dict) else payload
+        for key, value in values.items():
+            if key not in {"targets", "client_note"}:
+                metadata[str(key)] = value
+    for target in targets:
+        if kind.endswith(".remove"):
+            objects.pop(target, None)
+        else:
+            objects[target] = {"kind": kind, "payload": payload}
+    updated["last_operation"] = {"kind": kind, "payload": payload, "targets": targets}
+    return updated
+
+
 class WorkspaceCreate(CloudModel):
     name: str = Field(min_length=1, max_length=120)
     organization_id: UUID | None = None
@@ -181,6 +260,21 @@ class SyncOperation(CloudModel):
     payload: dict[str, Any]
     payload_sha256: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     created_at: str = Field(min_length=1, max_length=80)
+
+
+class SyncConflictResolution(CloudModel):
+    expected_head_revision_id: UUID
+    strategy: Literal["keep_remote", "apply_local", "merged"]
+    merged_payload: dict[str, Any] | None = None
+    reason: str = Field(min_length=1, max_length=1000)
+
+    @model_validator(mode="after")
+    def validate_merged_payload(self) -> SyncConflictResolution:
+        if self.strategy == "merged" and self.merged_payload is None:
+            raise ValueError("merged strategy requires merged_payload")
+        if self.strategy != "merged" and self.merged_payload is not None:
+            raise ValueError("merged_payload is only valid for merged strategy")
+        return self
 
 
 class InitiateUpload(CloudModel):
@@ -509,6 +603,27 @@ class CloudRepository:
         for name, declaration in executor_additions.items():
             if name not in executor_columns:
                 db.execute(f"ALTER TABLE executors ADD COLUMN {name} {declaration}")
+        operation_columns = {
+            row["name"] for row in db.execute("PRAGMA table_info(operations)")
+        }
+        if "kind" not in operation_columns:
+            db.execute("ALTER TABLE operations ADD COLUMN kind TEXT NOT NULL DEFAULT 'legacy'")
+        if "target_keys_json" not in operation_columns:
+            db.execute(
+                "ALTER TABLE operations ADD COLUMN target_keys_json TEXT NOT NULL DEFAULT '[]'"
+            )
+        if "conflict_id" not in operation_columns:
+            db.execute("ALTER TABLE operations ADD COLUMN conflict_id TEXT")
+        db.execute(
+            "CREATE TABLE IF NOT EXISTS sync_conflicts ("
+            "id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) "
+            "ON DELETE CASCADE, operation_id TEXT NOT NULL UNIQUE, "
+            "idempotency_key TEXT NOT NULL UNIQUE, actor_id TEXT NOT NULL, "
+            "base_revision_id TEXT NOT NULL, head_revision_id TEXT NOT NULL, "
+            "kind TEXT NOT NULL, paths_json TEXT NOT NULL, operation_json TEXT NOT NULL, "
+            "status TEXT NOT NULL, resolution_json TEXT, resolved_revision_id TEXT, "
+            "created_at TEXT NOT NULL, resolved_at TEXT)"
+        )
 
     def create_organization(self, actor_id: str, name: str) -> dict[str, str]:
         organization_id = str(uuid4())
@@ -691,6 +806,44 @@ class CloudRepository:
             "membership_version": record["membership_version"],
             "created_at": record["created_at"],
         }
+
+    def revoke_member(
+        self, workspace_id: str, actor_id: str, target_actor_id: str
+    ) -> dict[str, Any]:
+        with self._lock, self._connect() as db:
+            role = self._workspace_access(db, workspace_id, actor_id)
+            if role not in {"owner", "admin"}:
+                raise HTTPException(status_code=403, detail="member_admin_required")
+            target = db.execute(
+                "SELECT role, membership_version FROM members "
+                "WHERE workspace_id=? AND actor_id=?",
+                (workspace_id, target_actor_id),
+            ).fetchone()
+            if target is None:
+                raise HTTPException(status_code=404, detail="member_not_found")
+            if target["role"] == "owner":
+                raise HTTPException(status_code=409, detail="workspace_owner_cannot_be_revoked")
+            db.execute(
+                "DELETE FROM members WHERE workspace_id=? AND actor_id=?",
+                (workspace_id, target_actor_id),
+            )
+        return {
+            "workspace_id": workspace_id,
+            "user_id": _principal_id(target_actor_id),
+            "status": "revoked",
+            "membership_version": int(target["membership_version"]) + 1,
+        }
+
+    def assert_active_device(self, actor_id: str, device_id: str | None) -> None:
+        if device_id is None:
+            return
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT status FROM devices WHERE id=? AND actor_id=?",
+                (device_id, actor_id),
+            ).fetchone()
+        if row is None or row["status"] != "active":
+            raise HTTPException(status_code=401, detail="device_revoked_or_unknown")
 
     def register_device(self, actor_id: str, device: DeviceRegister) -> dict[str, str]:
         now = _now()
@@ -931,6 +1084,7 @@ class CloudRepository:
         if canonical_sha256(operation.payload) != operation.payload_sha256:
             raise HTTPException(status_code=422, detail="payload_hash_mismatch")
         _assert_portable_document(operation.payload, field="operation.payload")
+        target_keys = _sync_target_keys(operation.kind, operation.payload)
         with self._lock, self._connect() as db:
             self._workspace_access(db, workspace_id, actor_id)
             project = db.execute(
@@ -943,6 +1097,12 @@ class CloudRepository:
                 (str(operation.idempotency_key),),
             ).fetchone()
             if existing is not None:
+                stored = json.loads(existing["payload_json"])
+                if (
+                    existing["id"] != str(operation.operation_id)
+                    or stored.get("payload_sha256") != operation.payload_sha256
+                ):
+                    raise HTTPException(status_code=409, detail="operation_idempotency_conflict")
                 revision = db.execute(
                     "SELECT * FROM revisions WHERE id=?", (existing["revision_id"],)
                 ).fetchone()
@@ -953,50 +1113,82 @@ class CloudRepository:
                     "cursor": existing["id"],
                     "conflict": None,
                 }
-            if str(operation.base_revision_id) != project["current_revision_id"]:
+            existing_conflict = db.execute(
+                "SELECT * FROM sync_conflicts WHERE idempotency_key=?",
+                (str(operation.idempotency_key),),
+            ).fetchone()
+            if existing_conflict is not None:
                 raise HTTPException(
-                    status_code=409,
-                    detail={
-                        "code": "revision_conflict",
-                        "head_revision_id": project["current_revision_id"],
-                    },
+                    status_code=409, detail=self._sync_conflict_dict(existing_conflict)
                 )
+            base = db.execute(
+                "SELECT * FROM revisions WHERE id=? AND project_id=?",
+                (str(operation.base_revision_id), project_id),
+            ).fetchone()
+            if base is None:
+                raise HTTPException(status_code=409, detail="sync_base_revision_missing")
+            if str(operation.base_revision_id) != project["current_revision_id"]:
+                rows = db.execute(
+                    "SELECT o.kind, o.target_keys_json FROM operations o "
+                    "JOIN revisions r ON r.id=o.revision_id "
+                    "WHERE o.project_id=? AND r.sequence>? ORDER BY r.sequence",
+                    (project_id, int(base["sequence"])),
+                ).fetchall()
+                intervening: list[tuple[str, set[str]]] = []
+                overlapping_paths: set[str] = set()
+                incoming = set(target_keys)
+                for row in rows:
+                    paths = set(json.loads(row["target_keys_json"]))
+                    if not paths:
+                        paths = {"*"}
+                    intervening.append((str(row["kind"]), paths))
+                    if "*" in paths:
+                        overlapping_paths.update(incoming)
+                    else:
+                        overlapping_paths.update(incoming & paths)
+                if overlapping_paths:
+                    conflict_id = str(uuid4())
+                    conflict_kind = _sync_conflict_kind(
+                        operation.kind, incoming, intervening
+                    )
+                    created_at = _now()
+                    db.execute(
+                        "INSERT INTO sync_conflicts "
+                        "(id, project_id, operation_id, idempotency_key, actor_id, "
+                        "base_revision_id, head_revision_id, kind, paths_json, "
+                        "operation_json, status, created_at) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?)",
+                        (
+                            conflict_id,
+                            project_id,
+                            str(operation.operation_id),
+                            str(operation.idempotency_key),
+                            actor_id,
+                            str(operation.base_revision_id),
+                            project["current_revision_id"],
+                            conflict_kind,
+                            json.dumps(sorted(overlapping_paths)),
+                            json.dumps(operation.model_dump(mode="json"), sort_keys=True),
+                            created_at,
+                        ),
+                    )
+                    conflict = db.execute(
+                        "SELECT * FROM sync_conflicts WHERE id=?", (conflict_id,)
+                    ).fetchone()
+                    assert conflict is not None
+                    db.commit()
+                    raise HTTPException(
+                        status_code=409, detail=self._sync_conflict_dict(conflict)
+                    )
             parent = db.execute(
                 "SELECT * FROM revisions WHERE id=?", (project["current_revision_id"],)
             ).fetchone()
-            manifest = json.loads(parent["manifest_json"])
-            manifest["last_operation"] = {"kind": operation.kind, "payload": operation.payload}
-            revision_id, operation_id = str(uuid4()), str(operation.operation_id)
-            created_at = _now()
-            db.execute(
-                "INSERT INTO revisions VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (
-                    revision_id,
-                    project_id,
-                    int(parent["sequence"]) + 1,
-                    parent["id"],
-                    canonical_sha256(manifest),
-                    json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
-                    created_at,
-                ),
+            if parent is None:
+                raise HTTPException(status_code=500, detail="project_head_missing")
+            revision = self._commit_sync_operation(
+                db, project_id, actor_id, operation, parent, target_keys
             )
-            db.execute(
-                "UPDATE projects SET current_revision_id=? WHERE id=?", (revision_id, project_id)
-            )
-            db.execute(
-                "INSERT INTO operations VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    operation_id,
-                    str(operation.idempotency_key),
-                    project_id,
-                    actor_id,
-                    str(operation.base_revision_id),
-                    revision_id,
-                    json.dumps(operation.model_dump(mode="json"), separators=(",", ":")),
-                    created_at,
-                ),
-            )
-            revision = db.execute("SELECT * FROM revisions WHERE id=?", (revision_id,)).fetchone()
+            operation_id = str(operation.operation_id)
         return {
             "operation_id": operation_id,
             "accepted_attempt_id": str(operation.attempt_id),
@@ -1004,6 +1196,178 @@ class CloudRepository:
             "cursor": operation_id,
             "conflict": None,
         }
+
+    @staticmethod
+    def _commit_sync_operation(
+        db: sqlite3.Connection,
+        project_id: str,
+        actor_id: str,
+        operation: SyncOperation,
+        parent: sqlite3.Row,
+        target_keys: list[str],
+        *,
+        conflict_id: str | None = None,
+    ) -> sqlite3.Row:
+        manifest = _apply_sync_operation(
+            json.loads(parent["manifest_json"]), operation.kind, operation.payload, target_keys
+        )
+        revision_id = str(uuid4())
+        operation_id = str(operation.operation_id)
+        created_at = _now()
+        db.execute(
+            "INSERT INTO revisions VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                revision_id,
+                project_id,
+                int(parent["sequence"]) + 1,
+                parent["id"],
+                canonical_sha256(manifest),
+                json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+                created_at,
+            ),
+        )
+        db.execute(
+            "UPDATE projects SET current_revision_id=? WHERE id=?",
+            (revision_id, project_id),
+        )
+        db.execute(
+            "INSERT INTO operations "
+            "(id, idempotency_key, project_id, actor_id, base_revision_id, revision_id, "
+            "payload_json, created_at, kind, target_keys_json, conflict_id) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                operation_id,
+                str(operation.idempotency_key),
+                project_id,
+                actor_id,
+                str(operation.base_revision_id),
+                revision_id,
+                json.dumps(operation.model_dump(mode="json"), separators=(",", ":")),
+                created_at,
+                operation.kind,
+                json.dumps(target_keys),
+                conflict_id,
+            ),
+        )
+        revision = cast(
+            sqlite3.Row,
+            db.execute("SELECT * FROM revisions WHERE id=?", (revision_id,)).fetchone(),
+        )
+        assert revision is not None
+        return revision
+
+    @staticmethod
+    def _sync_conflict_dict(row: sqlite3.Row) -> dict[str, Any]:
+        return {
+            "conflict_id": row["id"],
+            "project_id": row["project_id"],
+            "operation_id": row["operation_id"],
+            "base_revision_id": row["base_revision_id"],
+            "head_revision_id": row["head_revision_id"],
+            "kind": row["kind"],
+            "paths": json.loads(row["paths_json"]),
+            "status": row["status"],
+            "resolution": (
+                json.loads(row["resolution_json"]) if row["resolution_json"] else None
+            ),
+            "resolved_revision_id": row["resolved_revision_id"],
+            "created_at": row["created_at"],
+            "resolved_at": row["resolved_at"],
+        }
+
+    def sync_conflicts(
+        self, workspace_id: str, project_id: str, actor_id: str
+    ) -> list[dict[str, Any]]:
+        self.project(workspace_id, project_id, actor_id)
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT * FROM sync_conflicts WHERE project_id=? ORDER BY created_at, id",
+                (project_id,),
+            ).fetchall()
+        return [self._sync_conflict_dict(row) for row in rows]
+
+    def resolve_sync_conflict(
+        self,
+        workspace_id: str,
+        project_id: str,
+        conflict_id: str,
+        actor_id: str,
+        resolution: SyncConflictResolution,
+    ) -> dict[str, Any]:
+        self.project(workspace_id, project_id, actor_id)
+        _assert_portable_document(
+            resolution.merged_payload or {}, field="conflict.merged_payload"
+        )
+        with self._lock, self._connect() as db:
+            conflict = db.execute(
+                "SELECT * FROM sync_conflicts WHERE id=? AND project_id=?",
+                (conflict_id, project_id),
+            ).fetchone()
+            if conflict is None:
+                raise HTTPException(status_code=404, detail="sync_conflict_not_found")
+            if conflict["status"] == "resolved":
+                return self._sync_conflict_dict(conflict)
+            project = db.execute(
+                "SELECT * FROM projects WHERE id=? AND workspace_id=?", (project_id, workspace_id)
+            ).fetchone()
+            if project is None:
+                raise HTTPException(status_code=404, detail="project_not_found")
+            if str(resolution.expected_head_revision_id) != project["current_revision_id"]:
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "code": "revision_conflict",
+                        "head_revision_id": project["current_revision_id"],
+                    },
+                )
+            resolved_revision_id: str | None = None
+            if resolution.strategy != "keep_remote":
+                operation = SyncOperation.model_validate(json.loads(conflict["operation_json"]))
+                payload = (
+                    resolution.merged_payload
+                    if resolution.strategy == "merged"
+                    else operation.payload
+                )
+                assert payload is not None
+                operation = operation.model_copy(
+                    update={
+                        "base_revision_id": UUID(project["current_revision_id"]),
+                        "payload": payload,
+                        "payload_sha256": canonical_sha256(payload),
+                    }
+                )
+                target_keys = _sync_target_keys(operation.kind, operation.payload)
+                parent = db.execute(
+                    "SELECT * FROM revisions WHERE id=?", (project["current_revision_id"],)
+                ).fetchone()
+                if parent is None:
+                    raise HTTPException(status_code=500, detail="project_head_missing")
+                revision = self._commit_sync_operation(
+                    db,
+                    project_id,
+                    actor_id,
+                    operation,
+                    parent,
+                    target_keys,
+                    conflict_id=conflict_id,
+                )
+                resolved_revision_id = str(revision["id"])
+            resolved_at = _now()
+            db.execute(
+                "UPDATE sync_conflicts SET status='resolved', resolution_json=?, "
+                "resolved_revision_id=?, resolved_at=? WHERE id=?",
+                (
+                    json.dumps(resolution.model_dump(mode="json"), sort_keys=True),
+                    resolved_revision_id,
+                    resolved_at,
+                    conflict_id,
+                ),
+            )
+            updated = db.execute(
+                "SELECT * FROM sync_conflicts WHERE id=?", (conflict_id,)
+            ).fetchone()
+        assert updated is not None
+        return self._sync_conflict_dict(updated)
 
     def operations(
         self, workspace_id: str, project_id: str, actor_id: str, cursor: str | None
@@ -2124,6 +2488,18 @@ def create_cloud_app(
     ) -> dict[str, Any]:
         return repository.add_member(workspace_id(request), actor(x_actor_id), payload)
 
+    @router.delete("/workspaces/{workspaceId}/members/{actorId}")
+    def revoke_member(
+        request: Request,
+        actorId: str,
+        idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=200),
+        x_actor_id: str | None = Header(default=None),
+    ) -> dict[str, Any]:
+        del idempotency_key
+        return repository.revoke_member(
+            workspace_id(request), actor(x_actor_id), actorId
+        )
+
     @router.post("/workspaces/{workspaceId}/service-accounts", status_code=201)
     def create_service_account(
         request: Request,
@@ -2212,11 +2588,14 @@ def create_cloud_app(
     def list_operations(
         request: Request,
         cursor: str | None = Query(default=None),
+        x_device_id: str | None = Header(default=None, alias="X-Device-ID"),
         x_actor_id: str | None = Header(default=None),
     ) -> dict[str, Any]:
+        actor_id = actor(x_actor_id)
+        repository.assert_active_device(actor_id, x_device_id)
         return {
             "items": repository.operations(
-                workspace_id(request), project_id(request), actor(x_actor_id), cursor
+                workspace_id(request), project_id(request), actor_id, cursor
             ),
             "next_cursor": None,
         }
@@ -2226,13 +2605,53 @@ def create_cloud_app(
         request: Request,
         payload: SyncOperation,
         response: Response,
+        x_device_id: str | None = Header(default=None, alias="X-Device-ID"),
         x_actor_id: str | None = Header(default=None),
     ) -> dict[str, Any]:
+        actor_id = actor(x_actor_id)
+        repository.assert_active_device(actor_id, x_device_id)
         result = repository.append_operation(
-            workspace_id(request), project_id(request), actor(x_actor_id), payload
+            workspace_id(request), project_id(request), actor_id, payload
         )
         response.headers["Operation-Id"] = result["operation_id"]
         return result
+
+    @router.get("/workspaces/{workspaceId}/projects/{projectId}/conflicts")
+    def list_sync_conflicts(
+        request: Request,
+        x_device_id: str | None = Header(default=None, alias="X-Device-ID"),
+        x_actor_id: str | None = Header(default=None),
+    ) -> dict[str, Any]:
+        actor_id = actor(x_actor_id)
+        repository.assert_active_device(actor_id, x_device_id)
+        return {
+            "items": repository.sync_conflicts(
+                workspace_id(request), project_id(request), actor_id
+            ),
+            "next_cursor": None,
+        }
+
+    @router.post(
+        "/workspaces/{workspaceId}/projects/{projectId}/conflicts/{conflictId}/resolve"
+    )
+    def resolve_sync_conflict(
+        request: Request,
+        conflictId: str,
+        payload: SyncConflictResolution,
+        idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=200),
+        x_device_id: str | None = Header(default=None, alias="X-Device-ID"),
+        x_actor_id: str | None = Header(default=None),
+    ) -> dict[str, Any]:
+        del idempotency_key
+        actor_id = actor(x_actor_id)
+        repository.assert_active_device(actor_id, x_device_id)
+        return repository.resolve_sync_conflict(
+            workspace_id(request),
+            project_id(request),
+            conflictId,
+            actor_id,
+            payload,
+        )
 
     @router.post("/workspaces/{workspaceId}/projects/{projectId}/objects/uploads", status_code=201)
     def initiate_upload(

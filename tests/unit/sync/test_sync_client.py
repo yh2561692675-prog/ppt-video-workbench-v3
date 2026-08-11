@@ -119,3 +119,81 @@ def test_sync_client_requires_pull_capability(tmp_path: Path) -> None:
 
     with pytest.raises(SyncTransportError, match="pulling operations"):
         client.pull(Transport())  # type: ignore[arg-type]
+
+
+def test_resumable_object_staging_and_full_rebuild_preserve_outbox(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / ".sync" / "outbox.db"
+    staging = tmp_path / "staging"
+    content = b"resumable-object-content"
+    object_id = "sha256:" + sha256(content).hexdigest()
+    split = len(content) // 2
+
+    first_process = SyncClient(database, enabled=True)
+    partial = first_process.stage_object_chunk(
+        object_id,
+        content[:split],
+        offset=0,
+        total_size=len(content),
+        staging_root=staging,
+    )
+    assert partial.name.endswith(".part")
+    operation_id = str(uuid4())
+    assert first_process.enqueue(operation_id, {"kind": "page.insert"}) is True
+
+    restarted = SyncClient(database, enabled=True)
+    completed = restarted.stage_object_chunk(
+        object_id,
+        content[split:],
+        offset=split,
+        total_size=len(content),
+        staging_root=staging,
+    )
+    assert completed.read_bytes() == content
+    assert restarted.state().pending == 1
+
+    class PullTransport:
+        def list_operations(self, cursor: str | None = None) -> dict[str, object]:
+            del cursor
+            return {
+                "items": [
+                    {
+                        "operation_id": "remote-op-1",
+                        "kind": "page.insert",
+                    }
+                ]
+            }
+
+    restarted.pull(PullTransport())  # type: ignore[arg-type]
+    assert restarted.state().remote_operations == 1
+    restarted.begin_full_rebuild()
+    rebuilt = restarted.state()
+    assert rebuilt.remote_operations == 0
+    assert rebuilt.last_cursor is None
+    assert rebuilt.pending == 1
+
+
+def test_failed_chunk_hash_can_restart_from_zero(tmp_path: Path) -> None:
+    client = SyncClient(tmp_path / ".sync" / "outbox.db", enabled=True)
+    content = b"correct-content"
+    object_id = "sha256:" + sha256(content).hexdigest()
+    staging = tmp_path / "staging"
+
+    with pytest.raises(ValueError, match="object hash mismatch"):
+        client.stage_object_chunk(
+            object_id,
+            b"incorrect-data!",
+            staging,
+            offset=0,
+            total_size=len(content),
+        )
+
+    recovered = client.stage_object_chunk(
+        object_id,
+        content,
+        staging,
+        offset=0,
+        total_size=len(content),
+    )
+    assert recovered.read_bytes() == content

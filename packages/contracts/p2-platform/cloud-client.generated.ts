@@ -34,6 +34,7 @@ export const CLOUD_OPERATIONS = {
   listRemoteJobs: { method: "GET", path: "/workspaces/{workspaceId}/projects/{projectId}/jobs" },
   listReviews: { method: "GET", path: "/workspaces/{workspaceId}/projects/{projectId}/reviews" },
   listServiceAccounts: { method: "GET", path: "/workspaces/{workspaceId}/service-accounts" },
+  listSyncConflicts: { method: "GET", path: "/workspaces/{workspaceId}/projects/{projectId}/conflicts" },
   listSyncOperations: { method: "GET", path: "/workspaces/{workspaceId}/projects/{projectId}/operations" },
   listWorkspaceMembers: { method: "GET", path: "/workspaces/{workspaceId}/members" },
   listWorkspaces: { method: "GET", path: "/workspaces" },
@@ -41,7 +42,9 @@ export const CLOUD_OPERATIONS = {
   registerExecutor: { method: "POST", path: "/workspaces/{workspaceId}/executors" },
   releaseProjectLease: { method: "DELETE", path: "/workspaces/{workspaceId}/projects/{projectId}/lease" },
   reportRemoteJobResult: { method: "POST", path: "/workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}/result" },
+  resolveSyncConflict: { method: "POST", path: "/workspaces/{workspaceId}/projects/{projectId}/conflicts/{conflictId}/resolve" },
   revokeDevice: { method: "DELETE", path: "/devices/{deviceId}" },
+  revokeWorkspaceMember: { method: "DELETE", path: "/workspaces/{workspaceId}/members/{actorId}" },
   submitReview: { method: "POST", path: "/workspaces/{workspaceId}/projects/{projectId}/reviews" },
   uploadObjectPart: { method: "PUT", path: "/workspaces/{workspaceId}/projects/{projectId}/objects/uploads/{uploadId}/parts/{partNumber}" },
 } as const satisfies Record<string, { method: CloudHttpMethod; path: string }>;
@@ -267,6 +270,10 @@ export class CloudCollaborationClient {
     return this.request<T>("listServiceAccounts", options);
   }
 
+  async listSyncConflicts<T = unknown>(options: CloudRequestOptions = {}): Promise<T> {
+    return this.request<T>("listSyncConflicts", options);
+  }
+
   async listSyncOperations<T = unknown>(options: CloudRequestOptions = {}): Promise<T> {
     return this.request<T>("listSyncOperations", options);
   }
@@ -295,8 +302,16 @@ export class CloudCollaborationClient {
     return this.request<T>("reportRemoteJobResult", options);
   }
 
+  async resolveSyncConflict<T = unknown>(options: CloudRequestOptions = {}): Promise<T> {
+    return this.request<T>("resolveSyncConflict", options);
+  }
+
   async revokeDevice<T = unknown>(options: CloudRequestOptions = {}): Promise<T> {
     return this.request<T>("revokeDevice", options);
+  }
+
+  async revokeWorkspaceMember<T = unknown>(options: CloudRequestOptions = {}): Promise<T> {
+    return this.request<T>("revokeWorkspaceMember", options);
   }
 
   async submitReview<T = unknown>(options: CloudRequestOptions = {}): Promise<T> {

@@ -64,6 +64,7 @@ def test_cloud_database_migrations_are_versioned_and_idempotent(tmp_path: Path) 
         (2, "0002_identity_control"),
         (3, "0003_collaboration_integrity"),
         (4, "0004_remote_job_attempts"),
+        (5, "0005_offline_sync_conflicts"),
     ]
     assert all(re.fullmatch(r"sha256:[0-9a-f]{64}", row[2]) for row in rows)
 
@@ -119,6 +120,13 @@ def test_cloud_database_upgrades_legacy_executor_columns(tmp_path: Path) -> None
         job_columns = {row[1] for row in db.execute("PRAGMA table_info(jobs)")}
         result_columns = {row[1] for row in db.execute("PRAGMA table_info(job_results)")}
         executor_columns = {row[1] for row in db.execute("PRAGMA table_info(executors)")}
+        operation_columns = {row[1] for row in db.execute("PRAGMA table_info(operations)")}
+        conflict_tables = {
+            row[0]
+            for row in db.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='sync_conflicts'"
+            )
+        }
     assert {
         "executor_id",
         "fingerprints_json",
@@ -138,6 +146,8 @@ def test_cloud_database_upgrades_legacy_executor_columns(tmp_path: Path) -> None
         "output_media_types_json",
     } <= result_columns
     assert {"capability_snapshot_json", "gpu_label", "office_capability"} <= executor_columns
+    assert {"kind", "target_keys_json", "conflict_id"} <= operation_columns
+    assert conflict_tables == {"sync_conflicts"}
 
 
 def test_cloud_prototype_enforces_tenant_ownership_and_idempotent_revisions(tmp_path: Path) -> None:

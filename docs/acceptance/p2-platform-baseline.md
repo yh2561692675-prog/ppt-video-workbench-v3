@@ -26,10 +26,10 @@ $env:PYTHONPATH = 'apps/api/src'
 & $py -m ruff check apps/api/src/workbench/p2.py apps/api/src/workbench/contracts/p2_platform.py apps/api/src/workbench/cache apps/api/src/workbench/diagnostics/p2_privacy.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype tests/contract tests/unit/providers tests/unit/platform_foundation tests/unit/cache/test_p2_matrix.py tests/unit/diagnostics/test_p2_privacy.py tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/integration/test_narration_generation_api.py tests/cloud tests/platform
 ```
 
-Current result: **110 focused P2 tests passed**, mypy reports no issues in 33 source files,
+Current result: **114 focused P2 tests passed**, mypy reports no issues in 33 source files,
 and Ruff reports no violations.
 
-The generated Cloud TypeScript client covers all 41 OpenAPI operations; its drift check
+The generated Cloud TypeScript client covers all 44 OpenAPI operations; its drift check
 passes and the P2 contract package passes a strict standalone TypeScript `--noEmit` run.
 
 The independent `peripheral-platform` S0 host also passes **128 tests** on the
@@ -43,8 +43,8 @@ baseline result is not reclassified as a current run.
 
 ## Explicitly unclaimed evidence
 
-- Full recovery-snapshot acceptance remains a separate baseline with existing
-  unrelated failures (10 legacy crash-recovery status expectations, the async
+- Full recovery-snapshot acceptance remains a separate baseline with **534 passes and 12 existing
+  unrelated failures** (10 legacy crash-recovery status expectations, the async
   M5 render status expectation, and one isolated-branch AI narration
   compatibility assertion); P04 legacy-result projection is covered by the
   current compatibility migration; it is not silently
@@ -64,8 +64,12 @@ baseline result is not reclassified as a current run.
   pass/fail privacy summary with finding codes.
 - Legacy projects have a deterministic local-first Provider policy helper that is
   additive and never writes policy fields implicitly.
-- The cloud prototype has an HTTP-level two-device evidence test covering A's
-  outbox, B's cursor pull/acknowledgement, and stale-base conflict handling.
+- The cloud prototype has HTTP-level two-device evidence covering A/B offline edits,
+  disjoint-object auto-merge, same-object structured conflict/manual resolution,
+  delete/modify and page-order races, comments/reviews/leases, member/device revocation,
+  cross-tenant conflict isolation, and conflict recovery after control-plane restart.
+- Desktop sync tests cover restart-safe chunk resume with final hash verification and
+  full remote-replica rebuild without deleting the durable local outbox.
 - Remote jobs now bind the immutable revision, Provider policy, runtime image,
   capability labels and region. Every dispatch/reclaim creates a new attempt and bounded
   lease with a short-lived capability token stored only as a hash; stale attempts,

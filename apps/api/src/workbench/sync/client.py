@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sqlite3
 from dataclasses import dataclass
@@ -24,11 +25,17 @@ class SyncClientState:
 
 class SyncTransportError(RuntimeError):
     def __init__(
-        self, message: str, *, retryable: bool = True, conflict_id: str | None = None
+        self,
+        message: str,
+        *,
+        retryable: bool = True,
+        conflict_id: str | None = None,
+        conflict: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(message)
         self.retryable = retryable
         self.conflict_id = conflict_id
+        self.conflict = conflict
 
 
 class SyncTransport(Protocol):
@@ -37,6 +44,10 @@ class SyncTransport(Protocol):
     def list_operations(self, cursor: str | None = None) -> dict[str, Any]: ...
 
     def download_object(self, object_id: str) -> bytes: ...
+
+    def resolve_conflict(
+        self, conflict_id: str, resolution: dict[str, Any]
+    ) -> dict[str, Any]: ...
 
 
 @dataclass(frozen=True)
@@ -95,6 +106,18 @@ class SyncClient:
                 "CREATE TABLE IF NOT EXISTS sync_state ("
                 "key TEXT PRIMARY KEY, value TEXT NOT NULL)"
             )
+            db.execute(
+                "CREATE TABLE IF NOT EXISTS conflicts ("
+                "conflict_id TEXT PRIMARY KEY, operation_id TEXT NOT NULL UNIQUE, "
+                "details_json TEXT NOT NULL, status TEXT NOT NULL, "
+                "resolution_json TEXT, updated_at TEXT NOT NULL)"
+            )
+            db.execute(
+                "CREATE TABLE IF NOT EXISTS object_transfers ("
+                "object_id TEXT PRIMARY KEY, staging_path TEXT NOT NULL, "
+                "total_size INTEGER NOT NULL, received_size INTEGER NOT NULL, "
+                "status TEXT NOT NULL, updated_at TEXT NOT NULL)"
+            )
 
     def enqueue(self, operation_id: str, payload: dict[str, Any]) -> bool:
         self._require_enabled()
@@ -136,10 +159,106 @@ class SyncClient:
     def mark_failed(self, operation_id: str, error: str) -> None:
         self._set_status(operation_id, "failed", cursor=None, error=error[:500])
 
-    def mark_conflict(self, operation_id: str, conflict_id: str) -> None:
-        self._set_status(
-            operation_id, "conflict", cursor=conflict_id, error="manual_merge_required"
-        )
+    def mark_conflict(
+        self,
+        operation_id: str,
+        conflict_id: str,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        conflict = details or {"conflict_id": conflict_id}
+        _assert_sync_payload(conflict, field="conflict")
+        with self._lock, self._connect() as db:
+            cursor = db.execute(
+                "UPDATE outbox SET status='conflict', attempts=attempts+1, cursor=?, "
+                "last_error='manual_merge_required', updated_at=? WHERE operation_id=?",
+                (conflict_id, _now(), operation_id),
+            )
+            if cursor.rowcount == 0:
+                raise KeyError(operation_id)
+            db.execute(
+                "INSERT INTO conflicts "
+                "(conflict_id, operation_id, details_json, status, updated_at) "
+                "VALUES (?, ?, ?, 'open', ?) "
+                "ON CONFLICT(conflict_id) DO UPDATE SET "
+                "details_json=excluded.details_json, updated_at=excluded.updated_at",
+                (
+                    conflict_id,
+                    operation_id,
+                    json.dumps(conflict, ensure_ascii=False, sort_keys=True),
+                    _now(),
+                ),
+            )
+
+    def conflicts(self, *, status: str | None = None) -> list[dict[str, Any]]:
+        self._require_enabled()
+        if status not in {None, "open", "resolved"}:
+            raise ValueError("status must be open, resolved, or None")
+        query = "SELECT * FROM conflicts"
+        parameters: tuple[object, ...] = ()
+        if status is not None:
+            query += " WHERE status=?"
+            parameters = (status,)
+        query += " ORDER BY updated_at, conflict_id"
+        with self._connect() as db:
+            rows = db.execute(query, parameters).fetchall()
+        return [
+            {
+                "conflict_id": row["conflict_id"],
+                "operation_id": row["operation_id"],
+                "details": json.loads(row["details_json"]),
+                "status": row["status"],
+                "resolution": (
+                    json.loads(row["resolution_json"]) if row["resolution_json"] else None
+                ),
+            }
+            for row in rows
+        ]
+
+    def resolve_conflict(
+        self,
+        transport: SyncTransport,
+        operation_id: str,
+        *,
+        strategy: str,
+        expected_head_revision_id: str,
+        reason: str,
+        merged_payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        self._require_enabled()
+        if strategy not in {"keep_remote", "apply_local", "merged"}:
+            raise ValueError("invalid conflict resolution strategy")
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT * FROM conflicts WHERE operation_id=? AND status='open'",
+                (operation_id,),
+            ).fetchone()
+        if row is None:
+            raise KeyError(operation_id)
+        resolution: dict[str, Any] = {
+            "expected_head_revision_id": expected_head_revision_id,
+            "strategy": strategy,
+            "reason": reason,
+        }
+        if merged_payload is not None:
+            resolution["merged_payload"] = merged_payload
+        _assert_sync_payload(resolution, field="conflict.resolution")
+        result = transport.resolve_conflict(str(row["conflict_id"]), resolution)
+        with self._lock, self._connect() as db:
+            db.execute(
+                "UPDATE conflicts SET status='resolved', resolution_json=?, updated_at=? "
+                "WHERE operation_id=?",
+                (
+                    json.dumps(result, ensure_ascii=False, sort_keys=True),
+                    _now(),
+                    operation_id,
+                ),
+            )
+            db.execute(
+                "UPDATE outbox SET status='resolved', last_error=NULL, updated_at=? "
+                "WHERE operation_id=?",
+                (_now(), operation_id),
+            )
+        return result
 
     def _set_status(
         self, operation_id: str, status: str, *, cursor: str | None, error: str | None
@@ -282,6 +401,80 @@ class SyncClient:
             )
         return target
 
+    def stage_object_chunk(
+        self,
+        object_id: str,
+        content: bytes,
+        staging_root: Path,
+        *,
+        offset: int,
+        total_size: int,
+    ) -> Path:
+        """Append one resumable chunk and atomically publish only after final hash validation."""
+
+        self._require_enabled()
+        digest = object_id.removeprefix("sha256:")
+        if not re.fullmatch(r"[0-9a-f]{64}", digest) or offset < 0 or total_size < 0:
+            raise ValueError("invalid object transfer declaration")
+        staging_root.mkdir(parents=True, exist_ok=True)
+        root = staging_root.resolve()
+        target = (root / digest).resolve()
+        if target.parent != root:
+            raise ValueError("invalid object staging path")
+        temporary = target.with_suffix(".part")
+        current_size = temporary.stat().st_size if temporary.exists() else 0
+        if current_size != offset:
+            raise ValueError("object transfer offset mismatch")
+        if current_size + len(content) > total_size:
+            raise ValueError("object transfer exceeds declared size")
+        with temporary.open("ab") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        received_size = temporary.stat().st_size
+        status = "staged" if received_size == total_size else "partial"
+        with self._lock, self._connect() as db:
+            db.execute(
+                "INSERT INTO object_transfers "
+                "(object_id, staging_path, total_size, received_size, status, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(object_id) DO UPDATE SET "
+                "total_size=excluded.total_size, received_size=excluded.received_size, "
+                "status=excluded.status, updated_at=excluded.updated_at",
+                (object_id, digest, total_size, received_size, status, _now()),
+            )
+        if received_size < total_size:
+            return temporary
+        if sha256(temporary.read_bytes()).hexdigest() != digest:
+            temporary.unlink(missing_ok=True)
+            with self._lock, self._connect() as db:
+                db.execute(
+                    "UPDATE object_transfers SET received_size=0, status='hash_mismatch', "
+                    "updated_at=? "
+                    "WHERE object_id=?",
+                    (_now(), object_id),
+                )
+            raise ValueError("object hash mismatch")
+        temporary.replace(target)
+        with self._lock, self._connect() as db:
+            db.execute(
+                "INSERT OR REPLACE INTO inbox VALUES (?, ?, ?, ?)",
+                (object_id, digest, object_id, _now()),
+            )
+            db.execute(
+                "UPDATE object_transfers SET status='complete', updated_at=? WHERE object_id=?",
+                (_now(), object_id),
+            )
+        return target
+
+    def begin_full_rebuild(self) -> None:
+        """Reset only the remote replica cursor; durable local outbox entries are preserved."""
+
+        self._require_enabled()
+        with self._lock, self._connect() as db:
+            db.execute("DELETE FROM remote_operations")
+            db.execute("DELETE FROM sync_state WHERE key='remote_cursor'")
+
     def flush(self, transport: SyncTransport, *, limit: int = 20) -> SyncBatchResult:
         """Submit an outbox batch without deleting unacknowledged operations."""
 
@@ -293,7 +486,7 @@ class SyncClient:
                 result = transport.append_operation(operation_id, item["payload"])
             except SyncTransportError as error:
                 if error.conflict_id:
-                    self.mark_conflict(operation_id, error.conflict_id)
+                    self.mark_conflict(operation_id, error.conflict_id, error.conflict)
                     counts["conflict"] += 1
                 elif error.retryable:
                     self.mark_retryable(operation_id, str(error))
