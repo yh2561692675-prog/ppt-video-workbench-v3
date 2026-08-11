@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/platform-capability-v1.schema.json",
+  "title": "PlatformCapabilityV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "platform", "runtime_version", "capabilities", "tools"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "platform": {"type": "string", "enum": ["windows", "macos", "linux"]},
+    "runtime_version": {"type": "string", "minLength": 1, "maxLength": 100},
+    "capabilities": {"type": "array", "maxItems": 200, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,99}$"}},
+    "tools": {"type": "array", "maxItems": 100, "items": {"$ref": "#/$defs/tool"}},
+    "diagnostic_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "tool": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "available"],
+      "properties": {
+        "name": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,63}$"},
+        "available": {"type": "boolean"}, "version": {"type": ["string", "null"], "maxLength": 100},
+        "capabilities": {"type": "array", "maxItems": 100, "uniqueItems": true, "items": {"type": "string"}}
+      }
+    }
+  }
+}
+

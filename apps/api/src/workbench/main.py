@@ -85,6 +85,7 @@ from workbench.media.presenter_audio import AnalysisAudio
 from workbench.media.presenter_service import PresenterImportService, PresenterProbe
 from workbench.narration.repository import NarrationRepository
 from workbench.ocr.paddle_adapter import OcrEngine
+from workbench.p2 import P2Composition, P2FeatureFlags
 from workbench.peripheral_s1.coordinator import S1Coordinator
 from workbench.peripheral_s1.inbox import ProjectionInbox
 from workbench.peripheral_s1.projector import ProjectorRegistry
@@ -156,6 +157,7 @@ def create_app(
     diagnostic_center_factory: Callable[[Path], DiagnosticCenterProtocol] | None = None,
     presenter_probe: PresenterProbe | None = None,
     presenter_audio_extractor: Callable[[Path, Path], AnalysisAudio] | None = None,
+    p2_flags: P2FeatureFlags | None = None,
 ) -> FastAPI:
     configured_root = workspace_root or Path(
         os.environ.get("WORKBENCH_WORKSPACE", Path.cwd() / "workspace-data")
@@ -191,6 +193,7 @@ def create_app(
         service.close()
 
     app = FastAPI(title="PPT Video Workbench", version="0.1.0", lifespan=lifespan)
+    P2Composition.build(configured_root, flags=p2_flags).install(app)
     app.state.project_service = service
     app.state.llm_profile_store = profile_store
     app.state.heygen_profile_store = heygen_profile_store

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/cloud-sync-operation-v1.schema.json",
+  "title": "CloudSyncOperationV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "operation_id", "idempotency_key", "attempt_id", "workspace_id", "project_id", "base_revision_id", "client_id", "client_sequence", "kind", "payload", "payload_sha256", "created_at"],
+  "properties": {
+    "schema_version": {"const": 1}, "operation_id": {"$ref": "#/$defs/uuid"}, "idempotency_key": {"$ref": "#/$defs/uuid"}, "attempt_id": {"$ref": "#/$defs/uuid"},
+    "workspace_id": {"$ref": "#/$defs/uuid"}, "project_id": {"$ref": "#/$defs/uuid"}, "base_revision_id": {"$ref": "#/$defs/uuid"}, "client_id": {"$ref": "#/$defs/uuid"},
+    "client_sequence": {"type": "integer", "minimum": 0},
+    "kind": {"type": "string", "enum": ["project.metadata.set", "material.add", "material.remove", "page.insert", "page.move", "page.replace", "page.remove", "timeline.patch", "revision.resolve_conflict"]},
+    "payload": {"type": "object", "maxProperties": 10000}, "payload_sha256": {"$ref": "#/$defs/sha256"}, "created_at": {"$ref": "#/$defs/timestamp"}
+  },
+  "$defs": {
+    "uuid": {"type": "string", "format": "uuid", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"},
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, "timestamp": {"type": "string", "format": "date-time", "pattern": "Z$"}
+  }
+}
+
