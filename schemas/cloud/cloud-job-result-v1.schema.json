@@ -4,11 +4,12 @@
   "title": "CloudJobResultV1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["attempt_id", "executor_id", "status", "result", "result_sha256", "output_refs"],
+  "required": ["attempt_id", "executor_id", "status", "result_schema_version", "result", "result_sha256", "output_refs", "output_media_types", "fingerprints"],
   "properties": {
     "attempt_id": { "type": "string", "format": "uuid" },
     "executor_id": { "type": "string", "format": "uuid" },
     "status": { "type": "string", "enum": ["completed", "failed"] },
+    "result_schema_version": { "const": 1 },
     "result": { "type": "object", "additionalProperties": true },
     "result_sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
     "output_refs": {
@@ -18,6 +19,18 @@
         "type": "string",
         "pattern": "^(artifact://)?sha256:[0-9a-f]{64}$"
       }
+    },
+    "output_media_types": {
+      "type": "object",
+      "maxProperties": 1000,
+      "propertyNames": { "pattern": "^(artifact://)?sha256:[0-9a-f]{64}$" },
+      "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 255 }
+    },
+    "fingerprints": {
+      "type": "object",
+      "maxProperties": 16,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_.-]{0,63}$" },
+      "additionalProperties": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
     }
   }
 }

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import os
 import re
+import secrets
 import sqlite3
 import tempfile
 import threading
@@ -11,7 +13,7 @@ from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from fastapi import APIRouter, FastAPI, Header, HTTPException, Query, Request, Response
@@ -25,6 +27,14 @@ def _now() -> str:
 
 def _expires(seconds: int) -> str:
     return (datetime.now(UTC) + timedelta(seconds=seconds)).isoformat().replace("+00:00", "Z")
+
+
+def _timestamp(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+def _token_hash(token: str) -> str:
+    return f"sha256:{hashlib.sha256(token.encode()).hexdigest()}"
 
 
 def _principal_id(actor_id: str) -> str:
@@ -228,22 +238,51 @@ class LeaseRequest(CloudModel):
 class JobCreate(CloudModel):
     revision_id: UUID
     kind: Literal["render", "transcribe", "export"]
+    provider_policy_sha256: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
+    runtime_image_sha256: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
+    required_capabilities: list[str] = Field(default_factory=list, max_length=100)
+    required_region: str | None = Field(default=None, min_length=1, max_length=64)
     parameters: dict[str, Any] = Field(default_factory=dict)
     fingerprints: dict[str, str] = Field(default_factory=dict, max_length=16)
 
     _fingerprints = field_validator("fingerprints")(_validate_fingerprints)
+
+    @field_validator("required_capabilities")
+    @classmethod
+    def validate_required_capabilities(cls, value: list[str]) -> list[str]:
+        if any(not item or len(item) > 128 for item in value):
+            raise ValueError("capability labels must contain 1-128 characters")
+        return sorted(set(value))
+
+
+class JobClaimRequest(CloudModel):
+    executor_id: UUID
+    requested_ttl_seconds: int = Field(default=120, ge=30, le=900)
 
 
 class JobResultReport(CloudModel):
     attempt_id: UUID
     executor_id: UUID
     status: Literal["completed", "failed"]
+    result_schema_version: Literal[1]
     result: dict[str, Any] = Field(default_factory=dict)
     result_sha256: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     output_refs: list[str] = Field(default_factory=list, max_length=1000)
+    output_media_types: dict[str, str] = Field(default_factory=dict, max_length=1000)
     fingerprints: dict[str, str] = Field(default_factory=dict, max_length=16)
 
     _fingerprints = field_validator("fingerprints")(_validate_fingerprints)
+
+    @model_validator(mode="after")
+    def validate_output_manifest(self) -> JobResultReport:
+        if len(set(self.output_refs)) != len(self.output_refs):
+            raise ValueError("output_refs must be unique")
+        if any(
+            not media_type or len(media_type) > 255
+            for media_type in self.output_media_types.values()
+        ):
+            raise ValueError("output media types must contain 1-255 characters")
+        return self
 
 
 class ExecutorRegister(CloudModel):
@@ -251,8 +290,17 @@ class ExecutorRegister(CloudModel):
     platform: Literal["windows", "macos", "linux"]
     capabilities: list[str] = Field(min_length=1, max_length=100)
     region: str = Field(min_length=1, max_length=64)
+    gpu_label: str | None = Field(default=None, min_length=1, max_length=128)
+    office_capability: Literal["microsoft_office", "libreoffice", "none"] = "none"
     ttl_seconds: int = Field(default=120, ge=30, le=900)
     capability_snapshot: dict[str, Any] = Field(default_factory=dict, max_length=128)
+
+    @field_validator("capabilities")
+    @classmethod
+    def validate_capabilities(cls, value: list[str]) -> list[str]:
+        if any(not item or len(item) > 128 for item in value):
+            raise ValueError("capability labels must contain 1-128 characters")
+        return sorted(set(value))
 
 
 @dataclass(frozen=True)
@@ -410,27 +458,57 @@ class CloudRepository:
     @staticmethod
     def _upgrade_legacy_columns(db: sqlite3.Connection) -> None:
         columns = {row["name"] for row in db.execute("PRAGMA table_info(jobs)")}
-        if "executor_id" not in columns:
-            db.execute("ALTER TABLE jobs ADD COLUMN executor_id TEXT")
-        if "fingerprints_json" not in columns:
-            db.execute("ALTER TABLE jobs ADD COLUMN fingerprints_json TEXT NOT NULL DEFAULT '{}'")
+        job_columns = {
+            "executor_id": "TEXT",
+            "fingerprints_json": "TEXT NOT NULL DEFAULT '{}'",
+            "attempt_id": "TEXT",
+            "lease_id": "TEXT",
+            "lease_expires_at": "TEXT",
+            "attempt_count": "INTEGER NOT NULL DEFAULT 0",
+            "attempt_token_hash": "TEXT",
+            "attempt_token_expires_at": "TEXT",
+            "provider_policy_sha256": (
+                "TEXT NOT NULL DEFAULT "
+                "'sha256:0000000000000000000000000000000000000000000000000000000000000000'"
+            ),
+            "runtime_image_sha256": (
+                "TEXT NOT NULL DEFAULT "
+                "'sha256:0000000000000000000000000000000000000000000000000000000000000000'"
+            ),
+            "required_capabilities_json": "TEXT NOT NULL DEFAULT '[]'",
+            "required_region": "TEXT",
+            "idempotency_key": "TEXT",
+            "request_sha256": "TEXT",
+            "claim_idempotency_key": "TEXT",
+        }
+        for name, declaration in job_columns.items():
+            if name not in columns:
+                db.execute(f"ALTER TABLE jobs ADD COLUMN {name} {declaration}")
+        db.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS jobs_project_idempotency_key "
+            "ON jobs(project_id, idempotency_key) WHERE idempotency_key IS NOT NULL"
+        )
         result_columns = {
             row["name"] for row in db.execute("PRAGMA table_info(job_results)")
         }
-        if "output_refs_json" not in result_columns:
-            db.execute(
-                "ALTER TABLE job_results ADD COLUMN output_refs_json TEXT NOT NULL DEFAULT '[]'"
-            )
-        if "fingerprints_json" not in result_columns:
-            db.execute(
-                "ALTER TABLE job_results ADD COLUMN fingerprints_json TEXT NOT NULL DEFAULT '{}'"
-            )
+        job_result_columns = {
+            "output_refs_json": "TEXT NOT NULL DEFAULT '[]'",
+            "fingerprints_json": "TEXT NOT NULL DEFAULT '{}'",
+            "result_schema_version": "INTEGER NOT NULL DEFAULT 1",
+            "output_media_types_json": "TEXT NOT NULL DEFAULT '{}'",
+        }
+        for name, declaration in job_result_columns.items():
+            if name not in result_columns:
+                db.execute(f"ALTER TABLE job_results ADD COLUMN {name} {declaration}")
         executor_columns = {row["name"] for row in db.execute("PRAGMA table_info(executors)")}
-        if "capability_snapshot_json" not in executor_columns:
-            db.execute(
-                "ALTER TABLE executors ADD COLUMN capability_snapshot_json TEXT NOT NULL "
-                "DEFAULT '{}'"
-            )
+        executor_additions = {
+            "capability_snapshot_json": "TEXT NOT NULL DEFAULT '{}'",
+            "gpu_label": "TEXT",
+            "office_capability": "TEXT NOT NULL DEFAULT 'none'",
+        }
+        for name, declaration in executor_additions.items():
+            if name not in executor_columns:
+                db.execute(f"ALTER TABLE executors ADD COLUMN {name} {declaration}")
 
     def create_organization(self, actor_id: str, name: str) -> dict[str, str]:
         organization_id = str(uuid4())
@@ -1425,31 +1503,48 @@ class CloudRepository:
         self, workspace_id: str, actor_id: str, request: ExecutorRegister
     ) -> dict[str, Any]:
         _assert_portable_document(request.capability_snapshot, field="executor.capability_snapshot")
-        with self._connect() as db:
+        with self._lock, self._connect() as db:
             self._workspace_access(db, workspace_id, actor_id)
             expires_at = _expires(request.ttl_seconds)
+            existing = db.execute(
+                "SELECT workspace_id, actor_id FROM executors WHERE id=?",
+                (str(request.executor_id),),
+            ).fetchone()
+            if existing is not None and (
+                existing["workspace_id"] != workspace_id or existing["actor_id"] != actor_id
+            ):
+                raise HTTPException(status_code=403, detail="executor_scope_mismatch")
             db.execute(
-                "INSERT OR REPLACE INTO executors "
+                "INSERT INTO executors "
                 "(id, workspace_id, actor_id, platform, capabilities_json, region, status, "
-                "expires_at, capability_snapshot_json) "
-                "VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?)",
+                "expires_at, capability_snapshot_json, gpu_label, office_capability) "
+                "VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?) "
+                "ON CONFLICT(id) DO UPDATE SET platform=excluded.platform, "
+                "capabilities_json=excluded.capabilities_json, region=excluded.region, "
+                "status='active', expires_at=excluded.expires_at, "
+                "capability_snapshot_json=excluded.capability_snapshot_json, "
+                "gpu_label=excluded.gpu_label, office_capability=excluded.office_capability",
                 (
                     str(request.executor_id),
                     workspace_id,
                     actor_id,
                     request.platform,
-                    json.dumps(sorted(set(request.capabilities))),
+                    json.dumps(request.capabilities),
                     request.region,
                     expires_at,
                     json.dumps(request.capability_snapshot, ensure_ascii=False, sort_keys=True),
+                    request.gpu_label,
+                    request.office_capability,
                 ),
             )
         return {
             "executor_id": str(request.executor_id),
             "workspace_id": workspace_id,
             "platform": request.platform,
-            "capabilities": sorted(set(request.capabilities)),
+            "capabilities": request.capabilities,
             "region": request.region,
+            "gpu_label": request.gpu_label,
+            "office_capability": request.office_capability,
             "status": "active",
             "expires_at": expires_at,
             "capability_snapshot": request.capability_snapshot,
@@ -1469,9 +1564,11 @@ class CloudRepository:
                 "platform": row["platform"],
                 "capabilities": json.loads(row["capabilities_json"]),
                 "region": row["region"],
+                "gpu_label": row["gpu_label"],
+                "office_capability": row["office_capability"],
                 "status": (
                     row["status"]
-                    if datetime.fromisoformat(row["expires_at"].replace("Z", "+00:00")) > now
+                    if _timestamp(row["expires_at"]) > now
                     else "expired"
                 ),
                 "expires_at": row["expires_at"],
@@ -1486,85 +1583,199 @@ class CloudRepository:
         workspace_id: str,
         kind: str,
         required_capabilities: set[str] | None = None,
-    ) -> str | None:
-        rows = db.execute(
-            "SELECT id, capabilities_json, expires_at FROM executors "
-            "WHERE workspace_id=? AND status='active' ORDER BY id",
-            (workspace_id,),
-        ).fetchall()
+        required_region: str | None = None,
+    ) -> sqlite3.Row | None:
+        rows = cast(
+            list[sqlite3.Row],
+            db.execute(
+                "SELECT * FROM executors "
+                "WHERE workspace_id=? AND status='active' ORDER BY id",
+                (workspace_id,),
+            ).fetchall(),
+        )
         now = datetime.now(UTC)
         for row in rows:
-            if datetime.fromisoformat(row["expires_at"].replace("Z", "+00:00")) <= now:
+            if _timestamp(row["expires_at"]) <= now:
+                continue
+            if required_region is not None and row["region"] != required_region:
                 continue
             capabilities = set(json.loads(row["capabilities_json"]))
             required = required_capabilities or set()
             if (kind in capabilities or "*" in capabilities) and required.issubset(capabilities):
-                return str(row["id"])
+                return row
         return None
 
+    @staticmethod
+    def _job_payload(row: sqlite3.Row) -> dict[str, Any]:
+        return {
+            "job_id": row["id"],
+            "project_id": row["project_id"],
+            "revision_id": row["revision_id"],
+            "kind": row["kind"],
+            "parameters": json.loads(row["parameters_json"]),
+            "status": row["status"],
+            "executor_id": row["executor_id"],
+            "attempt_id": row["attempt_id"],
+            "lease_id": row["lease_id"],
+            "lease_expires_at": row["lease_expires_at"],
+            "attempt_count": row["attempt_count"],
+            "provider_policy_sha256": row["provider_policy_sha256"],
+            "runtime_image_sha256": row["runtime_image_sha256"],
+            "required_capabilities": json.loads(row["required_capabilities_json"]),
+            "required_region": row["required_region"],
+            "fingerprints": json.loads(row["fingerprints_json"]),
+            "created_at": row["created_at"],
+        }
+
+    @staticmethod
+    def _job_request_sha256(request: JobCreate) -> str:
+        return canonical_sha256(
+            {
+                "revision_id": str(request.revision_id),
+                "kind": request.kind,
+                "provider_policy_sha256": request.provider_policy_sha256,
+                "runtime_image_sha256": request.runtime_image_sha256,
+                "required_capabilities": request.required_capabilities,
+                "required_region": request.required_region,
+                "parameters": request.parameters,
+                "fingerprints": request.fingerprints,
+            }
+        )
+
+    @staticmethod
+    def _issue_job_attempt(
+        db: sqlite3.Connection,
+        job_id: str,
+        executor: sqlite3.Row,
+        *,
+        ttl_seconds: int,
+        claim_idempotency_key: str | None = None,
+    ) -> dict[str, str]:
+        now = datetime.now(UTC)
+        executor_expires_at = _timestamp(executor["expires_at"])
+        if executor_expires_at <= now:
+            raise HTTPException(status_code=409, detail="executor_expired")
+        expires_at = min(now + timedelta(seconds=ttl_seconds), executor_expires_at)
+        expires_text = expires_at.isoformat().replace("+00:00", "Z")
+        attempt_id, lease_id = str(uuid4()), str(uuid4())
+        attempt_token = secrets.token_urlsafe(32)
+        db.execute(
+            "UPDATE jobs SET status='dispatched', executor_id=?, attempt_id=?, lease_id=?, "
+            "lease_expires_at=?, attempt_token_hash=?, attempt_token_expires_at=?, "
+            "attempt_count=attempt_count+1, claim_idempotency_key=? WHERE id=?",
+            (
+                str(executor["id"]),
+                attempt_id,
+                lease_id,
+                expires_text,
+                _token_hash(attempt_token),
+                expires_text,
+                claim_idempotency_key,
+                job_id,
+            ),
+        )
+        db.execute(
+            "INSERT INTO job_attempt_events "
+            "(id, job_id, attempt_id, executor_id, lease_id, action, occurred_at) "
+            "VALUES (?, ?, ?, ?, ?, 'issued', ?)",
+            (str(uuid4()), job_id, attempt_id, str(executor["id"]), lease_id, _now()),
+        )
+        return {
+            "attempt_access_token": attempt_token,
+            "attempt_token_expires_at": expires_text,
+        }
+
+    @staticmethod
+    def _assert_attempt_token(job: sqlite3.Row, attempt_token: str | None) -> None:
+        expected_hash = job["attempt_token_hash"]
+        if attempt_token is None or expected_hash is None:
+            raise HTTPException(status_code=401, detail="attempt_token_required")
+        if not hmac.compare_digest(_token_hash(attempt_token), str(expected_hash)):
+            raise HTTPException(status_code=401, detail="attempt_token_invalid")
+        expires_at = job["attempt_token_expires_at"]
+        if expires_at is None or _timestamp(expires_at) <= datetime.now(UTC):
+            raise HTTPException(status_code=401, detail="attempt_token_expired")
+
     def job(
-        self, workspace_id: str, project_id: str, actor_id: str, request: JobCreate
+        self,
+        workspace_id: str,
+        project_id: str,
+        actor_id: str,
+        request: JobCreate,
+        idempotency_key: str,
     ) -> dict[str, Any]:
         project = self.project(workspace_id, project_id, actor_id)
         if str(request.revision_id) != project["current_revision_id"]:
             raise HTTPException(status_code=409, detail="job_revision_is_not_head")
         _assert_portable_document(request.parameters, field="job.parameters")
-        required_raw = request.parameters.get("required_capabilities", [])
-        if not isinstance(required_raw, list) or any(
-            not isinstance(item, str) or not item for item in required_raw
-        ):
-            raise HTTPException(status_code=422, detail="invalid_required_capabilities")
+        if request.fingerprints.get("provider_policy") not in {
+            None,
+            request.provider_policy_sha256,
+        }:
+            raise HTTPException(status_code=422, detail="provider_policy_fingerprint_mismatch")
+        if request.fingerprints.get("runtime") not in {None, request.runtime_image_sha256}:
+            raise HTTPException(status_code=422, detail="runtime_fingerprint_mismatch")
         job_id, created_at = str(uuid4()), _now()
-        with self._connect() as db:
-            executor_id = self._select_executor(
+        request_sha256 = self._job_request_sha256(request)
+        attempt_credentials: dict[str, str] = {}
+        with self._lock, self._connect() as db:
+            existing = db.execute(
+                "SELECT * FROM jobs WHERE project_id=? AND idempotency_key=?",
+                (project_id, idempotency_key),
+            ).fetchone()
+            if existing is not None:
+                if existing["request_sha256"] != request_sha256:
+                    raise HTTPException(status_code=409, detail="job_idempotency_conflict")
+                return self._job_payload(existing)
+            executor = self._select_executor(
                 db,
                 project["workspace_id"],
                 request.kind,
-                set(required_raw),
+                set(request.required_capabilities),
+                request.required_region,
             )
             db.execute(
                 "INSERT INTO jobs "
                 "(id, project_id, revision_id, actor_id, kind, parameters_json, status, "
-                "executor_id, created_at, fingerprints_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "executor_id, created_at, fingerprints_json, provider_policy_sha256, "
+                "runtime_image_sha256, required_capabilities_json, required_region, "
+                "idempotency_key, request_sha256) "
+                "VALUES (?, ?, ?, ?, ?, ?, 'queued', NULL, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     job_id,
                     project_id,
                     str(request.revision_id),
                     actor_id,
                     request.kind,
-                    json.dumps(request.parameters),
-                    "dispatched" if executor_id else "queued",
-                    executor_id,
+                    json.dumps(request.parameters, ensure_ascii=False, sort_keys=True),
                     created_at,
                     json.dumps(request.fingerprints, sort_keys=True),
+                    request.provider_policy_sha256,
+                    request.runtime_image_sha256,
+                    json.dumps(request.required_capabilities),
+                    request.required_region,
+                    idempotency_key,
+                    request_sha256,
                 ),
             )
-        return {
-            "job_id": job_id,
-            "project_id": project_id,
-            "revision_id": str(request.revision_id),
-            "kind": request.kind,
-            "status": "dispatched" if executor_id else "queued",
-            "executor_id": executor_id,
-            "fingerprints": request.fingerprints,
-            "created_at": created_at,
-        }
+            if executor is not None:
+                attempt_credentials = self._issue_job_attempt(
+                    db, job_id, executor, ttl_seconds=120
+                )
+            row = db.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
+            assert row is not None
+            payload = self._job_payload(row)
+        payload.update(attempt_credentials)
+        return payload
 
     def jobs(self, workspace_id: str, project_id: str, actor_id: str) -> list[dict[str, Any]]:
         self.project(workspace_id, project_id, actor_id)
         with self._connect() as db:
             rows = db.execute(
-                "SELECT id, project_id, revision_id, kind, status, executor_id, "
-                "created_at, fingerprints_json FROM jobs "
-                "WHERE project_id=? ORDER BY created_at, id",
+                "SELECT * FROM jobs WHERE project_id=? ORDER BY created_at, id",
                 (project_id,),
             ).fetchall()
-        result: list[dict[str, Any]] = []
-        for row in rows:
-            item = dict(row)
-            item["fingerprints"] = json.loads(item.pop("fingerprints_json"))
-            result.append(item)
-        return result
+        return [self._job_payload(row) for row in rows]
 
     def get_job(
         self, workspace_id: str, project_id: str, job_id: str, actor_id: str
@@ -1572,32 +1783,119 @@ class CloudRepository:
         self.project(workspace_id, project_id, actor_id)
         with self._connect() as db:
             row = db.execute(
-                "SELECT id, project_id, revision_id, kind, status, executor_id, "
-                "created_at, fingerprints_json FROM jobs "
-                "WHERE id=? AND project_id=?",
+                "SELECT * FROM jobs WHERE id=? AND project_id=?",
                 (job_id, project_id),
             ).fetchone()
             result = db.execute(
-                "SELECT attempt_id, status, result_sha256, result_json, created_at, "
-                "output_refs_json, fingerprints_json FROM job_results WHERE job_id=? "
+                "SELECT * FROM job_results WHERE job_id=? "
                 "ORDER BY created_at DESC LIMIT 1",
                 (job_id,),
             ).fetchone()
         if row is None:
             raise HTTPException(status_code=404, detail="job_not_found")
-        payload = dict(row)
-        payload["fingerprints"] = json.loads(payload.pop("fingerprints_json"))
+        payload = self._job_payload(row)
         if result is not None:
             payload["result"] = {
                 "attempt_id": result["attempt_id"],
                 "status": result["status"],
+                "result_schema_version": result["result_schema_version"],
                 "result_sha256": result["result_sha256"],
                 "result": json.loads(result["result_json"]),
                 "output_refs": json.loads(result["output_refs_json"]),
+                "output_media_types": json.loads(result["output_media_types_json"]),
                 "fingerprints": json.loads(result["fingerprints_json"]),
                 "created_at": result["created_at"],
             }
         return payload
+
+    def claim_job(
+        self,
+        workspace_id: str,
+        project_id: str,
+        job_id: str,
+        actor_id: str,
+        request: JobClaimRequest,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        self.project(workspace_id, project_id, actor_id)
+        with self._lock, self._connect() as db:
+            job = db.execute(
+                "SELECT * FROM jobs WHERE id=? AND project_id=?", (job_id, project_id)
+            ).fetchone()
+            if job is None:
+                raise HTTPException(status_code=404, detail="job_not_found")
+            if job["status"] in {"completed", "failed", "cancelled"}:
+                raise HTTPException(status_code=409, detail="job_is_terminal")
+            executor = db.execute(
+                "SELECT * FROM executors WHERE id=? AND workspace_id=?",
+                (str(request.executor_id), workspace_id),
+            ).fetchone()
+            if executor is None or executor["actor_id"] != actor_id:
+                raise HTTPException(status_code=403, detail="executor_scope_mismatch")
+            if executor["status"] != "active" or _timestamp(executor["expires_at"]) <= datetime.now(
+                UTC
+            ):
+                raise HTTPException(status_code=409, detail="executor_expired")
+            capabilities = set(json.loads(executor["capabilities_json"]))
+            required = set(json.loads(job["required_capabilities_json"]))
+            if (
+                (job["kind"] not in capabilities and "*" not in capabilities)
+                or not required.issubset(capabilities)
+                or (job["required_region"] and job["required_region"] != executor["region"])
+            ):
+                raise HTTPException(status_code=409, detail="executor_capability_mismatch")
+            lease_expires_at = job["lease_expires_at"]
+            if lease_expires_at is not None and _timestamp(lease_expires_at) > datetime.now(UTC):
+                if job["claim_idempotency_key"] == idempotency_key:
+                    return self._job_payload(job)
+                raise HTTPException(status_code=409, detail="job_attempt_lease_active")
+            credentials = self._issue_job_attempt(
+                db,
+                job_id,
+                executor,
+                ttl_seconds=request.requested_ttl_seconds,
+                claim_idempotency_key=idempotency_key,
+            )
+            updated = db.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
+            assert updated is not None
+            payload = self._job_payload(updated)
+        payload.update(credentials)
+        return payload
+
+    def job_input(
+        self,
+        workspace_id: str,
+        project_id: str,
+        job_id: str,
+        attempt_id: str,
+        actor_id: str,
+        attempt_token: str | None,
+    ) -> dict[str, Any]:
+        self.project(workspace_id, project_id, actor_id)
+        with self._connect() as db:
+            job = db.execute(
+                "SELECT * FROM jobs WHERE id=? AND project_id=?", (job_id, project_id)
+            ).fetchone()
+        if job is None:
+            raise HTTPException(status_code=404, detail="job_not_found")
+        if job["attempt_id"] != attempt_id:
+            raise HTTPException(status_code=409, detail="job_attempt_mismatch")
+        self._assert_attempt_token(job, attempt_token)
+        if job["status"] == "cancelled":
+            raise HTTPException(status_code=409, detail="job_cancelled")
+        return {
+            "job_id": job_id,
+            "attempt_id": attempt_id,
+            "project_id": project_id,
+            "revision_id": job["revision_id"],
+            "kind": job["kind"],
+            "parameters": json.loads(job["parameters_json"]),
+            "provider_policy_sha256": job["provider_policy_sha256"],
+            "runtime_image_sha256": job["runtime_image_sha256"],
+            "required_capabilities": json.loads(job["required_capabilities_json"]),
+            "required_region": job["required_region"],
+            "fingerprints": json.loads(job["fingerprints_json"]),
+        }
 
     def report_job_result(
         self,
@@ -1606,14 +1904,9 @@ class CloudRepository:
         job_id: str,
         actor_id: str,
         report: JobResultReport,
+        attempt_token: str | None,
     ) -> dict[str, Any]:
-        job = self.get_job(workspace_id, project_id, job_id, actor_id)
-        if job["executor_id"] != str(report.executor_id):
-            raise HTTPException(status_code=403, detail="executor_scope_mismatch")
-        if job["status"] == "cancelled":
-            raise HTTPException(status_code=409, detail="job_cancelled")
-        if report.fingerprints != job.get("fingerprints", {}):
-            raise HTTPException(status_code=422, detail="job_fingerprint_mismatch")
+        self.project(workspace_id, project_id, actor_id)
         if canonical_sha256(report.result) != report.result_sha256:
             raise HTTPException(status_code=422, detail="result_hash_mismatch")
         _assert_portable_document(report.result, field="job.result")
@@ -1622,40 +1915,81 @@ class CloudRepository:
             for item in report.output_refs
         ):
             raise HTTPException(status_code=422, detail="invalid_result_reference")
+        if set(report.output_media_types) != set(report.output_refs):
+            raise HTTPException(status_code=422, detail="result_media_manifest_mismatch")
         created_at = _now()
         with self._lock, self._connect() as db:
+            job_row = db.execute(
+                "SELECT * FROM jobs WHERE id=? AND project_id=?", (job_id, project_id)
+            ).fetchone()
+            if job_row is None:
+                raise HTTPException(status_code=404, detail="job_not_found")
+            self._workspace_access(db, workspace_id, actor_id)
+            if job_row["attempt_id"] != str(report.attempt_id):
+                raise HTTPException(status_code=409, detail="job_attempt_mismatch")
+            if job_row["executor_id"] != str(report.executor_id):
+                raise HTTPException(status_code=403, detail="executor_scope_mismatch")
+            self._assert_attempt_token(job_row, attempt_token)
+            if job_row["status"] == "cancelled":
+                raise HTTPException(status_code=409, detail="job_cancelled")
+            job_fingerprints = json.loads(job_row["fingerprints_json"])
+            if report.fingerprints != job_fingerprints:
+                raise HTTPException(status_code=422, detail="job_fingerprint_mismatch")
+            result_json = json.dumps(report.result, ensure_ascii=False, sort_keys=True)
+            output_refs_json = json.dumps(report.output_refs, ensure_ascii=False)
+            output_media_types_json = json.dumps(
+                report.output_media_types, ensure_ascii=False, sort_keys=True
+            )
+            fingerprints_json = json.dumps(report.fingerprints, sort_keys=True)
+            existing = db.execute(
+                "SELECT * FROM job_results WHERE attempt_id=?", (str(report.attempt_id),)
+            ).fetchone()
+            if existing is not None:
+                exact = (
+                    existing["job_id"] == job_id
+                    and existing["status"] == report.status
+                    and existing["result_schema_version"] == report.result_schema_version
+                    and existing["result_sha256"] == report.result_sha256
+                    and existing["result_json"] == result_json
+                    and existing["output_refs_json"] == output_refs_json
+                    and existing["output_media_types_json"] == output_media_types_json
+                    and existing["fingerprints_json"] == fingerprints_json
+                )
+                if not exact:
+                    raise HTTPException(status_code=409, detail="attempt_result_conflict")
+                return self.get_job(workspace_id, project_id, job_id, actor_id)
+            lease_expires_at = job_row["lease_expires_at"]
+            if lease_expires_at is None or _timestamp(lease_expires_at) <= datetime.now(UTC):
+                raise HTTPException(status_code=409, detail="job_attempt_lease_expired")
             for reference in report.output_refs:
                 object_id = reference.removeprefix("artifact://")
                 owned = db.execute(
-                    "SELECT 1 FROM objects WHERE id=? AND project_id=?",
+                    "SELECT media_type FROM objects WHERE id=? AND project_id=?",
                     (object_id, project_id),
                 ).fetchone()
                 if owned is None:
                     raise HTTPException(status_code=422, detail="result_object_not_owned")
-            existing = db.execute(
-                "SELECT * FROM job_results WHERE attempt_id=?", (str(report.attempt_id),)
-            ).fetchone()
-            if existing is None:
-                db.execute(
-                    "INSERT INTO job_results "
-                    "(attempt_id, job_id, status, result_sha256, result_json, "
-                    "output_refs_json, created_at, fingerprints_json) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    (
-                        str(report.attempt_id),
-                        job_id,
-                        report.status,
-                        report.result_sha256,
-                        json.dumps(report.result, ensure_ascii=False, sort_keys=True),
-                        json.dumps(report.output_refs, ensure_ascii=False),
-                        created_at,
-                        json.dumps(report.fingerprints, sort_keys=True),
-                    ),
-                )
-                db.execute(
-                    "UPDATE jobs SET status=? WHERE id=?",
-                    (report.status, job_id),
-                )
+                if report.output_media_types[reference] != owned["media_type"]:
+                    raise HTTPException(status_code=422, detail="result_media_type_mismatch")
+            db.execute(
+                "INSERT INTO job_results "
+                "(attempt_id, job_id, status, result_sha256, result_json, "
+                "output_refs_json, created_at, fingerprints_json, result_schema_version, "
+                "output_media_types_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    str(report.attempt_id),
+                    job_id,
+                    report.status,
+                    report.result_sha256,
+                    result_json,
+                    output_refs_json,
+                    created_at,
+                    fingerprints_json,
+                    report.result_schema_version,
+                    output_media_types_json,
+                ),
+            )
+            db.execute("UPDATE jobs SET status=? WHERE id=?", (report.status, job_id))
         updated = self.get_job(workspace_id, project_id, job_id, actor_id)
         updated["output_refs"] = report.output_refs
         return updated
@@ -1667,7 +2001,11 @@ class CloudRepository:
         if job["status"] in {"completed", "failed", "cancelled"}:
             return job
         with self._connect() as db:
-            db.execute("UPDATE jobs SET status='cancelled' WHERE id=?", (job_id,))
+            db.execute(
+                "UPDATE jobs SET status='cancelled', attempt_token_hash=NULL, "
+                "attempt_token_expires_at=NULL WHERE id=?",
+                (job_id,),
+            )
         job["status"] = "cancelled"
         return job
 
@@ -2034,10 +2372,17 @@ def create_cloud_app(
 
     @router.post("/workspaces/{workspaceId}/projects/{projectId}/jobs", status_code=202)
     def create_job(
-        request: Request, payload: JobCreate, x_actor_id: str | None = Header(default=None)
+        request: Request,
+        payload: JobCreate,
+        idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=200),
+        x_actor_id: str | None = Header(default=None),
     ) -> dict[str, Any]:
         return repository.job(
-            workspace_id(request), project_id(request), actor(x_actor_id), payload
+            workspace_id(request),
+            project_id(request),
+            actor(x_actor_id),
+            payload,
+            idempotency_key,
         )
 
     @router.get("/workspaces/{workspaceId}/projects/{projectId}/jobs")
@@ -2060,6 +2405,45 @@ def create_cloud_app(
         )
 
     @router.post(
+        "/workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}/claim",
+        status_code=200,
+    )
+    def claim_job(
+        request: Request,
+        jobId: str,
+        payload: JobClaimRequest,
+        idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=200),
+        x_actor_id: str | None = Header(default=None),
+    ) -> dict[str, Any]:
+        return repository.claim_job(
+            workspace_id(request),
+            project_id(request),
+            jobId,
+            actor(x_actor_id),
+            payload,
+            idempotency_key,
+        )
+
+    @router.get(
+        "/workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}/attempts/{attemptId}/input"
+    )
+    def get_job_attempt_input(
+        request: Request,
+        jobId: str,
+        attemptId: str,
+        x_attempt_token: str | None = Header(default=None, alias="X-Attempt-Token"),
+        x_actor_id: str | None = Header(default=None),
+    ) -> dict[str, Any]:
+        return repository.job_input(
+            workspace_id(request),
+            project_id(request),
+            jobId,
+            attemptId,
+            actor(x_actor_id),
+            x_attempt_token,
+        )
+
+    @router.post(
         "/workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}/result",
         status_code=200,
     )
@@ -2067,10 +2451,16 @@ def create_cloud_app(
         request: Request,
         jobId: str,
         payload: JobResultReport,
+        x_attempt_token: str | None = Header(default=None, alias="X-Attempt-Token"),
         x_actor_id: str | None = Header(default=None),
     ) -> dict[str, Any]:
         return repository.report_job_result(
-            workspace_id(request), project_id(request), jobId, actor(x_actor_id), payload
+            workspace_id(request),
+            project_id(request),
+            jobId,
+            actor(x_actor_id),
+            payload,
+            x_attempt_token,
         )
 
     @router.delete("/workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}")

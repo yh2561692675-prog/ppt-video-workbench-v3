@@ -1031,6 +1031,77 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+  /workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}/claim:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceId"
+      - $ref: "#/components/parameters/ProjectId"
+      - name: jobId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/Uuid"
+    post:
+      tags: [Jobs]
+      operationId: claimRemoteJobAttempt
+      summary: Claim a queued or expired built-in job with a bounded executor lease
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimJobRequest"
+      responses:
+        "200":
+          description: Attempt lease and one short-lived capability token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemoteJob"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+  /workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}/attempts/{attemptId}/input:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceId"
+      - $ref: "#/components/parameters/ProjectId"
+      - name: jobId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/Uuid"
+      - name: attemptId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/Uuid"
+    get:
+      tags: [Jobs]
+      operationId: getRemoteJobAttemptInput
+      summary: Read immutable input using the current attempt capability token
+      parameters:
+        - $ref: "#/components/parameters/AttemptToken"
+      responses:
+        "200":
+          description: Immutable attempt input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobAttemptInput"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}/result:
     parameters:
       - $ref: "#/components/parameters/WorkspaceId"
@@ -1046,6 +1117,7 @@ paths:
       summary: Verify and publish one executor result attempt
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/AttemptToken"
       requestBody:
         required: true
         content:
@@ -1112,6 +1184,15 @@ components:
       description: UUID scoped to tenant and operation kind; reused only for the same semantic side effect.
       schema:
         $ref: "#/components/schemas/Uuid"
+    AttemptToken:
+      name: X-Attempt-Token
+      in: header
+      required: true
+      description: Short-lived capability bound to one job attempt and its staging boundary.
+      schema:
+        type: string
+        minLength: 32
+        maxLength: 256
     Cursor:
       name: cursor
       in: query
@@ -1385,6 +1466,14 @@ components:
           type: string
           minLength: 1
           maxLength: 64
+        gpu_label:
+          type: string
+          minLength: 1
+          maxLength: 128
+        office_capability:
+          type: string
+          enum: [microsoft_office, libreoffice, none]
+          default: none
         ttl_seconds:
           type: integer
           minimum: 30
@@ -1403,6 +1492,7 @@ components:
         - platform
         - capabilities
         - region
+        - office_capability
         - status
         - expires_at
         - capability_snapshot
@@ -1426,6 +1516,15 @@ components:
           type: string
           minLength: 1
           maxLength: 64
+        gpu_label:
+          oneOf:
+            - type: string
+              minLength: 1
+              maxLength: 128
+            - type: "null"
+        office_capability:
+          type: string
+          enum: [microsoft_office, libreoffice, none]
         status:
           type: string
           enum: [active, expired]
@@ -1834,35 +1933,72 @@ components:
           $ref: "#/components/schemas/Timestamp"
     JobKind:
       type: string
-      enum: [render_preview, render_final, transcribe, synthesize_speech, analyze_media]
+      enum: [render, transcribe, export]
     CreateJobRequest:
       type: object
       additionalProperties: false
-      required: [revision_id, kind, input_objects, priority]
+      required: [revision_id, kind, provider_policy_sha256, runtime_image_sha256]
       properties:
         revision_id:
           $ref: "#/components/schemas/Uuid"
         kind:
           $ref: "#/components/schemas/JobKind"
-        input_objects:
+        provider_policy_sha256:
+          $ref: "#/components/schemas/Sha256"
+        runtime_image_sha256:
+          $ref: "#/components/schemas/Sha256"
+        required_capabilities:
           type: array
-          maxItems: 10000
+          maxItems: 100
+          uniqueItems: true
           items:
-            $ref: "#/components/schemas/ObjectRef"
-        priority:
+            type: string
+            minLength: 1
+            maxLength: 128
+        required_region:
+          type: string
+          minLength: 1
+          maxLength: 64
+        parameters:
+          type: object
+          additionalProperties: true
+        fingerprints:
+          type: object
+          maxProperties: 16
+          additionalProperties:
+            $ref: "#/components/schemas/Sha256"
+    ClaimJobRequest:
+      type: object
+      additionalProperties: false
+      required: [executor_id]
+      properties:
+        executor_id:
+          $ref: "#/components/schemas/Uuid"
+        requested_ttl_seconds:
           type: integer
-          minimum: 0
-          maximum: 100
+          minimum: 30
+          maximum: 900
+          default: 120
     JobResultReport:
       $ref: "./cloud-job-result-v1.schema.json"
     RemoteJob:
       type: object
       additionalProperties: false
-      required: [job_id, operation_id, project_id, revision_id, kind, status, attempt_count, created_at, updated_at, outputs]
+      required:
+        - job_id
+        - project_id
+        - revision_id
+        - kind
+        - parameters
+        - status
+        - attempt_count
+        - provider_policy_sha256
+        - runtime_image_sha256
+        - required_capabilities
+        - fingerprints
+        - created_at
       properties:
         job_id:
-          $ref: "#/components/schemas/Uuid"
-        operation_id:
           $ref: "#/components/schemas/Uuid"
         project_id:
           $ref: "#/components/schemas/Uuid"
@@ -1872,24 +2008,110 @@ components:
           $ref: "#/components/schemas/JobKind"
         status:
           type: string
-          enum: [queued, claimed, running, succeeded, failed, cancellation_requested, cancelled]
+          enum: [queued, dispatched, completed, failed, cancelled]
+        parameters:
+          type: object
+          additionalProperties: true
+        executor_id:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        attempt_id:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        lease_id:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        lease_expires_at:
+          oneOf:
+            - $ref: "#/components/schemas/Timestamp"
+            - type: "null"
         attempt_count:
           type: integer
           minimum: 0
           maximum: 100
+        provider_policy_sha256:
+          $ref: "#/components/schemas/Sha256"
+        runtime_image_sha256:
+          $ref: "#/components/schemas/Sha256"
+        required_capabilities:
+          type: array
+          maxItems: 100
+          uniqueItems: true
+          items:
+            type: string
+        required_region:
+          oneOf:
+            - type: string
+              minLength: 1
+              maxLength: 64
+            - type: "null"
+        fingerprints:
+          type: object
+          maxProperties: 16
+          additionalProperties:
+            $ref: "#/components/schemas/Sha256"
         created_at:
           $ref: "#/components/schemas/Timestamp"
-        updated_at:
+        attempt_access_token:
+          type: string
+          writeOnly: true
+          minLength: 32
+          maxLength: 256
+        attempt_token_expires_at:
           $ref: "#/components/schemas/Timestamp"
-        outputs:
+        result:
+          type: object
+          additionalProperties: true
+    JobAttemptInput:
+      type: object
+      additionalProperties: false
+      required:
+        - job_id
+        - attempt_id
+        - project_id
+        - revision_id
+        - kind
+        - parameters
+        - provider_policy_sha256
+        - runtime_image_sha256
+        - required_capabilities
+        - fingerprints
+      properties:
+        job_id:
+          $ref: "#/components/schemas/Uuid"
+        attempt_id:
+          $ref: "#/components/schemas/Uuid"
+        project_id:
+          $ref: "#/components/schemas/Uuid"
+        revision_id:
+          $ref: "#/components/schemas/Uuid"
+        kind:
+          $ref: "#/components/schemas/JobKind"
+        parameters:
+          type: object
+          additionalProperties: true
+        provider_policy_sha256:
+          $ref: "#/components/schemas/Sha256"
+        runtime_image_sha256:
+          $ref: "#/components/schemas/Sha256"
+        required_capabilities:
           type: array
-          maxItems: 10000
+          maxItems: 100
+          uniqueItems: true
           items:
-            $ref: "#/components/schemas/ObjectRef"
-        error:
+            type: string
+        required_region:
           oneOf:
-            - $ref: "#/components/schemas/Problem"
+            - type: string
             - type: "null"
+        fingerprints:
+          type: object
+          maxProperties: 16
+          additionalProperties:
+            $ref: "#/components/schemas/Sha256"
     PageMeta:
       type: object
       required: [next_cursor]

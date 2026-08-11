@@ -8,6 +8,7 @@ export const CLOUD_OPERATIONS = {
   appendSyncOperation: { method: "POST", path: "/workspaces/{workspaceId}/projects/{projectId}/operations" },
   authorizeObjectDownload: { method: "POST", path: "/workspaces/{workspaceId}/projects/{projectId}/objects/{objectId}/download" },
   cancelRemoteJob: { method: "DELETE", path: "/workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}" },
+  claimRemoteJobAttempt: { method: "POST", path: "/workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}/claim" },
   completeObjectUpload: { method: "POST", path: "/workspaces/{workspaceId}/projects/{projectId}/objects/uploads/{uploadId}/complete" },
   createComment: { method: "POST", path: "/workspaces/{workspaceId}/projects/{projectId}/comments" },
   createOrganization: { method: "POST", path: "/organizations" },
@@ -22,6 +23,7 @@ export const CLOUD_OPERATIONS = {
   getProject: { method: "GET", path: "/workspaces/{workspaceId}/projects/{projectId}" },
   getProjectRevision: { method: "GET", path: "/workspaces/{workspaceId}/projects/{projectId}/revisions/{revisionId}" },
   getRemoteJob: { method: "GET", path: "/workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}" },
+  getRemoteJobAttemptInput: { method: "GET", path: "/workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}/attempts/{attemptId}/input" },
   initiateObjectUpload: { method: "POST", path: "/workspaces/{workspaceId}/projects/{projectId}/objects/uploads" },
   listComments: { method: "GET", path: "/workspaces/{workspaceId}/projects/{projectId}/comments" },
   listDevices: { method: "GET", path: "/devices" },
@@ -161,6 +163,10 @@ export class CloudCollaborationClient {
     return this.request<T>("cancelRemoteJob", options);
   }
 
+  async claimRemoteJobAttempt<T = unknown>(options: CloudRequestOptions = {}): Promise<T> {
+    return this.request<T>("claimRemoteJobAttempt", options);
+  }
+
   async completeObjectUpload<T = unknown>(options: CloudRequestOptions = {}): Promise<T> {
     return this.request<T>("completeObjectUpload", options);
   }
@@ -215,6 +221,10 @@ export class CloudCollaborationClient {
 
   async getRemoteJob<T = unknown>(options: CloudRequestOptions = {}): Promise<T> {
     return this.request<T>("getRemoteJob", options);
+  }
+
+  async getRemoteJobAttemptInput<T = unknown>(options: CloudRequestOptions = {}): Promise<T> {
+    return this.request<T>("getRemoteJobAttemptInput", options);
   }
 
   async initiateObjectUpload<T = unknown>(options: CloudRequestOptions = {}): Promise<T> {

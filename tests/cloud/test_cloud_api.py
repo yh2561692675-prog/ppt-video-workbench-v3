@@ -12,6 +12,24 @@ from workbench.contracts.p2_platform import canonical_sha256
 
 from cloud_prototype.app import CloudProductionEvidence, CloudRepository, create_cloud_app
 
+_PROVIDER_POLICY_SHA256 = "sha256:" + "1" * 64
+_RUNTIME_IMAGE_SHA256 = "sha256:" + "3" * 64
+
+
+def _idempotent(headers: dict[str, str]) -> dict[str, str]:
+    return {**headers, "Idempotency-Key": str(uuid4())}
+
+
+def _remote_job_request(revision_id: str, **overrides: object) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "revision_id": revision_id,
+        "kind": "render",
+        "provider_policy_sha256": _PROVIDER_POLICY_SHA256,
+        "runtime_image_sha256": _RUNTIME_IMAGE_SHA256,
+    }
+    payload.update(overrides)
+    return payload
+
 
 def _operation(workspace_id: str, project_id: str, revision_id: str) -> dict[str, object]:
     payload = {"title": "updated"}
@@ -45,6 +63,7 @@ def test_cloud_database_migrations_are_versioned_and_idempotent(tmp_path: Path) 
         (1, "0001_initial"),
         (2, "0002_identity_control"),
         (3, "0003_collaboration_integrity"),
+        (4, "0004_remote_job_attempts"),
     ]
     assert all(re.fullmatch(r"sha256:[0-9a-f]{64}", row[2]) for row in rows)
 
@@ -100,9 +119,25 @@ def test_cloud_database_upgrades_legacy_executor_columns(tmp_path: Path) -> None
         job_columns = {row[1] for row in db.execute("PRAGMA table_info(jobs)")}
         result_columns = {row[1] for row in db.execute("PRAGMA table_info(job_results)")}
         executor_columns = {row[1] for row in db.execute("PRAGMA table_info(executors)")}
-    assert {"executor_id", "fingerprints_json"} <= job_columns
-    assert {"output_refs_json", "fingerprints_json"} <= result_columns
-    assert "capability_snapshot_json" in executor_columns
+    assert {
+        "executor_id",
+        "fingerprints_json",
+        "attempt_id",
+        "lease_id",
+        "lease_expires_at",
+        "attempt_token_hash",
+        "provider_policy_sha256",
+        "runtime_image_sha256",
+        "required_capabilities_json",
+        "idempotency_key",
+    } <= job_columns
+    assert {
+        "output_refs_json",
+        "fingerprints_json",
+        "result_schema_version",
+        "output_media_types_json",
+    } <= result_columns
+    assert {"capability_snapshot_json", "gpu_label", "office_capability"} <= executor_columns
 
 
 def test_cloud_prototype_enforces_tenant_ownership_and_idempotent_revisions(tmp_path: Path) -> None:
@@ -415,8 +450,8 @@ def test_cloud_prototype_validates_objects_and_supports_review_lease_job(tmp_pat
         )
         job = client.post(
             f"/v1/workspaces/{workspace_id}/projects/{project_id}/jobs",
-            json={"revision_id": revision_id, "kind": "render"},
-            headers=headers,
+            json=_remote_job_request(revision_id),
+            headers=_idempotent(headers),
         )
         assert job.status_code == 202
         assert job.json()["status"] == "dispatched"
@@ -597,17 +632,16 @@ def test_cloud_executor_result_is_hash_checked_and_idempotent(tmp_path: Path) ->
         ).json()
         job = client.post(
             f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}/jobs",
-            json={
-                "revision_id": project["current_revision_id"],
-                "kind": "render",
-                "fingerprints": {
+            json=_remote_job_request(
+                project["current_revision_id"],
+                fingerprints={
                     "provider_policy": "sha256:" + "1" * 64,
                     "platform": "sha256:" + "2" * 64,
                     "runtime": "sha256:" + "3" * 64,
                     "input": "sha256:" + "4" * 64,
                 },
-            },
-            headers=headers,
+            ),
+            headers=_idempotent(headers),
         ).json()
         fingerprints = job["fingerprints"]
         result = {"media_type": "video/mp4", "duration_ms": 1000}
@@ -620,15 +654,19 @@ def test_cloud_executor_result_is_hash_checked_and_idempotent(tmp_path: Path) ->
         unowned = client.post(
             result_url,
             json={
-                "attempt_id": str(uuid4()),
+                "attempt_id": job["attempt_id"],
                 "executor_id": executor["executor_id"],
                 "status": "completed",
+                "result_schema_version": 1,
                 "result": result,
                 "result_sha256": canonical_sha256(result),
                 "output_refs": ["artifact://" + output_object],
+                "output_media_types": {
+                    "artifact://" + output_object: "application/octet-stream"
+                },
                 "fingerprints": fingerprints,
             },
-            headers=headers,
+            headers={**headers, "X-Attempt-Token": job["attempt_access_token"]},
         )
         assert unowned.status_code == 422
         assert unowned.json()["detail"] == "result_object_not_owned"
@@ -658,18 +696,23 @@ def test_cloud_executor_result_is_hash_checked_and_idempotent(tmp_path: Path) ->
             headers=headers,
         ).status_code == 201
         report = {
-            "attempt_id": str(uuid4()),
+            "attempt_id": job["attempt_id"],
             "executor_id": executor["executor_id"],
             "status": "completed",
+            "result_schema_version": 1,
             "result": result,
             "result_sha256": canonical_sha256(result),
             "output_refs": ["artifact://" + output_object],
+            "output_media_types": {
+                "artifact://" + output_object: "application/octet-stream"
+            },
             "fingerprints": fingerprints,
         }
-        completed = client.post(result_url, json=report, headers=headers)
+        attempt_headers = {**headers, "X-Attempt-Token": job["attempt_access_token"]}
+        completed = client.post(result_url, json=report, headers=attempt_headers)
         assert completed.status_code == 200
         assert completed.json()["status"] == "completed"
-        repeated = client.post(result_url, json=report, headers=headers)
+        repeated = client.post(result_url, json=report, headers=attempt_headers)
         assert repeated.status_code == 200
         job_after = client.get(
             f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}/jobs/{job['job_id']}",
@@ -680,11 +723,18 @@ def test_cloud_executor_result_is_hash_checked_and_idempotent(tmp_path: Path) ->
         assert job_after["result"]["fingerprints"] == fingerprints
 
         mismatch = dict(report)
-        mismatch["attempt_id"] = str(uuid4())
         mismatch["fingerprints"] = {**fingerprints, "runtime": "sha256:" + "9" * 64}
-        rejected = client.post(result_url, json=mismatch, headers=headers)
+        rejected = client.post(result_url, json=mismatch, headers=attempt_headers)
         assert rejected.status_code == 422
         assert rejected.json()["detail"] == "job_fingerprint_mismatch"
+
+        conflict = dict(report)
+        conflict_result = {**result, "duration_ms": 2000}
+        conflict["result"] = conflict_result
+        conflict["result_sha256"] = canonical_sha256(conflict_result)
+        rejected_conflict = client.post(result_url, json=conflict, headers=attempt_headers)
+        assert rejected_conflict.status_code == 409
+        assert rejected_conflict.json()["detail"] == "attempt_result_conflict"
 
 
 def test_cloud_job_dispatch_matches_required_executor_capabilities(tmp_path: Path) -> None:
@@ -733,12 +783,207 @@ def test_cloud_job_dispatch_matches_required_executor_capabilities(tmp_path: Pat
         ).json()
         job = client.post(
             f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}/jobs",
-            json={
-                "revision_id": project["current_revision_id"],
-                "kind": "render",
-                "parameters": {"required_capabilities": ["gpu.nvidia"]},
-            },
-            headers=headers,
+            json=_remote_job_request(
+                project["current_revision_id"],
+                required_capabilities=["gpu.nvidia"],
+            ),
+            headers=_idempotent(headers),
         ).json()
     assert job["status"] == "dispatched"
     assert job["executor_id"] == capable["executor_id"]
+
+
+def test_remote_job_idempotency_region_and_attempt_lease_reclaim(tmp_path: Path) -> None:
+    db_path = tmp_path / "control.db"
+    app = create_cloud_app(db_path, tmp_path / "objects")
+    headers = {"X-Actor-ID": "alice"}
+    east_id = "00000000-0000-0000-0000-000000000001"
+    west_one_id = "00000000-0000-0000-0000-000000000002"
+    west_two_id = "00000000-0000-0000-0000-000000000003"
+    with TestClient(app) as client:
+        workspace_id = client.post(
+            "/v1/workspaces", json={"name": "Team"}, headers=headers
+        ).json()["workspace_id"]
+        project = client.post(
+            f"/v1/workspaces/{workspace_id}/projects",
+            json={"name": "Course"},
+            headers=headers,
+        ).json()
+        for executor_id, region in ((east_id, "east"), (west_one_id, "west")):
+            registered = client.post(
+                f"/v1/workspaces/{workspace_id}/executors",
+                json={
+                    "executor_id": executor_id,
+                    "platform": "windows",
+                    "capabilities": ["render", "gpu.nvidia", "office.powerpoint"],
+                    "region": region,
+                    "gpu_label": "nvidia",
+                    "office_capability": "microsoft_office",
+                    "ttl_seconds": 900,
+                },
+                headers=headers,
+            )
+            assert registered.status_code == 201
+
+        create_headers = _idempotent(headers)
+        request = _remote_job_request(
+            project["current_revision_id"],
+            required_capabilities=["gpu.nvidia", "office.powerpoint"],
+            required_region="west",
+            parameters={"input_objects": ["sha256:" + "a" * 64]},
+        )
+        created = client.post(
+            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}/jobs",
+            json=request,
+            headers=create_headers,
+        )
+        assert created.status_code == 202
+        job = created.json()
+        assert job["executor_id"] == west_one_id
+        assert job["attempt_count"] == 1
+        assert job["attempt_id"]
+        assert job["lease_id"]
+        assert job["attempt_access_token"]
+        with sqlite3.connect(db_path) as db:
+            token_hash = db.execute(
+                "SELECT attempt_token_hash FROM jobs WHERE id=?", (job["job_id"],)
+            ).fetchone()[0]
+        assert token_hash.startswith("sha256:")
+        assert token_hash != job["attempt_access_token"]
+
+        renewed = client.post(
+            f"/v1/workspaces/{workspace_id}/executors",
+            json={
+                "executor_id": west_one_id,
+                "platform": "windows",
+                "capabilities": ["render", "gpu.nvidia", "office.powerpoint"],
+                "region": "west",
+                "gpu_label": "nvidia",
+                "office_capability": "microsoft_office",
+                "ttl_seconds": 900,
+            },
+            headers=headers,
+        )
+        assert renewed.status_code == 201
+
+        duplicate = client.post(
+            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}/jobs",
+            json=request,
+            headers=create_headers,
+        )
+        assert duplicate.status_code == 202
+        assert duplicate.json()["job_id"] == job["job_id"]
+        assert duplicate.json()["attempt_count"] == 1
+        assert "attempt_access_token" not in duplicate.json()
+
+        changed_request = {**request, "kind": "export"}
+        conflict = client.post(
+            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}/jobs",
+            json=changed_request,
+            headers=create_headers,
+        )
+        assert conflict.status_code == 409
+        assert conflict.json()["detail"] == "job_idempotency_conflict"
+
+        input_url = (
+            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}"
+            f"/jobs/{job['job_id']}/attempts/{job['attempt_id']}/input"
+        )
+        assert client.get(input_url, headers=headers).status_code == 401
+        assert (
+            client.get(input_url, headers={**headers, "X-Attempt-Token": "x" * 43}).json()[
+                "detail"
+            ]
+            == "attempt_token_invalid"
+        )
+        immutable_input = client.get(
+            input_url,
+            headers={**headers, "X-Attempt-Token": job["attempt_access_token"]},
+        )
+        assert immutable_input.status_code == 200
+        assert immutable_input.json()["revision_id"] == project["current_revision_id"]
+        assert immutable_input.json()["provider_policy_sha256"] == _PROVIDER_POLICY_SHA256
+
+        active_claim = client.post(
+            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}"
+            f"/jobs/{job['job_id']}/claim",
+            json={"executor_id": west_one_id, "requested_ttl_seconds": 120},
+            headers=_idempotent(headers),
+        )
+        assert active_claim.status_code == 409
+        assert active_claim.json()["detail"] == "job_attempt_lease_active"
+
+        with sqlite3.connect(db_path) as db:
+            db.execute(
+                "UPDATE jobs SET lease_expires_at=?, attempt_token_expires_at=? WHERE id=?",
+                ("2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z", job["job_id"]),
+            )
+            db.execute(
+                "UPDATE executors SET status='offline', expires_at=? WHERE id=?",
+                ("2026-01-01T00:00:00Z", west_one_id),
+            )
+
+        replacement = client.post(
+            f"/v1/workspaces/{workspace_id}/executors",
+            json={
+                "executor_id": west_two_id,
+                "platform": "linux",
+                "capabilities": ["render", "gpu.nvidia", "office.powerpoint"],
+                "region": "west",
+                "gpu_label": "nvidia",
+                "office_capability": "libreoffice",
+                "ttl_seconds": 900,
+            },
+            headers=headers,
+        )
+        assert replacement.status_code == 201
+        reclaimed = client.post(
+            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}"
+            f"/jobs/{job['job_id']}/claim",
+            json={"executor_id": west_two_id, "requested_ttl_seconds": 120},
+            headers=_idempotent(headers),
+        )
+        assert reclaimed.status_code == 200
+        second = reclaimed.json()
+        assert second["executor_id"] == west_two_id
+        assert second["attempt_count"] == 2
+        assert second["attempt_id"] != job["attempt_id"]
+        assert second["lease_id"] != job["lease_id"]
+        with sqlite3.connect(db_path) as db:
+            attempt_events = db.execute(
+                "SELECT attempt_id FROM job_attempt_events WHERE job_id=? ORDER BY occurred_at",
+                (job["job_id"],),
+            ).fetchall()
+        assert {row[0] for row in attempt_events} == {job["attempt_id"], second["attempt_id"]}
+
+        stale_result = {"message": "stale"}
+        rejected_stale = client.post(
+            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}"
+            f"/jobs/{job['job_id']}/result",
+            json={
+                "attempt_id": job["attempt_id"],
+                "executor_id": west_one_id,
+                "status": "completed",
+                "result_schema_version": 1,
+                "result": stale_result,
+                "result_sha256": canonical_sha256(stale_result),
+                "output_refs": [],
+                "output_media_types": {},
+                "fingerprints": {},
+            },
+            headers={**_idempotent(headers), "X-Attempt-Token": job["attempt_access_token"]},
+        )
+        assert rejected_stale.status_code == 409
+        assert rejected_stale.json()["detail"] == "job_attempt_mismatch"
+
+        second_input_url = (
+            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}"
+            f"/jobs/{job['job_id']}/attempts/{second['attempt_id']}/input"
+        )
+        assert (
+            client.get(
+                second_input_url,
+                headers={**headers, "X-Attempt-Token": second["attempt_access_token"]},
+            ).status_code
+            == 200
+        )

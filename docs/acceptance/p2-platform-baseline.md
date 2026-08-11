@@ -26,10 +26,10 @@ $env:PYTHONPATH = 'apps/api/src'
 & $py -m ruff check apps/api/src/workbench/p2.py apps/api/src/workbench/contracts/p2_platform.py apps/api/src/workbench/cache apps/api/src/workbench/diagnostics/p2_privacy.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype tests/contract tests/unit/providers tests/unit/platform_foundation tests/unit/cache/test_p2_matrix.py tests/unit/diagnostics/test_p2_privacy.py tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/integration/test_narration_generation_api.py tests/cloud tests/platform
 ```
 
-Current result: **109 focused P2 tests passed**, mypy reports no issues in 33 source files,
+Current result: **110 focused P2 tests passed**, mypy reports no issues in 33 source files,
 and Ruff reports no violations.
 
-The generated Cloud TypeScript client covers all 39 OpenAPI operations; its drift check
+The generated Cloud TypeScript client covers all 41 OpenAPI operations; its drift check
 passes and the P2 contract package passes a strict standalone TypeScript `--noEmit` run.
 
 The independent `peripheral-platform` S0 host also passes **128 tests** on the
@@ -66,8 +66,10 @@ baseline result is not reclassified as a current run.
   additive and never writes policy fields implicitly.
 - The cloud prototype has an HTTP-level two-device evidence test covering A's
   outbox, B's cursor pull/acknowledgement, and stale-base conflict handling.
-- Remote jobs now persist provider-policy/platform/runtime/input fingerprints;
-  result publication rejects a mismatched executor fingerprint set.
+- Remote jobs now bind the immutable revision, Provider policy, runtime image,
+  capability labels and region. Every dispatch/reclaim creates a new attempt and bounded
+  lease with a short-lived capability token stored only as a hash; stale attempts,
+  expired leases, mismatched media declarations and conflicting duplicate results are rejected.
 - Provider invocations now expose a bounded tenant/project-scoped audit stream
   containing operation status and billed cost only; request inputs and secrets
   are never persisted in the audit payload.
