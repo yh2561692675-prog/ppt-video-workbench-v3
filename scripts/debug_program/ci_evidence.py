@@ -37,7 +37,7 @@ _QUALITY_COMMANDS = (
     "pnpm check",
 )
 _QUALITY_COMMAND_SET = set(_QUALITY_COMMANDS)
-_JOB_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+_JOB_ID = re.compile(r"^[1-9][0-9]*$")
 _REPOSITORY = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 _PATH_SEPARATOR = re.compile(r"[/\\]")
 _RFC3339 = re.compile(
@@ -128,7 +128,11 @@ def _validate_hash_files(
 
 
 def _validate_job(
-    value: Any, index: int, evidence_root: Path, seen_paths: set[str]
+    value: Any,
+    index: int,
+    evidence_root: Path,
+    seen_paths: set[str],
+    expected_repository: str,
 ) -> tuple[str, str, str, str, str]:
     job = _object(value, f"jobs[{index}]")
     fields = {
@@ -199,6 +203,8 @@ def _validate_job(
     repository = _string(job, "repository")
     if not _REPOSITORY.fullmatch(repository):
         raise ValidationError(f"jobs[{index}].repository is invalid")
+    if repository.casefold() != expected_repository.casefold():
+        raise ValidationError(f"jobs[{index}].repository does not match GitHub origin")
     run_id = _string(job, "run_id")
     job_id = _string(job, "job_id")
     if not _JOB_ID.fullmatch(run_id) or not _JOB_ID.fullmatch(job_id):
@@ -227,9 +233,12 @@ def validate_external_ci_evidence(
     repo_root: Path,
     candidate_path: Path,
     expected_source_commit: str,
+    expected_repository: str,
 ) -> dict[str, Any]:
     """Validate a CI attestation and bind it to local candidate/workflow bytes."""
 
+    if not _REPOSITORY.fullmatch(expected_repository):
+        raise ValidationError("expected GitHub repository is invalid")
     evidence = _inside(evidence_path, repo_root, "external evidence")
     if not evidence.is_file():
         raise ValidationError("external evidence file is missing")
@@ -290,7 +299,7 @@ def validate_external_ci_evidence(
     origin: tuple[str, str] | None = None
     for index, job in enumerate(jobs):
         platform, job_id, current_run_id, current_workflow_url, job_url = _validate_job(
-            job, index, evidence.parent, seen_paths
+            job, index, evidence.parent, seen_paths, expected_repository
         )
         if platform in seen_platforms:
             raise ValidationError(f"duplicate external CI platform: {platform}")

@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,7 @@ from scripts.debug_program.models import ValidationError
 
 COMMIT = "a" * 40
 CANDIDATE_ID = "v1-rc-abc1234-20260811T193000Z"
+REPOSITORY = "openai/ppt-video-workbench-v3"
 QUALITY_COMMANDS = (
     "uv sync --frozen",
     "uv run ruff check .",
@@ -80,7 +82,7 @@ def _fixture(tmp_path: Path) -> tuple[Path, Path, dict[str, Any]]:
                     for command in QUALITY_COMMANDS
                 ],
                 "provider": "github-actions",
-                "repository": "openai/ppt-video-workbench-v3",
+                "repository": REPOSITORY,
                 "run_id": "123456789",
                 "workflow_run_url": (
                     "https://github.com/openai/ppt-video-workbench-v3/actions/runs/123456789"
@@ -118,9 +120,10 @@ def test_external_ci_golden_and_cli_pass(tmp_path: Path, monkeypatch: pytest.Mon
     repo_root, candidate_path, evidence = _fixture(tmp_path)
     evidence_path = repo_root / "external-ci-evidence.json"
     monkeypatch.setattr(ci_preflight, "_git_head", lambda _: COMMIT)
+    monkeypatch.setattr(ci_preflight, "_git_origin_repository", lambda _: REPOSITORY)
     assert (
         validate_external_ci_evidence(
-            evidence, evidence_path, repo_root, candidate_path, COMMIT
+            evidence, evidence_path, repo_root, candidate_path, COMMIT, REPOSITORY
         )["candidate_id"]
         == CANDIDATE_ID
     )
@@ -142,6 +145,76 @@ def test_external_ci_golden_and_cli_pass(tmp_path: Path, monkeypatch: pytest.Mon
 def test_ci_preflight_without_external_evidence_is_blocked(tmp_path: Path) -> None:
     repo_root, _, _ = _fixture(tmp_path)
     assert ci_preflight.main(["--repo-root", str(repo_root)]) == 2
+
+
+@pytest.mark.parametrize(
+    ("remote", "expected"),
+    [
+        ("https://github.com/OpenAI/ppt-video-workbench-v3.git", REPOSITORY),
+        ("git@github.com:OpenAI/ppt-video-workbench-v3.git", REPOSITORY),
+        ("ssh://git@github.com/OpenAI/ppt-video-workbench-v3.git", REPOSITORY),
+    ],
+)
+def test_github_origin_parsing_accepts_https_and_ssh(remote: str, expected: str) -> None:
+    assert ci_preflight._parse_github_origin(remote) == expected
+
+
+@pytest.mark.parametrize(
+    "remote",
+    [
+        "",
+        "https://gitlab.com/openai/ppt-video-workbench-v3.git",
+        "https://github.com/openai/ppt-video-workbench-v3/extra.git",
+        "https://github.com/openai/ppt-video-workbench-v3?mirror=1",
+        "ssh://user@github.com/openai/ppt-video-workbench-v3.git",
+    ],
+)
+def test_github_origin_parsing_rejects_missing_non_github_and_weird_paths(
+    remote: str,
+) -> None:
+    with pytest.raises(ValidationError):
+        ci_preflight._parse_github_origin(remote)
+
+
+@pytest.mark.parametrize(
+    "stdout",
+    ["", "https://gitlab.com/openai/ppt-video-workbench-v3.git", "https://github.com/a/b\nhttps://github.com/c/d"],
+)
+def test_git_origin_repository_requires_one_trusted_remote(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stdout: str
+) -> None:
+    def fake_run(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(args[0], 0, stdout=stdout, stderr="")
+
+    monkeypatch.setattr(ci_preflight.subprocess, "run", fake_run)
+    with pytest.raises(ValidationError):
+        ci_preflight._git_origin_repository(tmp_path)
+
+
+def test_ci_preflight_blocks_without_trusted_origin(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo_root, candidate_path, _ = _fixture(tmp_path)
+    evidence_path = repo_root / "external-ci-evidence.json"
+
+    def missing_origin(_: Path) -> str:
+        raise ValidationError("trusted GitHub origin is unavailable")
+
+    monkeypatch.setattr(ci_preflight, "_git_origin_repository", missing_origin)
+    assert (
+        ci_preflight.main(
+            [
+                "--repo-root",
+                str(repo_root),
+                "--candidate",
+                str(candidate_path),
+                "--external-evidence",
+                str(evidence_path),
+            ]
+        )
+        == 2
+    )
+    assert "trusted GitHub origin unavailable" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize(
@@ -176,6 +249,9 @@ def test_ci_preflight_without_external_evidence_is_blocked(tmp_path: Path) -> No
         ),
         lambda value: value["jobs"][1].update({"job_url": value["jobs"][0]["job_url"]}),
         lambda value: value["jobs"][1].update({"job_url": "https://evil.example/runs/1/job/2"}),
+        lambda value: value["jobs"][0].update({"repository": "other/project"}),
+        lambda value: value["jobs"][0].update({"run_id": "run-123"}),
+        lambda value: value["jobs"][0].update({"job_id": "job-1001"}),
     ],
 )
 def test_external_ci_invalid_variants_are_rejected(
@@ -186,7 +262,9 @@ def test_external_ci_invalid_variants_are_rejected(
     value = copy.deepcopy(evidence)
     mutate(value)
     with pytest.raises(ValidationError):
-        validate_external_ci_evidence(value, evidence_path, repo_root, candidate_path, COMMIT)
+        validate_external_ci_evidence(
+            value, evidence_path, repo_root, candidate_path, COMMIT, REPOSITORY
+        )
 
 
 def test_ci_preflight_rejects_evidence_without_candidate(tmp_path: Path) -> None:
