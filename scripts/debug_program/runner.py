@@ -52,7 +52,9 @@ def _write_new(path: Path, value: Any) -> None:
 
 
 def _slug(value: str) -> str:
-    slug = "".join(char if char.isalnum() or char in "-_" else "-" for char in value).strip("-")
+    slug = "".join(
+        char if char.isalnum() or char in "-_" else "-" for char in value
+    ).strip("-").lower()
     if not slug:
         raise ValueError("command name must contain at least one alphanumeric character")
     return slug
@@ -233,7 +235,7 @@ def new_run_id(candidate_id: str, matrix: str) -> str:
     import secrets
     import time
 
-    return f"{candidate_id}-{_slug(matrix)}-{time.time_ns()}-{secrets.token_hex(3)}"
+    return f"{_slug(candidate_id)}-{_slug(matrix)}-{time.time_ns()}-{secrets.token_hex(3)}"
 
 
 def python_smoke_plan(repo_root: Path) -> tuple[CommandSpec, ...]:

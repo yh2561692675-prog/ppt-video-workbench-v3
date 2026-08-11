@@ -317,6 +317,29 @@ def test_run_ids_are_unique_within_one_second() -> None:
     first = new_run_id("v1-rc-abc1234-20260811T193000Z", "python-smoke")
     second = new_run_id("v1-rc-abc1234-20260811T193000Z", "python-smoke")
     assert first != second
+    assert "T" not in first and "Z" not in first
+
+
+def test_generated_run_id_is_accepted_by_verdict_validator(tmp_path: Path) -> None:
+    run_id = new_run_id("v1-rc-abc1234-20260811T193000Z", "python-smoke")
+    result = tmp_path / "result.json"
+    result.write_text("{}", encoding="utf-8")
+    validate_automation_verdict(
+        {
+            "schema_version": "1.0",
+            "candidate_id": "v1-rc-abc1234-20260811T193000Z",
+            "run_id": run_id,
+            "matrix": "python-smoke",
+            "status": "passed",
+            "started_at": "2026-08-11T19:30:00Z",
+            "finished_at": "2026-08-11T19:30:01Z",
+            "commands": [
+                {"name": "smoke", "exit_code": 0, "status": "passed", "result": "result.json"}
+            ],
+            "first_failure": None,
+        },
+        tmp_path,
+    )
 
 
 def test_full_automation_plan_is_explicit_and_sequential(tmp_path: Path) -> None:
