@@ -71,7 +71,8 @@ class PreflightEngine:
             fingerprint, fresh_issues = checker()
             check_fingerprints[name] = fingerprint
             if (
-                reusable_previous is not None
+                name != "resources"
+                and reusable_previous is not None
                 and reusable_previous.check_fingerprints.get(name) == fingerprint
             ):
                 issues.extend(previous_issues.get(name, []))
@@ -83,11 +84,7 @@ class PreflightEngine:
         project_fingerprint = self.project_fingerprint(project)
         input_fingerprint = digest({"project": project_fingerprint, "checks": check_fingerprints})
         cache_status: Literal["fresh", "reused", "mixed", "stale"] = (
-            "fresh"
-            if fresh or not reused
-            else "reused"
-            if not executed
-            else "mixed"
+            "fresh" if fresh or not reused else "reused" if not executed else "mixed"
         )
         report = PreflightReport(
             project_id=project.id,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
@@ -65,6 +65,7 @@ class QualityService:
         policy: QualityPolicy | None = None,
         report_path: Path | None = None,
         report_relative_path: str | None = None,
+        render_provenance: Mapping[str, str] | None = None,
     ) -> QualityReport:
         selected_policy = policy or QualityPolicy()
         issues: list[QualityIssue] = []
@@ -92,6 +93,7 @@ class QualityService:
                 report_relative_path,
                 selected_policy,
                 blocks_p2=selected_policy.p2_blocks,
+                render_provenance=render_provenance,
             )
 
         probe = self._probe(target.video_path, issues)
@@ -167,6 +169,7 @@ class QualityService:
             report_relative_path,
             selected_policy,
             blocks_p2=selected_policy.p2_blocks,
+            render_provenance=render_provenance,
         )
 
     def _probe(self, path: Path, issues: list[QualityIssue]) -> MediaProbe:
@@ -767,6 +770,7 @@ class QualityService:
         report_relative_path: str | None,
         policy: QualityPolicy,
         blocks_p2: bool,
+        render_provenance: Mapping[str, str] | None,
     ) -> QualityReport:
         fingerprint = canonical_hash(
             {
@@ -774,6 +778,7 @@ class QualityService:
                 "target": target.model_dump(mode="json", exclude={"video_path"}),
                 "policy": policy.model_dump(mode="json"),
                 "analyzer_version": self.analyzer_version,
+                "render_provenance": dict(render_provenance or {}),
             }
         )
         result = (
@@ -795,7 +800,10 @@ class QualityService:
             result=result,
             metrics=metrics,
             issues=issues,
-            analyzer_versions={"quality-engine": self.analyzer_version},
+            analyzer_versions={
+                "quality-engine": self.analyzer_version,
+                **dict(render_provenance or {}),
+            },
             sampled_frames=sampled_frames,
             report_path=report_relative_path
             or (report_path.name if report_path is not None else None),

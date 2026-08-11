@@ -12,6 +12,7 @@ from workbench.video.process_runner import (
     ProcessControl,
 )
 
+from .extensions import RenderExtensionProvenance
 from .ffmpeg_audio import AudioFilterCompiler, build_audio_render_command
 from .final_mux import build_final_mux_command
 from .hashing import sha256_file
@@ -68,10 +69,14 @@ class RenderGraphExportPipeline:
         *,
         context: RenderExecutionContext | None = None,
         strict_assets: bool = True,
-        execution_mode: Literal[
-            "interactive-preview", "authoritative-preview", "final"
-        ] = "final",
+        execution_mode: Literal["interactive-preview", "authoritative-preview", "final"] = "final",
+        extension_provenance: RenderExtensionProvenance | None = None,
     ) -> GraphExportResult:
+        if (
+            extension_provenance is not None
+            and extension_provenance.effective_graph_hash != graph.graph_hash
+        ):
+            raise GraphExportError("extension provenance does not match the exported graph")
         report = GraphPreflight().check(
             graph,
             self.project_root,
@@ -123,6 +128,15 @@ class RenderGraphExportPipeline:
             execution,
         )
         self._require_artifact(final_video, "FFmpeg final mux 输出")
+        provenance_path: Path | None = None
+        if extension_provenance is not None:
+            provenance_path = output_dir / "render-provenance.json"
+            temporary_provenance = provenance_path.with_name(".render-provenance.json.tmp")
+            temporary_provenance.write_text(
+                extension_provenance.model_dump_json(indent=2) + "\n",
+                encoding="utf-8",
+            )
+            temporary_provenance.replace(provenance_path)
         manifest = output_dir / "render-manifest.json"
         manifest.write_text(
             json.dumps(
@@ -133,6 +147,9 @@ class RenderGraphExportPipeline:
                     "video_only": video_only.name,
                     "master_audio": master_audio.name,
                     "final_video": final_video.name,
+                    "extension_provenance": (
+                        provenance_path.name if provenance_path is not None else None
+                    ),
                     "subtitles": [
                         artifact.path.relative_to(output_dir).as_posix()
                         for artifact in subtitle_artifacts
