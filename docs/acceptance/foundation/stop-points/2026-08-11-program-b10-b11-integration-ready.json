@@ -1,0 +1,137 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects",
+  "wave": "W1",
+  "tasks": ["B10", "B11"],
+  "generated_at": "2026-08-11T20:55:00+08:00",
+  "decision": "passed",
+  "source": {
+    "worktree": ".worktrees/program-render-release",
+    "branch": "codex/program-render-release",
+    "foundation_source_commit": "5a071cb95d9af8f91c978abac75d3df77a0910ab",
+    "source_commit": "57f4286c114021cb2f64ec4ed94c9f649f491eb9",
+    "source_subject": "feat(render): isolate release extension boundaries",
+    "status_after_source_commit": "clean",
+    "generated_dependencies": "ignored .venv and remotion/node_modules junctions only; no dependency tree copied or committed"
+  },
+  "upstream_provenance": {
+    "B00_windows": {
+      "source_commit": "e81b455c4903889ac25697a4a030e523adb7650f",
+      "stop_point": "docs/acceptance/foundation/stop-points/2026-08-11-program-b00-windows-stop-point.json",
+      "engineering_full_flow": "passed",
+      "formal_single_candidate_freeze": "still deferred"
+    },
+    "B01_rendergraph": {
+      "source_commit": "1bef20823c27562b85fa1d142f1f794319879147",
+      "stop_point": "docs/acceptance/foundation/stop-points/2026-08-11-program-b01-rendergraph-stop-point.json",
+      "integration_method": "reviewed foundation reconstruction; no directory copy and no whole-branch merge"
+    },
+    "B02_effects": {
+      "source_commit": "fc41bdfe0997f842d718ab50353841d70809bf34",
+      "payload_source_commit": "3e5f310aee7157486944cc055a0f2d62a9418582",
+      "stop_point": "docs/acceptance/foundation/stop-points/2026-08-11-program-b02-effects-stop-point.json",
+      "source_classification": "reconstructed because the original claimed Task 18-25 commits were not found",
+      "integration_method": "only provenance-complete contracts already reconstructed into foundation are consumable"
+    }
+  },
+  "core_contract_dependency": {
+    "A13_source_commit": "f73faf6",
+    "contract_catalog_sha256": "7c63aab737d6fe9281ce83cd8fec0e2ddf52f2148d51938f6be4f80ac55f5488",
+    "job_record_schema_version": "1.0",
+    "export_plan_schema_version": "1.0",
+    "integration_state": "B was implemented from the common foundation; G1 must replay A13 before this source commit and run contract drift checks",
+    "compatibility": "B consumes the core contract envelope and does not fork, regenerate or replace it"
+  },
+  "B10": {
+    "status": "passed",
+    "verified_chain": [
+      "RenderGraphCompiler",
+      "RenderGraphSnapshotStore immutable graph and current pointer",
+      "GraphPreflight",
+      "RemotionGraphRunner",
+      "AudioFilterCompiler",
+      "final mux",
+      "RenderGraphExportPipeline production package",
+      "Windows runtime manifest, launcher and release artifact manifest"
+    ],
+    "executor_boundary": {
+      "job_type": "export_package",
+      "module": "workbench.rendering.runtime_adapter",
+      "registration": "JobExecutorRegistry.register",
+      "duplicate_policy": "fail with executor already registered; never replace",
+      "job_state_machine_modified": false,
+      "jobs_directory_modified": false,
+      "main_py_modified": false
+    },
+    "fallback": {
+      "rendergraph_v2_compile_default": false,
+      "rendergraph_v2_preview_default": false,
+      "rendergraph_v2_export_default": false,
+      "renderer_generation_default": "v1",
+      "verified": true
+    }
+  },
+  "B11": {
+    "status": "passed",
+    "adapter_module": "workbench.rendering.extensions",
+    "supported_boundaries": ["effects", "presenter", "peripheral_p03_p12"],
+    "feature_flags": {
+      "WORKBENCH_RENDERGRAPH_V2_EFFECTS": false,
+      "WORKBENCH_RENDERGRAPH_V2_PRESENTER": false,
+      "WORKBENCH_RENDERGRAPH_V2_PERIPHERAL": false
+    },
+    "failure_semantics": "adapters receive a deep copy and return declarative patches; any exception is explicit and the authoritative base graph remains byte-equivalent",
+    "silent_degrade_to_incorrect_video": false,
+    "provenance": {
+      "production_package": "render-provenance.json is hash-bound to the effective graph and included in the package artifact manifest",
+      "quality_report": "render provenance participates in input_fingerprint and analyzer_versions without forking QualityReport 1.0"
+    }
+  },
+  "additional_regression_fix": {
+    "path": "apps/api/src/workbench/preflight/engine.py",
+    "finding": "dynamic resource checks were incorrectly reusable when only the threshold booleans were unchanged",
+    "fix": "resources always executes; deterministic checks still reuse matching fingerprints",
+    "scope": "B-owned preflight safety; no contract or Job transition change"
+  },
+  "verification": {
+    "python_expanded": {
+      "result": "743 passed, 2 warnings",
+      "duration_seconds": 217.77,
+      "warnings": "two pre-existing Pydantic UnsupportedFieldAttributeWarning instances",
+      "command_scope": "unit, contract, contracts, integration, release, security, smoke, acceptance and regression"
+    },
+    "b_line_focused": "217 passed",
+    "post_hardening_focused": "43 passed",
+    "new_boundary_tests": "6 passed",
+    "remotion": "12 files, 32 tests passed; typecheck passed",
+    "ruff": "passed for all modified Python files",
+    "mypy_strict": "passed for 5 modified source files",
+    "diff_check": "passed"
+  },
+  "environment_recovery": {
+    "initial_pnpm_result": "blocked by the shared pnpm SQLite store and missing worktree-local dependency resolution",
+    "resolution": "created ignored controlled junctions to the already locked root .venv and remotion/node_modules; no install, copy, network request or source mutation",
+    "authoritative_node_result": "full Remotion test and typecheck passed after dependency resolution was isolated"
+  },
+  "deferred_release_boundaries": [
+    "Run one continuous schema 2.0 A0-A9 Windows bundle on one final candidate with a real ASR configuration.",
+    "Run the frozen 30-page Effects V2 dynamic Windows preview, caption/effect inspection and final export on the same RC.",
+    "The original Effects Task 18-25 commits and original sample ZIP remain unavailable; provenance must remain reconstructed.",
+    "Code signing and formal release freeze remain later release-gate work and are not claimed by W1."
+  ],
+  "g1_handoff": {
+    "ready": true,
+    "replay_order": ["A12/A13", "B10/B11", "C10"],
+    "expected_conflict_surfaces": [
+      "QualityReport/OpenAPI generated mirrors after A13",
+      "RenderGraph and Export contract drift",
+      "main.py executor wiring"
+    ],
+    "required_gate_checks": [
+      "confirm JobRecord and ExportPlan remain schema_version 1.0",
+      "confirm EXPORT_PACKAGE registration does not replace a core handler",
+      "regenerate schema/OpenAPI only from the A/Gate-owned source",
+      "rerun Python, Remotion, Web and migration/legacy fallback matrices"
+    ]
+  }
+}
