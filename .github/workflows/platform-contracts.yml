@@ -23,6 +23,7 @@ jobs:
         shell: pwsh
         run: |
           $env:PYTHONPATH = "apps/api/src"
+          python scripts/generate_cloud_client.py --check
           python -m pytest tests/platform tests/unit/platform_foundation -q
           python -m ruff check apps/api/src/workbench/platform tests/platform tests/unit/platform_foundation
           python -m mypy apps/api/src/workbench/platform

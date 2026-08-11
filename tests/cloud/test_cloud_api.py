@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import sqlite3
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from workbench.contracts.p2_platform import canonical_sha256
 
-from cloud_prototype.app import CloudProductionEvidence, create_cloud_app
+from cloud_prototype.app import CloudProductionEvidence, CloudRepository, create_cloud_app
 
 
 def _operation(workspace_id: str, project_id: str, revision_id: str) -> dict[str, object]:
@@ -28,6 +30,78 @@ def _operation(workspace_id: str, project_id: str, revision_id: str) -> dict[str
         "payload_sha256": canonical_sha256(payload),
         "created_at": "2026-08-11T00:00:00Z",
     }
+
+
+def test_cloud_database_migrations_are_versioned_and_idempotent(tmp_path: Path) -> None:
+    db_path = tmp_path / "control.db"
+    create_cloud_app(db_path, tmp_path / "objects")
+    create_cloud_app(db_path, tmp_path / "objects")
+
+    with sqlite3.connect(db_path) as db:
+        rows = db.execute(
+            "SELECT version, name, checksum FROM schema_migrations ORDER BY version"
+        ).fetchall()
+    assert [(row[0], row[1]) for row in rows] == [
+        (1, "0001_initial"),
+        (2, "0002_identity_control"),
+    ]
+    assert all(re.fullmatch(r"sha256:[0-9a-f]{64}", row[2]) for row in rows)
+
+
+def test_cloud_database_rejects_changed_applied_migration(tmp_path: Path) -> None:
+    migration_root = tmp_path / "migrations"
+    migration_root.mkdir()
+    source = (
+        Path(__file__).resolve().parents[2]
+        / "cloud_prototype"
+        / "migrations"
+        / "0001_initial.sql"
+    )
+    copied = migration_root / source.name
+    migration_text = source.read_text(encoding="utf-8")
+    copied.write_text(migration_text, encoding="utf-8", newline="\n")
+    db_path = tmp_path / "control.db"
+    CloudRepository(db_path, tmp_path / "objects", migration_root=migration_root)
+    copied.write_text(migration_text, encoding="utf-8", newline="\r\n")
+    CloudRepository(db_path, tmp_path / "objects", migration_root=migration_root)
+    copied.write_text(
+        migration_text + "\n-- changed after application\n", encoding="utf-8", newline="\n"
+    )
+
+    with pytest.raises(RuntimeError, match="migration checksum mismatch"):
+        CloudRepository(db_path, tmp_path / "objects", migration_root=migration_root)
+
+
+def test_cloud_database_upgrades_legacy_executor_columns(tmp_path: Path) -> None:
+    db_path = tmp_path / "control.db"
+    with sqlite3.connect(db_path) as db:
+        db.executescript(
+            """
+            CREATE TABLE jobs (
+                id TEXT PRIMARY KEY, project_id TEXT NOT NULL, revision_id TEXT NOT NULL,
+                actor_id TEXT NOT NULL, kind TEXT NOT NULL, parameters_json TEXT NOT NULL,
+                status TEXT NOT NULL, created_at TEXT NOT NULL
+            );
+            CREATE TABLE job_results (
+                attempt_id TEXT PRIMARY KEY, job_id TEXT NOT NULL, status TEXT NOT NULL,
+                result_sha256 TEXT NOT NULL, result_json TEXT NOT NULL, created_at TEXT NOT NULL
+            );
+            CREATE TABLE executors (
+                id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, actor_id TEXT NOT NULL,
+                platform TEXT NOT NULL, capabilities_json TEXT NOT NULL, region TEXT NOT NULL,
+                status TEXT NOT NULL, expires_at TEXT NOT NULL
+            );
+            """
+        )
+
+    CloudRepository(db_path, tmp_path / "objects")
+    with sqlite3.connect(db_path) as db:
+        job_columns = {row[1] for row in db.execute("PRAGMA table_info(jobs)")}
+        result_columns = {row[1] for row in db.execute("PRAGMA table_info(job_results)")}
+        executor_columns = {row[1] for row in db.execute("PRAGMA table_info(executors)")}
+    assert {"executor_id", "fingerprints_json"} <= job_columns
+    assert {"output_refs_json", "fingerprints_json"} <= result_columns
+    assert "capability_snapshot_json" in executor_columns
 
 
 def test_cloud_prototype_enforces_tenant_ownership_and_idempotent_revisions(tmp_path: Path) -> None:
@@ -87,6 +161,97 @@ def test_cloud_prototype_enforces_tenant_ownership_and_idempotent_revisions(tmp_
             headers={"X-Actor-ID": "mallory"},
         )
         assert hidden.status_code == 404
+
+
+def test_cloud_identity_devices_and_service_accounts_enforce_scope(tmp_path: Path) -> None:
+    app = create_cloud_app(tmp_path / "control.db", tmp_path / "objects")
+    alice = {"X-Actor-ID": "alice"}
+    bob = {"X-Actor-ID": "bob"}
+    mallory = {"X-Actor-ID": "mallory"}
+    with TestClient(app) as client:
+        organization = client.post(
+            "/v1/organizations", json={"name": "Studio"}, headers=alice
+        )
+        assert organization.status_code == 201
+        organization_id = organization.json()["organization_id"]
+        workspace = client.post(
+            "/v1/workspaces",
+            json={"name": "Team", "organization_id": organization_id},
+            headers=alice,
+        )
+        assert workspace.status_code == 201
+        workspace_id = workspace.json()["workspace_id"]
+        assert workspace.json()["organization_id"] == organization_id
+        assert client.get("/v1/organizations", headers=alice).json()["items"] == [
+            organization.json()
+        ]
+        assert (
+            client.post(
+                "/v1/workspaces",
+                json={"name": "Stolen", "organization_id": organization_id},
+                headers=mallory,
+            ).status_code
+            == 404
+        )
+
+        first_member = client.post(
+            f"/v1/workspaces/{workspace_id}/members",
+            json={"actor_id": "bob", "role": "viewer"},
+            headers=alice,
+        )
+        second_member = client.post(
+            f"/v1/workspaces/{workspace_id}/members",
+            json={"actor_id": "bob", "role": "reviewer"},
+            headers=alice,
+        )
+        assert first_member.json()["membership_version"] == 1
+        assert second_member.json()["membership_version"] == 2
+        assert re.fullmatch(r"[0-9a-f-]{36}", second_member.json()["user_id"])
+
+        device_id = str(uuid4())
+        device = client.post(
+            "/v1/devices",
+            json={"device_id": device_id, "name": "Laptop", "platform": "windows"},
+            headers=alice,
+        )
+        assert device.status_code == 201
+        assert device.json()["status"] == "active"
+        assert (
+            client.post(
+                "/v1/devices",
+                json={"device_id": device_id, "name": "Other", "platform": "linux"},
+                headers=mallory,
+            ).status_code
+            == 409
+        )
+        assert client.delete(f"/v1/devices/{device_id}", headers=mallory).status_code == 404
+        revoked = client.delete(f"/v1/devices/{device_id}", headers=alice)
+        assert revoked.json()["status"] == "revoked"
+        assert client.get("/v1/me", headers=alice).json()["devices"] == [revoked.json()]
+
+        account = client.post(
+            f"/v1/workspaces/{workspace_id}/service-accounts",
+            json={"name": "renderer"},
+            headers=alice,
+        )
+        assert account.status_code == 201
+        account_id = account.json()["service_account_id"]
+        assert (
+            client.get(
+                f"/v1/workspaces/{workspace_id}/service-accounts", headers=bob
+            ).status_code
+            == 403
+        )
+        assert (
+            client.get(
+                f"/v1/workspaces/{workspace_id}/service-accounts", headers=mallory
+            ).status_code
+            == 404
+        )
+        disabled = client.delete(
+            f"/v1/workspaces/{workspace_id}/service-accounts/{account_id}", headers=alice
+        )
+        assert disabled.json()["status"] == "disabled"
 
 
 def test_cloud_revisions_reject_host_paths_and_credentials(tmp_path: Path) -> None:

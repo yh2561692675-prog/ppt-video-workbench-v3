@@ -22,12 +22,15 @@ Run from the integration worktree with the repository virtual environment:
 $py = 'F:\ppt-video-workbench-v3\.venv\Scripts\python.exe'
 $env:PYTHONPATH = 'apps/api/src'
 & $py -m pytest tests/contract/test_p2_platform_contracts.py tests/contract/test_schema_alignment.py tests/unit/providers tests/unit/platform_foundation tests/unit/cache/test_p2_matrix.py tests/unit/diagnostics/test_p2_privacy.py tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/integration/test_narration_generation_api.py tests/cloud tests/platform -q
-& $py -m mypy apps/api/src/workbench/p2.py apps/api/src/workbench/contracts/p2_platform.py apps/api/src/workbench/cache apps/api/src/workbench/diagnostics/p2_privacy.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype
+& $py -m mypy --cache-dir .test-mypy-cache apps/api/src/workbench/p2.py apps/api/src/workbench/contracts/p2_platform.py apps/api/src/workbench/cache apps/api/src/workbench/diagnostics/p2_privacy.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype scripts/generate_cloud_client.py
 & $py -m ruff check apps/api/src/workbench/p2.py apps/api/src/workbench/contracts/p2_platform.py apps/api/src/workbench/cache apps/api/src/workbench/diagnostics/p2_privacy.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype tests/contract tests/unit/providers tests/unit/platform_foundation tests/unit/cache/test_p2_matrix.py tests/unit/diagnostics/test_p2_privacy.py tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/integration/test_narration_generation_api.py tests/cloud tests/platform
 ```
 
-Current result: **102 focused P2 tests passed**, mypy reports no issues in 32 source files,
+Current result: **108 focused P2 tests passed**, mypy reports no issues in 33 source files,
 and Ruff reports no violations.
+
+The generated Cloud TypeScript client covers all 37 OpenAPI operations; its drift check
+passes and the P2 contract package passes a strict standalone TypeScript `--noEmit` run.
 
 The independent `peripheral-platform` S0 host also passes **128 tests** on the
 current Windows runner (2 symlink tests are skipped when Developer Mode is not

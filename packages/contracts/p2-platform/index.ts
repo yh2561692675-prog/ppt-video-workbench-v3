@@ -246,3 +246,5 @@ export interface CloudSyncOperationV1 {
   created_at: string;
 }
 
+export * from "./cloud-client.generated";
+

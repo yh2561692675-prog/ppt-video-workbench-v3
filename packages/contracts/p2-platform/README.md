@@ -5,6 +5,10 @@ The first implementation lives in `apps/api/src/workbench/contracts/p2_platform.
 directory contains language-neutral schemas and snapshots that can be exported to Python,
 TypeScript and OpenAPI after the foundation gate.
 
+`cloud-client.generated.ts` is the bounded HTTP client snapshot generated from the Cloud
+OpenAPI operation IDs, methods and paths. Regenerate it with
+`python scripts/generate_cloud_client.py`; CI uses `--check` to reject contract drift.
+
 ## Rules
 
 - Every cross-boundary model has `schema_version: 1` and `additionalProperties: false`.

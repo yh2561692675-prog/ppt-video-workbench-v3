@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal
-from uuid import UUID, uuid4
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from fastapi import APIRouter, FastAPI, Header, HTTPException, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -25,6 +25,13 @@ def _now() -> str:
 
 def _expires(seconds: int) -> str:
     return (datetime.now(UTC) + timedelta(seconds=seconds)).isoformat().replace("+00:00", "Z")
+
+
+def _principal_id(actor_id: str) -> str:
+    try:
+        return str(UUID(actor_id))
+    except ValueError:
+        return str(uuid5(NAMESPACE_URL, f"ppt-video-workbench:cloud-principal:{actor_id}"))
 
 
 _SENSITIVE_KEYS = {
@@ -113,11 +120,26 @@ def _validate_fingerprints(value: dict[str, str]) -> dict[str, str]:
 
 class WorkspaceCreate(CloudModel):
     name: str = Field(min_length=1, max_length=120)
+    organization_id: UUID | None = None
+
+
+class OrganizationCreate(CloudModel):
+    name: str = Field(min_length=1, max_length=200)
 
 
 class MemberAdd(CloudModel):
     actor_id: str = Field(min_length=1, max_length=200)
     role: Literal["admin", "editor", "reviewer", "viewer"] = "editor"
+
+
+class DeviceRegister(CloudModel):
+    device_id: UUID = Field(default_factory=uuid4)
+    name: str = Field(min_length=1, max_length=200)
+    platform: Literal["windows", "macos", "linux"]
+
+
+class ServiceAccountCreate(CloudModel):
+    name: str = Field(min_length=1, max_length=200)
 
 
 class ProjectCreate(CloudModel):
@@ -250,9 +272,16 @@ class CloudProductionEvidence:
 class CloudRepository:
     """Small SQLite WAL repository with tenant checks in every project query."""
 
-    def __init__(self, db_path: Path, object_root: Path) -> None:
+    def __init__(
+        self,
+        db_path: Path,
+        object_root: Path,
+        *,
+        migration_root: Path | None = None,
+    ) -> None:
         self.db_path = db_path
         self.object_root = object_root
+        self.migration_root = migration_root or Path(__file__).with_name("migrations")
         self.object_root.mkdir(parents=True, exist_ok=True)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
@@ -286,123 +315,196 @@ class CloudRepository:
     def _init_db(self) -> None:
         with self._connect() as db:
             db.execute("PRAGMA journal_mode = WAL")
-            db.executescript(
-                """
-                CREATE TABLE IF NOT EXISTS workspaces (
-                    id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS members (
-                    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-                    actor_id TEXT NOT NULL, role TEXT NOT NULL,
-                    PRIMARY KEY(workspace_id, actor_id)
-                );
-                CREATE TABLE IF NOT EXISTS projects (
-                    id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL REFERENCES workspaces(id),
-                    name TEXT NOT NULL, current_revision_id TEXT, created_at TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS revisions (
-                    id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id),
-                    sequence INTEGER NOT NULL, parent_id TEXT, content_hash TEXT NOT NULL,
-                    manifest_json TEXT NOT NULL, created_at TEXT NOT NULL,
-                    UNIQUE(project_id, sequence)
-                );
-                CREATE TABLE IF NOT EXISTS operations (
-                    id TEXT PRIMARY KEY, idempotency_key TEXT UNIQUE NOT NULL,
-                    project_id TEXT NOT NULL REFERENCES projects(id), actor_id TEXT NOT NULL,
-                    base_revision_id TEXT NOT NULL, revision_id TEXT NOT NULL,
-                    payload_json TEXT NOT NULL, created_at TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS objects (
-                    id TEXT NOT NULL, project_id TEXT NOT NULL REFERENCES projects(id),
-                    size_bytes INTEGER NOT NULL, media_type TEXT NOT NULL,
-                    classification TEXT NOT NULL,
-                    path TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(id, project_id)
-                );
-                CREATE TABLE IF NOT EXISTS uploads (
-                    id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id),
-                    object_id TEXT NOT NULL, size_bytes INTEGER NOT NULL, media_type TEXT NOT NULL,
-                    classification TEXT NOT NULL, status TEXT NOT NULL, expires_at TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS comments (
-                    id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id),
-                    actor_id TEXT NOT NULL, body TEXT NOT NULL, anchor_json TEXT NOT NULL,
-                    created_at TEXT NOT NULL, resolved INTEGER NOT NULL DEFAULT 0
-                );
-                CREATE TABLE IF NOT EXISTS reviews (
-                    id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id),
-                    revision_id TEXT NOT NULL, actor_id TEXT NOT NULL, decision TEXT NOT NULL,
-                    note TEXT, created_at TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS leases (
-                    project_id TEXT PRIMARY KEY, lease_id TEXT NOT NULL, actor_id TEXT NOT NULL,
-                    client_id TEXT NOT NULL, expires_at TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS jobs (
-                    id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id),
-                    revision_id TEXT NOT NULL, actor_id TEXT NOT NULL, kind TEXT NOT NULL,
-                    parameters_json TEXT NOT NULL, status TEXT NOT NULL,
-                    executor_id TEXT, created_at TEXT NOT NULL,
-                    fingerprints_json TEXT NOT NULL DEFAULT '{}'
-                );
-                CREATE TABLE IF NOT EXISTS job_results (
-                    attempt_id TEXT PRIMARY KEY, job_id TEXT NOT NULL REFERENCES jobs(id),
-                    status TEXT NOT NULL, result_sha256 TEXT NOT NULL,
-                    result_json TEXT NOT NULL, output_refs_json TEXT NOT NULL DEFAULT '[]',
-                    created_at TEXT NOT NULL, fingerprints_json TEXT NOT NULL DEFAULT '{}'
-                );
-                CREATE TABLE IF NOT EXISTS executors (
-                    id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL REFERENCES workspaces(id),
-                    actor_id TEXT NOT NULL, platform TEXT NOT NULL, capabilities_json TEXT NOT NULL,
-                    region TEXT NOT NULL, status TEXT NOT NULL, expires_at TEXT NOT NULL,
-                    capability_snapshot_json TEXT NOT NULL DEFAULT '{}'
-                );
-                """
+            db.execute(
+                "CREATE TABLE IF NOT EXISTS schema_migrations ("
+                "version INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL, "
+                "checksum TEXT NOT NULL, applied_at TEXT NOT NULL)"
             )
-            columns = {row["name"] for row in db.execute("PRAGMA table_info(jobs)")}
-            if "executor_id" not in columns:
-                db.execute("ALTER TABLE jobs ADD COLUMN executor_id TEXT")
-            if "fingerprints_json" not in columns:
-                db.execute(
-                    "ALTER TABLE jobs ADD COLUMN fingerprints_json TEXT NOT NULL DEFAULT '{}'"
-                )
-            result_columns = {
-                row["name"] for row in db.execute("PRAGMA table_info(job_results)")
-            }
-            if "output_refs_json" not in result_columns:
-                db.execute(
-                    "ALTER TABLE job_results ADD COLUMN output_refs_json TEXT NOT NULL DEFAULT '[]'"
-                )
-            if "fingerprints_json" not in result_columns:
-                db.execute(
-                    "ALTER TABLE job_results ADD COLUMN fingerprints_json TEXT NOT NULL "
-                    "DEFAULT '{}'"
-                )
-            executor_columns = {
-                row["name"] for row in db.execute("PRAGMA table_info(executors)")
-            }
-            if "capability_snapshot_json" not in executor_columns:
-                db.execute(
-                    "ALTER TABLE executors ADD COLUMN capability_snapshot_json TEXT NOT NULL "
-                    "DEFAULT '{}'"
-                )
+            db.commit()
+            self._apply_migrations(db)
+            self._upgrade_legacy_columns(db)
 
-    def create_workspace(self, actor_id: str, name: str) -> dict[str, Any]:
+    def _apply_migrations(self, db: sqlite3.Connection) -> None:
+        if not self.migration_root.is_dir():
+            raise RuntimeError(f"cloud migration directory is missing: {self.migration_root}")
+        migration_files: dict[int, Path] = {}
+        for path in sorted(self.migration_root.glob("*.sql")):
+            match = re.fullmatch(r"(\d{4})_([a-z0-9_]+)\.sql", path.name)
+            if match is None:
+                raise RuntimeError(f"invalid cloud migration filename: {path.name}")
+            version = int(match.group(1))
+            if version in migration_files:
+                raise RuntimeError(f"duplicate cloud migration version: {version}")
+            migration_files[version] = path
+        if not migration_files:
+            raise RuntimeError("no cloud database migrations were found")
+        expected_versions = list(range(1, max(migration_files) + 1))
+        if sorted(migration_files) != expected_versions:
+            raise RuntimeError("cloud database migration versions must be contiguous")
+
+        applied = {
+            int(row["version"]): row
+            for row in db.execute(
+                "SELECT version, name, checksum FROM schema_migrations ORDER BY version"
+            )
+        }
+        unknown_versions = sorted(set(applied) - set(migration_files))
+        if unknown_versions:
+            raise RuntimeError(
+                f"cloud database is newer than this runtime: versions={unknown_versions}"
+            )
+
+        for version, path in migration_files.items():
+            migration_text = path.read_text(encoding="utf-8")
+            migration_text = migration_text.replace("\r\n", "\n").replace("\r", "\n")
+            checksum = f"sha256:{hashlib.sha256(migration_text.encode()).hexdigest()}"
+            existing = applied.get(version)
+            if existing is not None:
+                if existing["name"] != path.stem or existing["checksum"] != checksum:
+                    raise RuntimeError(f"cloud migration checksum mismatch: {path.name}")
+                continue
+            statements = [statement.strip() for statement in migration_text.split(";")]
+            db.execute("BEGIN IMMEDIATE")
+            try:
+                for statement in statements:
+                    if statement:
+                        db.execute(statement)
+                db.execute(
+                    "INSERT INTO schema_migrations (version, name, checksum, applied_at) "
+                    "VALUES (?, ?, ?, ?)",
+                    (version, path.stem, checksum, _now()),
+                )
+            except Exception:
+                db.rollback()
+                raise
+            else:
+                db.commit()
+
+    @staticmethod
+    def _upgrade_legacy_columns(db: sqlite3.Connection) -> None:
+        columns = {row["name"] for row in db.execute("PRAGMA table_info(jobs)")}
+        if "executor_id" not in columns:
+            db.execute("ALTER TABLE jobs ADD COLUMN executor_id TEXT")
+        if "fingerprints_json" not in columns:
+            db.execute("ALTER TABLE jobs ADD COLUMN fingerprints_json TEXT NOT NULL DEFAULT '{}'")
+        result_columns = {
+            row["name"] for row in db.execute("PRAGMA table_info(job_results)")
+        }
+        if "output_refs_json" not in result_columns:
+            db.execute(
+                "ALTER TABLE job_results ADD COLUMN output_refs_json TEXT NOT NULL DEFAULT '[]'"
+            )
+        if "fingerprints_json" not in result_columns:
+            db.execute(
+                "ALTER TABLE job_results ADD COLUMN fingerprints_json TEXT NOT NULL DEFAULT '{}'"
+            )
+        executor_columns = {row["name"] for row in db.execute("PRAGMA table_info(executors)")}
+        if "capability_snapshot_json" not in executor_columns:
+            db.execute(
+                "ALTER TABLE executors ADD COLUMN capability_snapshot_json TEXT NOT NULL "
+                "DEFAULT '{}'"
+            )
+
+    def create_organization(self, actor_id: str, name: str) -> dict[str, str]:
+        organization_id = str(uuid4())
+        created_at = _now()
+        created_by = _principal_id(actor_id)
+        with self._lock, self._connect() as db:
+            db.execute(
+                "INSERT INTO organizations "
+                "(id, name, owner_actor_id, created_by, created_at) VALUES (?, ?, ?, ?, ?)",
+                (organization_id, name, actor_id, created_by, created_at),
+            )
+        return {
+            "organization_id": organization_id,
+            "name": name,
+            "created_at": created_at,
+            "created_by": created_by,
+        }
+
+    def list_organizations(self, actor_id: str) -> list[dict[str, str]]:
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT DISTINCT o.id, o.name, o.created_at, o.created_by "
+                "FROM organizations o "
+                "LEFT JOIN workspaces w ON w.organization_id=o.id "
+                "LEFT JOIN members m ON m.workspace_id=w.id "
+                "WHERE o.owner_actor_id=? OR m.actor_id=? "
+                "ORDER BY o.created_at, o.id",
+                (actor_id, actor_id),
+            ).fetchall()
+        return [
+            {
+                "organization_id": row["id"],
+                "name": row["name"],
+                "created_at": row["created_at"],
+                "created_by": row["created_by"],
+            }
+            for row in rows
+        ]
+
+    @staticmethod
+    def _organization_access(
+        db: sqlite3.Connection, organization_id: str, actor_id: str
+    ) -> None:
+        row = db.execute(
+            "SELECT 1 FROM organizations WHERE id=? AND owner_actor_id=?",
+            (organization_id, actor_id),
+        ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="organization_not_found")
+
+    def _personal_organization(self, db: sqlite3.Connection, actor_id: str) -> str:
+        organization_id = str(
+            uuid5(NAMESPACE_URL, f"ppt-video-workbench:personal-organization:{actor_id}")
+        )
+        db.execute(
+            "INSERT INTO organizations "
+            "(id, name, owner_actor_id, created_by, created_at) VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(id) DO NOTHING",
+            (organization_id, "Personal", actor_id, _principal_id(actor_id), _now()),
+        )
+        return organization_id
+
+    def create_workspace(
+        self,
+        actor_id: str,
+        name: str,
+        organization_id: str | None = None,
+    ) -> dict[str, Any]:
         workspace_id = str(uuid4())
         created_at = _now()
+        created_by = _principal_id(actor_id)
         with self._lock, self._connect() as db:
-            db.execute("INSERT INTO workspaces VALUES (?, ?, ?)", (workspace_id, name, created_at))
-            db.execute("INSERT INTO members VALUES (?, ?, 'owner')", (workspace_id, actor_id))
+            if organization_id is None:
+                organization_id = self._personal_organization(db, actor_id)
+            else:
+                self._organization_access(db, organization_id, actor_id)
+            db.execute(
+                "INSERT INTO workspaces "
+                "(id, name, created_at, organization_id, created_by) VALUES (?, ?, ?, ?, ?)",
+                (workspace_id, name, created_at, organization_id, created_by),
+            )
+            db.execute(
+                "INSERT INTO members "
+                "(workspace_id, actor_id, role, membership_version, created_at) "
+                "VALUES (?, ?, 'owner', 1, ?)",
+                (workspace_id, actor_id, created_at),
+            )
         return {
             "workspace_id": workspace_id,
+            "organization_id": organization_id,
             "name": name,
             "role": "owner",
             "created_at": created_at,
+            "created_by": created_by,
         }
 
     def list_workspaces(self, actor_id: str) -> list[dict[str, Any]]:
         with self._connect() as db:
             rows = db.execute(
-                "SELECT w.id, w.name, w.created_at, m.role FROM workspaces w "
+                "SELECT w.id, w.organization_id, w.name, w.created_at, w.created_by, m.role "
+                "FROM workspaces w "
                 "JOIN members m ON m.workspace_id=w.id WHERE m.actor_id=? "
                 "ORDER BY w.created_at, w.id",
                 (actor_id,),
@@ -410,8 +512,29 @@ class CloudRepository:
         return [
             {
                 "workspace_id": row["id"],
+                "organization_id": row["organization_id"],
                 "name": row["name"],
                 "role": row["role"],
+                "created_at": row["created_at"],
+                "created_by": row["created_by"],
+            }
+            for row in rows
+        ]
+
+    def memberships(self, actor_id: str) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT workspace_id, role, membership_version, created_at "
+                "FROM members WHERE actor_id=? ORDER BY workspace_id",
+                (actor_id,),
+            ).fetchall()
+        user_id = _principal_id(actor_id)
+        return [
+            {
+                "workspace_id": row["workspace_id"],
+                "user_id": user_id,
+                "role": row["role"],
+                "membership_version": row["membership_version"],
                 "created_at": row["created_at"],
             }
             for row in rows
@@ -421,22 +544,181 @@ class CloudRepository:
         with self._connect() as db:
             self._workspace_access(db, workspace_id, actor_id)
             rows = db.execute(
-                "SELECT actor_id, role FROM members WHERE workspace_id=? ORDER BY actor_id",
+                "SELECT actor_id, role, membership_version, created_at "
+                "FROM members WHERE workspace_id=? ORDER BY actor_id",
                 (workspace_id,),
             ).fetchall()
-        return [{"actor_id": row["actor_id"], "role": row["role"]} for row in rows]
+        return [
+            {
+                "workspace_id": workspace_id,
+                "user_id": _principal_id(row["actor_id"]),
+                "role": row["role"],
+                "membership_version": row["membership_version"],
+                "created_at": row["created_at"],
+            }
+            for row in rows
+        ]
 
-    def add_member(self, workspace_id: str, actor_id: str, member: MemberAdd) -> dict[str, str]:
+    def add_member(self, workspace_id: str, actor_id: str, member: MemberAdd) -> dict[str, Any]:
+        created_at = _now()
         with self._lock, self._connect() as db:
             role = self._workspace_access(db, workspace_id, actor_id)
             if role not in {"owner", "admin"}:
                 raise HTTPException(status_code=403, detail="member_admin_required")
             db.execute(
-                "INSERT INTO members VALUES (?, ?, ?) ON CONFLICT(workspace_id, actor_id) "
-                "DO UPDATE SET role=excluded.role",
-                (workspace_id, member.actor_id, member.role),
+                "INSERT INTO members "
+                "(workspace_id, actor_id, role, membership_version, created_at) "
+                "VALUES (?, ?, ?, 1, ?) ON CONFLICT(workspace_id, actor_id) "
+                "DO UPDATE SET role=excluded.role, "
+                "membership_version=members.membership_version + 1",
+                (workspace_id, member.actor_id, member.role, created_at),
             )
-        return {"workspace_id": workspace_id, "actor_id": member.actor_id, "role": member.role}
+            record = db.execute(
+                "SELECT role, membership_version, created_at FROM members "
+                "WHERE workspace_id=? AND actor_id=?",
+                (workspace_id, member.actor_id),
+            ).fetchone()
+        assert record is not None
+        return {
+            "workspace_id": workspace_id,
+            "user_id": _principal_id(member.actor_id),
+            "role": record["role"],
+            "membership_version": record["membership_version"],
+            "created_at": record["created_at"],
+        }
+
+    def register_device(self, actor_id: str, device: DeviceRegister) -> dict[str, str]:
+        now = _now()
+        with self._lock, self._connect() as db:
+            existing = db.execute(
+                "SELECT actor_id FROM devices WHERE id=?", (str(device.device_id),)
+            ).fetchone()
+            if existing is not None and existing["actor_id"] != actor_id:
+                raise HTTPException(status_code=409, detail="device_id_conflict")
+            db.execute(
+                "INSERT INTO devices "
+                "(id, actor_id, user_id, name, platform, status, registered_at, last_seen_at) "
+                "VALUES (?, ?, ?, ?, ?, 'active', ?, ?) "
+                "ON CONFLICT(id) DO UPDATE SET name=excluded.name, platform=excluded.platform, "
+                "status='active', last_seen_at=excluded.last_seen_at",
+                (
+                    str(device.device_id),
+                    actor_id,
+                    _principal_id(actor_id),
+                    device.name,
+                    device.platform,
+                    now,
+                    now,
+                ),
+            )
+            row = db.execute(
+                "SELECT * FROM devices WHERE id=?", (str(device.device_id),)
+            ).fetchone()
+        assert row is not None
+        return self._device_dict(row)
+
+    def list_devices(self, actor_id: str) -> list[dict[str, str]]:
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT * FROM devices WHERE actor_id=? ORDER BY registered_at, id", (actor_id,)
+            ).fetchall()
+        return [self._device_dict(row) for row in rows]
+
+    def revoke_device(self, actor_id: str, device_id: str) -> dict[str, str]:
+        with self._lock, self._connect() as db:
+            row = db.execute(
+                "SELECT * FROM devices WHERE id=? AND actor_id=?", (device_id, actor_id)
+            ).fetchone()
+            if row is None:
+                raise HTTPException(status_code=404, detail="device_not_found")
+            db.execute("UPDATE devices SET status='revoked' WHERE id=?", (device_id,))
+            row = db.execute("SELECT * FROM devices WHERE id=?", (device_id,)).fetchone()
+        assert row is not None
+        return self._device_dict(row)
+
+    @staticmethod
+    def _device_dict(row: sqlite3.Row) -> dict[str, str]:
+        return {
+            "device_id": row["id"],
+            "user_id": row["user_id"],
+            "name": row["name"],
+            "platform": row["platform"],
+            "status": row["status"],
+            "registered_at": row["registered_at"],
+            "last_seen_at": row["last_seen_at"],
+        }
+
+    def create_service_account(
+        self, workspace_id: str, actor_id: str, account: ServiceAccountCreate
+    ) -> dict[str, str]:
+        account_id = str(uuid4())
+        created_at = _now()
+        created_by = _principal_id(actor_id)
+        with self._lock, self._connect() as db:
+            role = self._workspace_access(db, workspace_id, actor_id)
+            if role not in {"owner", "admin"}:
+                raise HTTPException(status_code=403, detail="service_account_admin_required")
+            try:
+                db.execute(
+                    "INSERT INTO service_accounts "
+                    "(id, workspace_id, name, status, created_at, created_by) "
+                    "VALUES (?, ?, ?, 'active', ?, ?)",
+                    (account_id, workspace_id, account.name, created_at, created_by),
+                )
+            except sqlite3.IntegrityError as error:
+                raise HTTPException(
+                    status_code=409, detail="service_account_name_conflict"
+                ) from error
+        return {
+            "service_account_id": account_id,
+            "workspace_id": workspace_id,
+            "name": account.name,
+            "status": "active",
+            "created_at": created_at,
+            "created_by": created_by,
+        }
+
+    def list_service_accounts(
+        self, workspace_id: str, actor_id: str
+    ) -> list[dict[str, str]]:
+        with self._connect() as db:
+            role = self._workspace_access(db, workspace_id, actor_id)
+            if role not in {"owner", "admin"}:
+                raise HTTPException(status_code=403, detail="service_account_admin_required")
+            rows = db.execute(
+                "SELECT * FROM service_accounts WHERE workspace_id=? ORDER BY created_at, id",
+                (workspace_id,),
+            ).fetchall()
+        return [self._service_account_dict(row) for row in rows]
+
+    def disable_service_account(
+        self, workspace_id: str, actor_id: str, account_id: str
+    ) -> dict[str, str]:
+        with self._lock, self._connect() as db:
+            role = self._workspace_access(db, workspace_id, actor_id)
+            if role not in {"owner", "admin"}:
+                raise HTTPException(status_code=403, detail="service_account_admin_required")
+            row = db.execute(
+                "SELECT * FROM service_accounts WHERE id=? AND workspace_id=?",
+                (account_id, workspace_id),
+            ).fetchone()
+            if row is None:
+                raise HTTPException(status_code=404, detail="service_account_not_found")
+            db.execute("UPDATE service_accounts SET status='disabled' WHERE id=?", (account_id,))
+            row = db.execute("SELECT * FROM service_accounts WHERE id=?", (account_id,)).fetchone()
+        assert row is not None
+        return self._service_account_dict(row)
+
+    @staticmethod
+    def _service_account_dict(row: sqlite3.Row) -> dict[str, str]:
+        return {
+            "service_account_id": row["id"],
+            "workspace_id": row["workspace_id"],
+            "name": row["name"],
+            "status": row["status"],
+            "created_at": row["created_at"],
+            "created_by": row["created_by"],
+        }
 
     def _workspace_access(self, db: sqlite3.Connection, workspace_id: str, actor_id: str) -> str:
         row = db.execute(
@@ -1294,32 +1576,102 @@ def create_cloud_app(
         }
 
     @router.get("/me")
-    def me(x_actor_id: str | None = Header(default=None)) -> dict[str, str]:
-        return {"user_id": actor(x_actor_id), "authentication": "development-header"}
+    def me(x_actor_id: str | None = Header(default=None)) -> dict[str, Any]:
+        actor_id = actor(x_actor_id)
+        return {
+            "user_id": _principal_id(actor_id),
+            "display_name": actor_id,
+            "memberships": repository.memberships(actor_id),
+            "devices": repository.list_devices(actor_id),
+        }
+
+    @router.post("/organizations", status_code=201)
+    def create_organization(
+        payload: OrganizationCreate, x_actor_id: str | None = Header(default=None)
+    ) -> dict[str, str]:
+        return repository.create_organization(actor(x_actor_id), payload.name)
+
+    @router.get("/organizations")
+    def list_organizations(x_actor_id: str | None = Header(default=None)) -> dict[str, Any]:
+        return {"items": repository.list_organizations(actor(x_actor_id)), "next_cursor": None}
+
+    @router.post("/devices", status_code=201)
+    def register_device(
+        payload: DeviceRegister, x_actor_id: str | None = Header(default=None)
+    ) -> dict[str, str]:
+        return repository.register_device(actor(x_actor_id), payload)
+
+    @router.get("/devices")
+    def list_devices(x_actor_id: str | None = Header(default=None)) -> dict[str, Any]:
+        return {"items": repository.list_devices(actor(x_actor_id)), "next_cursor": None}
+
+    @router.delete("/devices/{deviceId}")
+    def revoke_device(
+        deviceId: UUID, x_actor_id: str | None = Header(default=None)
+    ) -> dict[str, str]:
+        return repository.revoke_device(actor(x_actor_id), str(deviceId))
 
     @router.post("/workspaces", status_code=201)
     def create_workspace(
         payload: WorkspaceCreate, x_actor_id: str | None = Header(default=None)
     ) -> dict[str, Any]:
-        return repository.create_workspace(actor(x_actor_id), payload.name)
+        return repository.create_workspace(
+            actor(x_actor_id),
+            payload.name,
+            str(payload.organization_id) if payload.organization_id else None,
+        )
 
     @router.get("/workspaces")
     def list_workspaces(x_actor_id: str | None = Header(default=None)) -> dict[str, Any]:
-        return {"items": repository.list_workspaces(actor(x_actor_id))}
+        return {"items": repository.list_workspaces(actor(x_actor_id)), "next_cursor": None}
 
     @router.get("/workspaces/{workspaceId}/members")
     def list_members(
         request: Request, x_actor_id: str | None = Header(default=None)
     ) -> dict[str, Any]:
-        return {"items": repository.list_members(workspace_id(request), actor(x_actor_id))}
+        return {
+            "items": repository.list_members(workspace_id(request), actor(x_actor_id)),
+            "next_cursor": None,
+        }
 
     @router.post("/workspaces/{workspaceId}/members", status_code=201)
     def add_member(
         request: Request,
         payload: MemberAdd,
         x_actor_id: str | None = Header(default=None),
-    ) -> dict[str, str]:
+    ) -> dict[str, Any]:
         return repository.add_member(workspace_id(request), actor(x_actor_id), payload)
+
+    @router.post("/workspaces/{workspaceId}/service-accounts", status_code=201)
+    def create_service_account(
+        request: Request,
+        payload: ServiceAccountCreate,
+        x_actor_id: str | None = Header(default=None),
+    ) -> dict[str, str]:
+        return repository.create_service_account(
+            workspace_id(request), actor(x_actor_id), payload
+        )
+
+    @router.get("/workspaces/{workspaceId}/service-accounts")
+    def list_service_accounts(
+        request: Request, x_actor_id: str | None = Header(default=None)
+    ) -> dict[str, Any]:
+        return {
+            "items": repository.list_service_accounts(
+                workspace_id(request), actor(x_actor_id)
+            ),
+            "next_cursor": None,
+        }
+
+    @router.delete("/workspaces/{workspaceId}/service-accounts/{serviceAccountId}")
+    def disable_service_account(
+        request: Request,
+        serviceAccountId: UUID,
+        x_actor_id: str | None = Header(default=None),
+    ) -> dict[str, str]:
+        return repository.disable_service_account(
+            workspace_id(request), actor(x_actor_id), str(serviceAccountId)
+        )
 
     def workspace_id(request: Request) -> str:
         return str(request.path_params["workspaceId"])
@@ -1331,7 +1683,10 @@ def create_cloud_app(
     def list_projects(
         request: Request, x_actor_id: str | None = Header(default=None)
     ) -> dict[str, Any]:
-        return {"items": repository.list_projects(workspace_id(request), actor(x_actor_id))}
+        return {
+            "items": repository.list_projects(workspace_id(request), actor(x_actor_id)),
+            "next_cursor": None,
+        }
 
     @router.post("/workspaces/{workspaceId}/projects", status_code=201)
     def create_project(
@@ -1354,7 +1709,8 @@ def create_cloud_app(
         return {
             "items": repository.revisions(
                 workspace_id(request), project_id(request), actor(x_actor_id)
-            )
+            ),
+            "next_cursor": None,
         }
 
     @router.get("/workspaces/{workspaceId}/projects/{projectId}/revisions/{revisionId}")
@@ -1379,7 +1735,8 @@ def create_cloud_app(
         return {
             "items": repository.operations(
                 workspace_id(request), project_id(request), actor(x_actor_id), cursor
-            )
+            ),
+            "next_cursor": None,
         }
 
     @router.post("/workspaces/{workspaceId}/projects/{projectId}/operations", status_code=201)
@@ -1461,7 +1818,8 @@ def create_cloud_app(
         return {
             "items": repository.comments(
                 workspace_id(request), project_id(request), actor(x_actor_id)
-            )
+            ),
+            "next_cursor": None,
         }
 
     @router.post("/workspaces/{workspaceId}/projects/{projectId}/comments", status_code=201)
@@ -1504,7 +1862,10 @@ def create_cloud_app(
     def list_executors(
         request: Request, x_actor_id: str | None = Header(default=None)
     ) -> dict[str, Any]:
-        return {"items": repository.executors(workspace_id(request), actor(x_actor_id))}
+        return {
+            "items": repository.executors(workspace_id(request), actor(x_actor_id)),
+            "next_cursor": None,
+        }
 
     @router.post("/workspaces/{workspaceId}/projects/{projectId}/jobs", status_code=202)
     def create_job(
@@ -1519,7 +1880,10 @@ def create_cloud_app(
         request: Request, x_actor_id: str | None = Header(default=None)
     ) -> dict[str, Any]:
         return {
-            "items": repository.jobs(workspace_id(request), project_id(request), actor(x_actor_id))
+            "items": repository.jobs(
+                workspace_id(request), project_id(request), actor(x_actor_id)
+            ),
+            "next_cursor": None,
         }
 
     @router.get("/workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}")

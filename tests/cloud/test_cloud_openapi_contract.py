@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 from cloud_prototype.app import create_cloud_app
@@ -55,3 +57,29 @@ def test_cloud_openapi_documents_every_runtime_route(tmp_path: Path) -> None:
         for path, method in documented_routes
     }
     assert runtime_routes == normalized_documented_routes
+
+
+def test_generated_typescript_cloud_client_is_current() -> None:
+    completed = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "generate_cloud_client.py"), "--check"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+
+
+def test_cloud_openapi_mutations_require_idempotency_keys() -> None:
+    document = (ROOT / "schemas" / "cloud" / "cloud-collaboration-v1.openapi.yaml").read_text(
+        encoding="utf-8"
+    )
+    mutation_blocks = re.findall(
+        r"^    (?:post|put|patch|delete):\s*$.*?"
+        r"(?=^    (?:get|post|put|patch|delete):\s*$|^  /|^components:)",
+        document,
+        re.MULTILINE | re.DOTALL,
+    )
+    assert mutation_blocks
+    missing = [block for block in mutation_blocks if "IdempotencyKey" not in block]
+    assert missing == []
