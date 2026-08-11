@@ -15,7 +15,7 @@ from typing import Any, Literal
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from fastapi import APIRouter, FastAPI, Header, HTTPException, Query, Request, Response
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from workbench.contracts.p2_platform import canonical_sha256
 
 
@@ -181,19 +181,46 @@ class CompleteUpload(CloudModel):
     parts: list[dict[str, Any]] = Field(min_length=1, max_length=10000)
 
 
+class CommentAnchorModel(CloudModel):
+    revision_id: UUID
+    logical_path: str | None = Field(default=None, min_length=1, max_length=1024)
+    page_id: UUID | None = None
+    clip_id: UUID | None = None
+    time_ms: int | None = Field(default=None, ge=0)
+    end_time_ms: int | None = Field(default=None, ge=0)
+    evidence_object_id: str | None = Field(
+        default=None, pattern=r"^sha256:[0-9a-f]{64}$"
+    )
+
+    @model_validator(mode="after")
+    def validate_time_range(self) -> CommentAnchorModel:
+        if self.end_time_ms is not None and self.time_ms is None:
+            raise ValueError("end_time_ms requires time_ms")
+        if (
+            self.time_ms is not None
+            and self.end_time_ms is not None
+            and self.end_time_ms < self.time_ms
+        ):
+            raise ValueError("end_time_ms must not precede time_ms")
+        return self
+
+
 class CommentCreate(CloudModel):
     body: str = Field(min_length=1, max_length=10000)
-    anchor: dict[str, Any]
+    anchor: CommentAnchorModel
 
 
 class ReviewCreate(CloudModel):
     revision_id: UUID
+    content_sha256: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     decision: Literal["approved", "changes_requested"]
     note: str | None = Field(default=None, max_length=10000)
 
 
 class LeaseRequest(CloudModel):
     client_id: UUID
+    base_revision_id: UUID
+    scope: Literal["project_edit", "timeline_edit", "review"] = "project_edit"
     lease_id: UUID | None = None
     requested_ttl_seconds: int = Field(ge=30, le=900)
 
@@ -1172,11 +1199,30 @@ class CloudRepository:
         }
 
     def comment(
-        self, workspace_id: str, project_id: str, actor_id: str, body: str, anchor: dict[str, Any]
+        self,
+        workspace_id: str,
+        project_id: str,
+        actor_id: str,
+        body: str,
+        anchor: CommentAnchorModel,
     ) -> dict[str, Any]:
         self.project(workspace_id, project_id, actor_id)
+        anchor_data = anchor.model_dump(mode="json", exclude_none=True)
         comment_id, created_at = str(uuid4()), _now()
         with self._connect() as db:
+            revision = db.execute(
+                "SELECT 1 FROM revisions WHERE id=? AND project_id=?",
+                (str(anchor.revision_id), project_id),
+            ).fetchone()
+            if revision is None:
+                raise HTTPException(status_code=422, detail="comment_revision_not_found")
+            if anchor.evidence_object_id is not None:
+                evidence = db.execute(
+                    "SELECT 1 FROM objects WHERE id=? AND project_id=?",
+                    (anchor.evidence_object_id, project_id),
+                ).fetchone()
+                if evidence is None:
+                    raise HTTPException(status_code=422, detail="comment_evidence_not_owned")
             db.execute(
                 "INSERT INTO comments VALUES (?, ?, ?, ?, ?, ?, 0)",
                 (
@@ -1184,16 +1230,16 @@ class CloudRepository:
                     project_id,
                     actor_id,
                     body,
-                    json.dumps(anchor, separators=(",", ":")),
+                    json.dumps(anchor_data, separators=(",", ":")),
                     created_at,
                 ),
             )
         return {
             "comment_id": comment_id,
             "project_id": project_id,
-            "author_id": actor_id,
+            "author_id": _principal_id(actor_id),
             "body": body,
-            "anchor": anchor,
+            "anchor": anchor_data,
             "created_at": created_at,
             "resolved": False,
         }
@@ -1208,7 +1254,7 @@ class CloudRepository:
             {
                 "comment_id": row["id"],
                 "project_id": project_id,
-                "author_id": row["actor_id"],
+                "author_id": _principal_id(row["actor_id"]),
                 "body": row["body"],
                 "anchor": json.loads(row["anchor_json"]),
                 "created_at": row["created_at"],
@@ -1223,10 +1269,14 @@ class CloudRepository:
         project = self.project(workspace_id, project_id, actor_id)
         if str(request.revision_id) != project["current_revision_id"]:
             raise HTTPException(status_code=409, detail="review_revision_is_not_head")
+        if request.content_sha256 != project["head"]["content_sha256"]:
+            raise HTTPException(status_code=409, detail="review_content_is_not_head")
         review_id, created_at = str(uuid4()), _now()
         with self._connect() as db:
             db.execute(
-                "INSERT INTO reviews VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO reviews "
+                "(id, project_id, revision_id, actor_id, decision, note, created_at, "
+                "content_sha256) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     review_id,
                     project_id,
@@ -1235,22 +1285,55 @@ class CloudRepository:
                     request.decision,
                     request.note,
                     created_at,
+                    request.content_sha256,
                 ),
             )
         return {
             "review_id": review_id,
             "project_id": project_id,
             "revision_id": str(request.revision_id),
-            "reviewer_id": actor_id,
+            "content_sha256": request.content_sha256,
+            "reviewer_id": _principal_id(actor_id),
             "decision": request.decision,
             "note": request.note,
             "created_at": created_at,
+            "status": "current",
         }
+
+    def reviews(self, workspace_id: str, project_id: str, actor_id: str) -> list[dict[str, Any]]:
+        project = self.project(workspace_id, project_id, actor_id)
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT * FROM reviews WHERE project_id=? ORDER BY created_at, id",
+                (project_id,),
+            ).fetchall()
+        return [
+            {
+                "review_id": row["id"],
+                "project_id": project_id,
+                "revision_id": row["revision_id"],
+                "content_sha256": row["content_sha256"],
+                "reviewer_id": _principal_id(row["actor_id"]),
+                "decision": row["decision"],
+                "note": row["note"],
+                "created_at": row["created_at"],
+                "status": (
+                    "current"
+                    if row["revision_id"] == project["current_revision_id"]
+                    and row["content_sha256"] == project["head"]["content_sha256"]
+                    else "expired"
+                ),
+            }
+            for row in rows
+        ]
 
     def lease(
         self, workspace_id: str, project_id: str, actor_id: str, request: LeaseRequest
     ) -> dict[str, Any]:
-        self.project(workspace_id, project_id, actor_id)
+        project = self.project(workspace_id, project_id, actor_id)
+        if str(request.base_revision_id) != project["current_revision_id"]:
+            raise HTTPException(status_code=409, detail="lease_base_revision_is_not_head")
+        acquired_at = _now()
         with self._lock, self._connect() as db:
             current = db.execute(
                 "SELECT * FROM leases WHERE project_id=?", (project_id,)
@@ -1265,16 +1348,77 @@ class CloudRepository:
             lease_id = str(request.lease_id or uuid4())
             expires_at = _expires(request.requested_ttl_seconds)
             db.execute(
-                "INSERT OR REPLACE INTO leases VALUES (?, ?, ?, ?, ?)",
-                (project_id, lease_id, actor_id, str(request.client_id), expires_at),
+                "INSERT OR REPLACE INTO leases "
+                "(project_id, lease_id, actor_id, client_id, expires_at, scope, "
+                "base_revision_id, acquired_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    project_id,
+                    lease_id,
+                    actor_id,
+                    str(request.client_id),
+                    expires_at,
+                    request.scope,
+                    str(request.base_revision_id),
+                    acquired_at,
+                ),
             )
         return {
             "lease_id": lease_id,
             "project_id": project_id,
-            "holder_user_id": actor_id,
+            "holder_user_id": _principal_id(actor_id),
             "client_id": str(request.client_id),
-            "acquired_at": _now(),
+            "scope": request.scope,
+            "base_revision_id": str(request.base_revision_id),
+            "acquired_at": acquired_at,
             "expires_at": expires_at,
+        }
+
+    def release_lease(
+        self,
+        workspace_id: str,
+        project_id: str,
+        actor_id: str,
+        reason: str | None,
+    ) -> dict[str, Any]:
+        self.project(workspace_id, project_id, actor_id)
+        with self._lock, self._connect() as db:
+            role = self._workspace_access(db, workspace_id, actor_id)
+            current = db.execute(
+                "SELECT * FROM leases WHERE project_id=?", (project_id,)
+            ).fetchone()
+            if current is None:
+                raise HTTPException(status_code=404, detail="lease_not_found")
+            force_release = current["actor_id"] != actor_id
+            if force_release and role not in {"owner", "admin"}:
+                raise HTTPException(status_code=403, detail="lease_override_admin_required")
+            if force_release and not reason:
+                raise HTTPException(status_code=422, detail="lease_override_reason_required")
+            event_id = str(uuid4())
+            action = "force_released" if force_release else "released"
+            occurred_at = _now()
+            db.execute(
+                "INSERT INTO lease_audit_events "
+                "(id, project_id, lease_id, actor_id, action, reason, occurred_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    event_id,
+                    project_id,
+                    current["lease_id"],
+                    actor_id,
+                    action,
+                    reason,
+                    occurred_at,
+                ),
+            )
+            db.execute("DELETE FROM leases WHERE project_id=?", (project_id,))
+        return {
+            "lease_id": current["lease_id"],
+            "project_id": project_id,
+            "released_by": _principal_id(actor_id),
+            "action": action,
+            "reason": reason,
+            "audit_event_id": event_id,
+            "occurred_at": occurred_at,
         }
 
     def register_executor(
@@ -1834,6 +1978,17 @@ def create_cloud_app(
             payload.anchor,
         )
 
+    @router.get("/workspaces/{workspaceId}/projects/{projectId}/reviews")
+    def list_reviews(
+        request: Request, x_actor_id: str | None = Header(default=None)
+    ) -> dict[str, Any]:
+        return {
+            "items": repository.reviews(
+                workspace_id(request), project_id(request), actor(x_actor_id)
+            ),
+            "next_cursor": None,
+        }
+
     @router.post("/workspaces/{workspaceId}/projects/{projectId}/reviews", status_code=201)
     def submit_review(
         request: Request, payload: ReviewCreate, x_actor_id: str | None = Header(default=None)
@@ -1848,6 +2003,16 @@ def create_cloud_app(
     ) -> dict[str, Any]:
         return repository.lease(
             workspace_id(request), project_id(request), actor(x_actor_id), payload
+        )
+
+    @router.delete("/workspaces/{workspaceId}/projects/{projectId}/lease")
+    def release_lease(
+        request: Request,
+        reason: str | None = Query(default=None, min_length=1, max_length=500),
+        x_actor_id: str | None = Header(default=None),
+    ) -> dict[str, Any]:
+        return repository.release_lease(
+            workspace_id(request), project_id(request), actor(x_actor_id), reason
         )
 
     @router.post("/workspaces/{workspaceId}/executors", status_code=201)

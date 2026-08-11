@@ -44,6 +44,7 @@ def test_cloud_database_migrations_are_versioned_and_idempotent(tmp_path: Path) 
     assert [(row[0], row[1]) for row in rows] == [
         (1, "0001_initial"),
         (2, "0002_identity_control"),
+        (3, "0003_collaboration_integrity"),
     ]
     assert all(re.fullmatch(r"sha256:[0-9a-f]{64}", row[2]) for row in rows)
 
@@ -357,19 +358,37 @@ def test_cloud_prototype_validates_objects_and_supports_review_lease_job(tmp_pat
         assert downloaded.content == content
         comment = client.post(
             f"/v1/workspaces/{workspace_id}/projects/{project_id}/comments",
-            json={"body": "Review", "anchor": {"revision_id": revision_id}},
+            json={
+                "body": "Review",
+                "anchor": {
+                    "revision_id": revision_id,
+                    "time_ms": 100,
+                    "end_time_ms": 200,
+                    "evidence_object_id": object_id,
+                },
+            },
             headers=headers,
         )
         assert comment.status_code == 201
+        assert comment.json()["anchor"]["evidence_object_id"] == object_id
         review = client.post(
             f"/v1/workspaces/{workspace_id}/projects/{project_id}/reviews",
-            json={"revision_id": revision_id, "decision": "approved"},
+            json={
+                "revision_id": revision_id,
+                "content_sha256": project["head"]["content_sha256"],
+                "decision": "approved",
+            },
             headers=headers,
         )
         assert review.status_code == 201
         lease = client.put(
             f"/v1/workspaces/{workspace_id}/projects/{project_id}/lease",
-            json={"client_id": str(uuid4()), "requested_ttl_seconds": 60},
+            json={
+                "client_id": str(uuid4()),
+                "base_revision_id": revision_id,
+                "scope": "project_edit",
+                "requested_ttl_seconds": 60,
+            },
             headers=headers,
         )
         assert lease.status_code == 200
@@ -420,6 +439,82 @@ def test_cloud_prototype_validates_objects_and_supports_review_lease_job(tmp_pat
             ).json()["status"]
             == "cancelled"
         )
+
+
+def test_cloud_reviews_expire_and_force_lease_release_is_audited(tmp_path: Path) -> None:
+    app = create_cloud_app(tmp_path / "control.db", tmp_path / "objects")
+    alice = {"X-Actor-ID": "alice"}
+    bob = {"X-Actor-ID": "bob"}
+    with TestClient(app) as client:
+        workspace_id = client.post(
+            "/v1/workspaces", json={"name": "Team"}, headers=alice
+        ).json()["workspace_id"]
+        project = client.post(
+            f"/v1/workspaces/{workspace_id}/projects",
+            json={"name": "Course", "manifest": {"pages": []}},
+            headers=alice,
+        ).json()
+        project_id = project["project_id"]
+        revision_id = project["current_revision_id"]
+        client.post(
+            f"/v1/workspaces/{workspace_id}/members",
+            json={"actor_id": "bob", "role": "editor"},
+            headers=alice,
+        )
+        review = client.post(
+            f"/v1/workspaces/{workspace_id}/projects/{project_id}/reviews",
+            json={
+                "revision_id": revision_id,
+                "content_sha256": project["head"]["content_sha256"],
+                "decision": "approved",
+            },
+            headers=alice,
+        )
+        assert review.json()["status"] == "current"
+        lease = client.put(
+            f"/v1/workspaces/{workspace_id}/projects/{project_id}/lease",
+            json={
+                "client_id": str(uuid4()),
+                "base_revision_id": revision_id,
+                "scope": "timeline_edit",
+                "requested_ttl_seconds": 60,
+            },
+            headers=bob,
+        )
+        assert lease.status_code == 200
+        assert (
+            client.delete(
+                f"/v1/workspaces/{workspace_id}/projects/{project_id}/lease", headers=alice
+            ).status_code
+            == 422
+        )
+        released = client.delete(
+            f"/v1/workspaces/{workspace_id}/projects/{project_id}/lease",
+            params={"reason": "stale editor session"},
+            headers=alice,
+        )
+        assert released.status_code == 200
+        assert released.json()["action"] == "force_released"
+        with sqlite3.connect(tmp_path / "control.db") as db:
+            audit = db.execute(
+                "SELECT action, reason FROM lease_audit_events WHERE id=?",
+                (released.json()["audit_event_id"],),
+            ).fetchone()
+        assert audit == ("force_released", "stale editor session")
+
+        operation = _operation(workspace_id, project_id, revision_id)
+        assert (
+            client.post(
+                f"/v1/workspaces/{workspace_id}/projects/{project_id}/operations",
+                json=operation,
+                headers=alice,
+            ).status_code
+            == 201
+        )
+        reviews = client.get(
+            f"/v1/workspaces/{workspace_id}/projects/{project_id}/reviews", headers=alice
+        ).json()["items"]
+        assert reviews[0]["status"] == "expired"
 
 
 def test_cloud_production_auth_mode_fails_closed_without_oidc(tmp_path: Path) -> None:

@@ -30,12 +30,14 @@ export const CLOUD_OPERATIONS = {
   listProjectRevisions: { method: "GET", path: "/workspaces/{workspaceId}/projects/{projectId}/revisions" },
   listProjects: { method: "GET", path: "/workspaces/{workspaceId}/projects" },
   listRemoteJobs: { method: "GET", path: "/workspaces/{workspaceId}/projects/{projectId}/jobs" },
+  listReviews: { method: "GET", path: "/workspaces/{workspaceId}/projects/{projectId}/reviews" },
   listServiceAccounts: { method: "GET", path: "/workspaces/{workspaceId}/service-accounts" },
   listSyncOperations: { method: "GET", path: "/workspaces/{workspaceId}/projects/{projectId}/operations" },
   listWorkspaceMembers: { method: "GET", path: "/workspaces/{workspaceId}/members" },
   listWorkspaces: { method: "GET", path: "/workspaces" },
   registerDevice: { method: "POST", path: "/devices" },
   registerExecutor: { method: "POST", path: "/workspaces/{workspaceId}/executors" },
+  releaseProjectLease: { method: "DELETE", path: "/workspaces/{workspaceId}/projects/{projectId}/lease" },
   reportRemoteJobResult: { method: "POST", path: "/workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}/result" },
   revokeDevice: { method: "DELETE", path: "/devices/{deviceId}" },
   submitReview: { method: "POST", path: "/workspaces/{workspaceId}/projects/{projectId}/reviews" },
@@ -247,6 +249,10 @@ export class CloudCollaborationClient {
     return this.request<T>("listRemoteJobs", options);
   }
 
+  async listReviews<T = unknown>(options: CloudRequestOptions = {}): Promise<T> {
+    return this.request<T>("listReviews", options);
+  }
+
   async listServiceAccounts<T = unknown>(options: CloudRequestOptions = {}): Promise<T> {
     return this.request<T>("listServiceAccounts", options);
   }
@@ -269,6 +275,10 @@ export class CloudCollaborationClient {
 
   async registerExecutor<T = unknown>(options: CloudRequestOptions = {}): Promise<T> {
     return this.request<T>("registerExecutor", options);
+  }
+
+  async releaseProjectLease<T = unknown>(options: CloudRequestOptions = {}): Promise<T> {
+    return this.request<T>("releaseProjectLease", options);
   }
 
   async reportRemoteJobResult<T = unknown>(options: CloudRequestOptions = {}): Promise<T> {

@@ -16,9 +16,10 @@ This file records evidence for the isolated integration branch
 | Peripheral platform host and module contract | `peripheral-platform/tests` | pass locally (128 passed, 2 Windows Developer Mode skips); cross-OS runner evidence remains required |
 | Platform credentials/redaction | `test_platform_credentials.py` | pass |
 | Cloud control plane/RBAC/revision/object/sync | `tests/cloud` | pass (logical object storage keys, bounded declarations, restricted upload rejection) |
-| Cloud TypeScript client snapshot | `scripts/generate_cloud_client.py --check` and strict `tsc --noEmit` on `packages/contracts/p2-platform/index.ts` | pass (37 OpenAPI operations) |
+| Cloud TypeScript client snapshot | `scripts/generate_cloud_client.py --check` and strict `tsc --noEmit` on `packages/contracts/p2-platform/index.ts` | pass (39 OpenAPI operations) |
 | Cloud database migrations | `cloud_prototype/migrations` and migration regression tests | pass (version/checksum drift, repeat startup, legacy-column upgrade) |
 | Cloud identity control metadata | organization/device/service-account routes and RBAC regression | pass (membership versions, device ownership/revocation, admin-only service accounts) |
+| Cloud collaboration integrity | structured comment anchors, review hash expiry, revision-scoped leases, audited force release | pass |
 | Remote executor fingerprints | `tests/cloud/test_cloud_api.py` | pass (capability snapshot portability and job/result fingerprint equality) |
 | Production cloud fail-closed gate | `CloudProductionEvidence` and production-auth tests | pass (missing external evidence blocks traffic) |
 | Desktop outbox/inbox/conflict | `tests/unit/sync` and stale-base cloud test | pass |
@@ -28,8 +29,8 @@ This file records evidence for the isolated integration branch
 | P2 settings UI panels | three focused Vitest suites under `apps/web/src/features/{providers,settings/platform,cloud}` | pass |
 | Full web UI regression | Vitest 28 files / 47 tests | pass; TypeScript `--noEmit` not rerun because this worktree has no TypeScript compiler binary |
 | Static quality | Ruff + mypy on 33 P2 source files | pass |
-| Focused P2 regression | 108 tests across contracts/providers/platform/cache/diagnostics/sync/cloud/integration | pass |
-| Full recovery snapshot | `pytest --import-mode=importlib -q --maxfail=20` | pending: latest run 529 passed / 12 failed — 10 crash-recovery status mismatches (`succeeded` vs legacy `completed`), M5 async render status mismatch (202 vs legacy 201), and one isolated-branch AI narration compatibility assertion; P04 legacy-result projection is now covered; S1 module smoke is 10/10 after linking the shared venv |
+| Focused P2 regression | 109 tests across contracts/providers/platform/cache/diagnostics/sync/cloud/integration | pass |
+| Full recovery snapshot | `pytest --import-mode=importlib -q --maxfail=20` | pending: latest run 530 passed / 12 failed — 10 crash-recovery status mismatches (`succeeded` vs legacy `completed`), M5 async render status mismatch (202 vs legacy 201), and one isolated-branch AI narration compatibility assertion; P04 legacy-result projection is now covered; S1 module smoke is 10/10 after linking the shared venv |
 | Real macOS/Linux media and signed installers | three-OS CI/tag evidence | pending runner artifacts |
 | Production cloud | OIDC, PostgreSQL PITR, object retention, security scans | pending production environment |
 

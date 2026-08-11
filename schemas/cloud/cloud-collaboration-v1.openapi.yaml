@@ -759,6 +759,24 @@ paths:
     parameters:
       - $ref: "#/components/parameters/WorkspaceId"
       - $ref: "#/components/parameters/ProjectId"
+    get:
+      tags: [Collaboration]
+      operationId: listReviews
+      summary: List current and expired reviews for the project
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Review page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
     post:
       tags: [Collaboration]
       operationId: submitReview
@@ -821,6 +839,34 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+    delete:
+      tags: [Collaboration]
+      operationId: releaseProjectLease
+      summary: Release a lease or force release it with an audited administrator reason
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - name: reason
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 500
+      responses:
+        "200":
+          description: Lease release audit record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaseRelease"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationFailed"
   /workspaces/{workspaceId}/executors:
@@ -1635,9 +1681,18 @@ components:
           type: string
           minLength: 1
           maxLength: 1024
+        page_id:
+          $ref: "#/components/schemas/Uuid"
+        clip_id:
+          $ref: "#/components/schemas/Uuid"
         time_ms:
           type: integer
           minimum: 0
+        end_time_ms:
+          type: integer
+          minimum: 0
+        evidence_object_id:
+          $ref: "#/components/schemas/Sha256"
     Comment:
       type: object
       additionalProperties: false
@@ -1674,7 +1729,7 @@ components:
     Review:
       type: object
       additionalProperties: false
-      required: [review_id, project_id, revision_id, reviewer_id, decision, created_at]
+      required: [review_id, project_id, revision_id, content_sha256, reviewer_id, decision, created_at, status]
       properties:
         review_id:
           $ref: "#/components/schemas/Uuid"
@@ -1682,6 +1737,8 @@ components:
           $ref: "#/components/schemas/Uuid"
         revision_id:
           $ref: "#/components/schemas/Uuid"
+        content_sha256:
+          $ref: "#/components/schemas/Sha256"
         reviewer_id:
           $ref: "#/components/schemas/Uuid"
         decision:
@@ -1692,13 +1749,18 @@ components:
           maxLength: 10000
         created_at:
           $ref: "#/components/schemas/Timestamp"
+        status:
+          type: string
+          enum: [current, expired]
     SubmitReviewRequest:
       type: object
       additionalProperties: false
-      required: [revision_id, decision]
+      required: [revision_id, content_sha256, decision]
       properties:
         revision_id:
           $ref: "#/components/schemas/Uuid"
+        content_sha256:
+          $ref: "#/components/schemas/Sha256"
         decision:
           type: string
           enum: [approved, changes_requested]
@@ -1708,10 +1770,16 @@ components:
     LeaseRequest:
       type: object
       additionalProperties: false
-      required: [client_id, requested_ttl_seconds]
+      required: [client_id, base_revision_id, requested_ttl_seconds]
       properties:
         client_id:
           $ref: "#/components/schemas/Uuid"
+        base_revision_id:
+          $ref: "#/components/schemas/Uuid"
+        scope:
+          type: string
+          enum: [project_edit, timeline_edit, review]
+          default: project_edit
         lease_id:
           $ref: "#/components/schemas/Uuid"
         requested_ttl_seconds:
@@ -1721,7 +1789,7 @@ components:
     Lease:
       type: object
       additionalProperties: false
-      required: [lease_id, project_id, holder_user_id, client_id, acquired_at, expires_at]
+      required: [lease_id, project_id, holder_user_id, client_id, scope, base_revision_id, acquired_at, expires_at]
       properties:
         lease_id:
           $ref: "#/components/schemas/Uuid"
@@ -1731,9 +1799,38 @@ components:
           $ref: "#/components/schemas/Uuid"
         client_id:
           $ref: "#/components/schemas/Uuid"
+        scope:
+          type: string
+          enum: [project_edit, timeline_edit, review]
+        base_revision_id:
+          $ref: "#/components/schemas/Uuid"
         acquired_at:
           $ref: "#/components/schemas/Timestamp"
         expires_at:
+          $ref: "#/components/schemas/Timestamp"
+    LeaseRelease:
+      type: object
+      additionalProperties: false
+      required: [lease_id, project_id, released_by, action, audit_event_id, occurred_at]
+      properties:
+        lease_id:
+          $ref: "#/components/schemas/Uuid"
+        project_id:
+          $ref: "#/components/schemas/Uuid"
+        released_by:
+          $ref: "#/components/schemas/Uuid"
+        action:
+          type: string
+          enum: [released, force_released]
+        reason:
+          oneOf:
+            - type: string
+              minLength: 1
+              maxLength: 500
+            - type: "null"
+        audit_event_id:
+          $ref: "#/components/schemas/Uuid"
+        occurred_at:
           $ref: "#/components/schemas/Timestamp"
     JobKind:
       type: string
@@ -1902,6 +1999,17 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/Comment"
+    ReviewPage:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "#/components/schemas/PageMeta"
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Review"
     JobPage:
       unevaluatedProperties: false
       allOf:
