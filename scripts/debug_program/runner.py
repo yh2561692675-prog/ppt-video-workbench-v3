@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 from collections.abc import Sequence
@@ -13,6 +14,8 @@ from typing import Any
 
 from .evidence import EvidenceWriter, sha256_file, utc_now
 from .models import validate_automation_verdict
+
+_RUN_ID = re.compile(r"^[a-z0-9][a-z0-9-]{3,127}$")
 
 
 @dataclass(frozen=True)
@@ -53,7 +56,7 @@ def _write_new(path: Path, value: Any) -> None:
 
 def _slug(value: str) -> str:
     slug = "".join(
-        char if char.isalnum() or char in "-_" else "-" for char in value
+        char if char.isalnum() or char == "-" else "-" for char in value
     ).strip("-").lower()
     if not slug:
         raise ValueError("command name must contain at least one alphanumeric character")
@@ -235,7 +238,10 @@ def new_run_id(candidate_id: str, matrix: str) -> str:
     import secrets
     import time
 
-    return f"{_slug(candidate_id)}-{_slug(matrix)}-{time.time_ns()}-{secrets.token_hex(3)}"
+    run_id = f"{_slug(candidate_id)}-{_slug(matrix)}-{time.time_ns()}-{secrets.token_hex(3)}"
+    if _RUN_ID.fullmatch(run_id) is None:
+        raise ValueError("generated run_id does not satisfy automation verdict contract")
+    return run_id
 
 
 def python_smoke_plan(repo_root: Path) -> tuple[CommandSpec, ...]:
@@ -252,7 +258,9 @@ def python_smoke_plan(repo_root: Path) -> tuple[CommandSpec, ...]:
     )
 
 
-def full_automation_plan(repo_root: Path) -> tuple[CommandSpec, ...]:
+def full_automation_plan(
+    repo_root: Path, candidate: Path | None = None
+) -> tuple[CommandSpec, ...]:
     """DP20-DP24 command plan; execution remains sequential and fail-closed."""
 
     python_env = {
@@ -269,38 +277,45 @@ def full_automation_plan(repo_root: Path) -> tuple[CommandSpec, ...]:
     ) -> CommandSpec:
         return CommandSpec(name, tuple(argv), repo_root, env or {}, timeout_seconds)
 
+    release_command = [
+        python,
+        "-m",
+        "scripts.debug_program.release_preflight",
+        "--repo-root",
+        str(repo_root),
+    ]
+    if candidate is not None:
+        release_command.extend(("--candidate", str(candidate)))
+    release_root = repo_root / "test-results" / "debug-program" / "release-payload"
+    installer_root = repo_root / "test-results" / "debug-program" / "release-artifacts"
     return (
+        spec("release-preflight", release_command, 300, python_env),
+        spec(
+            "release-build",
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-File",
+                str(repo_root / "scripts" / "build-release.ps1"),
+                "-Output",
+                str(release_root),
+                "-InstallerOutputDirectory",
+                str(installer_root),
+            ],
+            7200,
+        ),
         spec("python-full-tests", [python, "-m", "pytest", "-q"], 3600, python_env),
         spec(
             "python-ruff",
-            [python, "-m", "ruff", "check", "apps", "tests", "scripts"],
+            [python, "-m", "ruff", "check", "."],
             900,
             python_env,
         ),
         spec("python-mypy", [python, "-m", "mypy", "--strict"], 1800, python_env),
-        spec(
-            "web-lint",
-            [pnpm, "--filter", "@workbench/web", "exec", "eslint", "src", "--max-warnings=0"],
-            900,
-        ),
-        spec("web-typecheck", [pnpm, "--filter", "@workbench/web", "typecheck"], 900),
-        spec(
-            "web-tests",
-            [pnpm, "--filter", "@workbench/web", "test", "--", "--reporter=verbose"],
-            1800,
-        ),
-        spec("web-build", [pnpm, "--filter", "@workbench/web", "build"], 1800),
-        spec(
-            "remotion-typecheck",
-            [pnpm, "--filter", "@workbench/remotion", "typecheck"],
-            900,
-        ),
-        spec(
-            "remotion-tests",
-            [pnpm, "--filter", "@workbench/remotion", "test", "--", "--reporter=verbose"],
-            1800,
-        ),
-        spec("remotion-build", [pnpm, "--filter", "@workbench/remotion", "build"], 1200),
+        spec("root-lint", [pnpm, "lint"], 1800),
+        spec("root-typecheck", [pnpm, "typecheck"], 1200),
+        spec("root-tests", [pnpm, "test"], 2400),
+        spec("root-build", [pnpm, "build"], 2400),
         spec(
             "contract-migration-regression",
             [
@@ -314,6 +329,30 @@ def full_automation_plan(repo_root: Path) -> tuple[CommandSpec, ...]:
                 "tests/unit/storage/test_workspace_migrations.py",
             ],
             1800,
+            python_env,
+        ),
+        spec(
+            "export-contracts-check",
+            [python, "scripts/export_contracts.py", "--check"],
+            900,
+            python_env,
+        ),
+        spec(
+            "cloud-client-check",
+            [python, "scripts/generate_cloud_client.py", "--check"],
+            900,
+            python_env,
+        ),
+        spec(
+            "ci-wiring-check",
+            [
+                python,
+                "-m",
+                "scripts.debug_program.ci_preflight",
+                "--repo-root",
+                str(repo_root),
+            ],
+            300,
             python_env,
         ),
     )

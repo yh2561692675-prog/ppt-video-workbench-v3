@@ -122,7 +122,7 @@ def main(argv: list[str] | None = None) -> int:
             plan = (
                 python_smoke_plan(args.repo_root.resolve())
                 if args.matrix == "python-smoke"
-                else full_automation_plan(args.repo_root.resolve())
+                else full_automation_plan(args.repo_root.resolve(), args.candidate.resolve())
             )
             verdict = run_plan(
                 writer=writer,

@@ -321,7 +321,7 @@ def test_run_ids_are_unique_within_one_second() -> None:
 
 
 def test_generated_run_id_is_accepted_by_verdict_validator(tmp_path: Path) -> None:
-    run_id = new_run_id("v1-rc-abc1234-20260811T193000Z", "python-smoke")
+    run_id = new_run_id("v1-rc-abc1234-20260811T193000Z", "DP20_FULL")
     result = tmp_path / "result.json"
     result.write_text("{}", encoding="utf-8")
     validate_automation_verdict(
@@ -329,7 +329,7 @@ def test_generated_run_id_is_accepted_by_verdict_validator(tmp_path: Path) -> No
             "schema_version": "1.0",
             "candidate_id": "v1-rc-abc1234-20260811T193000Z",
             "run_id": run_id,
-            "matrix": "python-smoke",
+            "matrix": "DP20_FULL",
             "status": "passed",
             "started_at": "2026-08-11T19:30:00Z",
             "finished_at": "2026-08-11T19:30:01Z",
@@ -345,8 +345,17 @@ def test_generated_run_id_is_accepted_by_verdict_validator(tmp_path: Path) -> No
 def test_full_automation_plan_is_explicit_and_sequential(tmp_path: Path) -> None:
     plan = full_automation_plan(tmp_path)
     names = [item.name for item in plan]
-    assert names[:3] == ["python-full-tests", "python-ruff", "python-mypy"]
-    assert "web-tests" in names
-    assert "remotion-tests" in names
+    assert names[:5] == [
+        "release-preflight",
+        "release-build",
+        "python-full-tests",
+        "python-ruff",
+        "python-mypy",
+    ]
+    assert "root-lint" in names
+    assert "root-tests" in names
+    assert "export-contracts-check" in names
+    assert "cloud-client-check" in names
+    assert "ci-wiring-check" in names
     assert "contract-migration-regression" in names
     assert all(item.argv and item.argv[0] != "cmd.exe" for item in plan)

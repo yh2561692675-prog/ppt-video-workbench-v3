@@ -27,6 +27,7 @@ jobs:
       - run: uv run pytest
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+      - run: pnpm e2e
       - if: runner.os == 'Windows'
         shell: pwsh
         run: ./scripts/run-web-release-gate.ps1 -CandidateId ci-${{ github.sha }}
