@@ -2,14 +2,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sys
 from pathlib import Path
 
 import pytest
 
+from scripts.debug_program import candidate as candidate_module
 from scripts.debug_program.evidence import EvidenceWriter
 from scripts.debug_program.isolation import IsolatedRun
 from scripts.debug_program.models import (
     ValidationError,
+    validate_automation_verdict,
     validate_candidate_manifest,
     validate_defect,
     validate_run,
@@ -17,7 +20,13 @@ from scripts.debug_program.models import (
     validate_signoff,
 )
 from scripts.debug_program.registry import list_scenarios
-from scripts.debug_program.runner import CommandSpec, run_plan
+from scripts.debug_program.runner import (
+    CommandSpec,
+    execute_command,
+    new_run_id,
+    recover_automation,
+    run_plan,
+)
 
 
 def candidate(tmp_path: Path) -> dict[str, object]:
@@ -156,3 +165,90 @@ def test_runner_executes_and_preserves_first_failure(tmp_path: Path) -> None:
         / "result.json"
     )
     assert json.loads(result.read_text(encoding="utf-8"))["exit_code"] == 7
+
+
+def test_runner_closes_logs_and_rejects_empty_command_name(tmp_path: Path) -> None:
+    output = tmp_path / "commands"
+    result = execute_command(
+        CommandSpec("log-close", (sys.executable, "-c", "print('ok')"), tmp_path, {}, 30),
+        output,
+        1,
+    )
+    renamed = result.stdout.with_name("stdout-renamed.log")
+    result.stdout.rename(renamed)
+    assert renamed.read_text(encoding="utf-8").strip() == "ok"
+    with pytest.raises(ValueError, match="command name"):
+        execute_command(CommandSpec("!!!", (sys.executable, "-c", "pass"), tmp_path, {}), output, 2)
+
+
+def test_runner_records_timeout_and_spawn_errors(tmp_path: Path) -> None:
+    timeout = execute_command(
+        CommandSpec(
+            "timeout",
+            (sys.executable, "-c", "import time; time.sleep(0.1)"),
+            tmp_path,
+            {},
+            0,
+        ),
+        tmp_path / "commands",
+        1,
+    )
+    assert timeout.exit_code == 124
+    missing = execute_command(
+        CommandSpec("spawn-error", ("definitely-not-an-executable",), tmp_path, {}),
+        tmp_path / "commands",
+        2,
+    )
+    assert missing.exit_code == 127
+
+
+def test_automation_verdict_is_validated_and_recovery_is_idempotent(tmp_path: Path) -> None:
+    root = tmp_path / "evidence"
+    writer = EvidenceWriter(root, "v1-rc-abc1234-20260811T193000Z", "run-recovery-001")
+    writer.create_run("python-smoke", status="running")
+    first = recover_automation(writer)
+    second = recover_automation(writer)
+    assert first is not None
+    assert second is None
+    verdict = json.loads(first.read_text(encoding="utf-8"))
+    validate_automation_verdict(verdict, writer.run_root)
+    verdict["unexpected"] = True
+    with pytest.raises(ValidationError, match="unknown fields"):
+        validate_automation_verdict(verdict)
+
+
+def test_candidate_checkout_binding_rejects_mismatch_and_dirty(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    value = candidate(tmp_path)
+
+    def fake_git(_root: Path, *args: str) -> str:
+        if args == ("rev-parse", "--show-toplevel"):
+            return str(tmp_path)
+        if args == ("rev-parse", "HEAD"):
+            return "a" * 40
+        return ""
+
+    monkeypatch.setattr(candidate_module, "_git", fake_git)
+    candidate_module.validate_checkout(value, tmp_path)
+    value["source"] = {"commit": "b" * 40, "branch": "codex/test", "dirty": False}
+    with pytest.raises(ValidationError, match="HEAD"):
+        candidate_module.validate_checkout(value, tmp_path)
+
+    value["source"] = {"commit": "a" * 40, "branch": "codex/test", "dirty": False}
+    def dirty_git(_root: Path, *args: str) -> str:
+        if args[0] == "status":
+            return " M source.py"
+        if args[-1] == "--show-toplevel":
+            return str(tmp_path)
+        return "a" * 40
+
+    monkeypatch.setattr(candidate_module, "_git", dirty_git)
+    with pytest.raises(ValidationError, match="dirty"):
+        candidate_module.validate_checkout(value, tmp_path)
+
+
+def test_run_ids_are_unique_within_one_second() -> None:
+    first = new_run_id("v1-rc-abc1234-20260811T193000Z", "python-smoke")
+    second = new_run_id("v1-rc-abc1234-20260811T193000Z", "python-smoke")
+    assert first != second

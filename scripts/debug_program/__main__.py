@@ -7,10 +7,11 @@ import json
 import sys
 from pathlib import Path
 
-from .evidence import EvidenceWriter, utc_now
+from .candidate import build_candidate, validate_checkout
+from .evidence import EvidenceWriter
 from .models import ValidationError, load_and_validate, validate_candidate_manifest, validate_run
 from .registry import list_scenarios
-from .runner import python_smoke_plan, run_plan
+from .runner import new_run_id, python_smoke_plan, recover_automation, run_plan
 
 
 def _json(value: object) -> None:
@@ -32,6 +33,7 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("--candidate", required=True, type=Path)
     run.add_argument("--matrix", default="local-e2e")
     run.add_argument("--evidence-root", type=Path, default=Path("test-results/debug-program"))
+    run.add_argument("--repo-root", type=Path, default=Path("."))
     run.add_argument("--allow-external", action="store_true")
     automation = commands.add_parser("run-automation")
     automation.add_argument("--candidate", required=True, type=Path)
@@ -40,6 +42,14 @@ def _parser() -> argparse.ArgumentParser:
         "--evidence-root", type=Path, default=Path("test-results/debug-program")
     )
     automation.add_argument("--repo-root", type=Path, default=Path("."))
+    candidate_build = commands.add_parser("build-candidate")
+    candidate_build.add_argument("--repo-root", type=Path, default=Path("."))
+    candidate_build.add_argument(
+        "--output-root", type=Path, default=Path("test-results/debug-program/candidates")
+    )
+    candidate_build.add_argument("--candidate-id")
+    recover = commands.add_parser("recover-automation")
+    recover.add_argument("--run", required=True, type=Path)
     verdict = commands.add_parser("verdict")
     verdict.add_argument("--run", required=True, type=Path)
     return parser
@@ -78,8 +88,8 @@ def main(argv: list[str] | None = None) -> int:
                     }
                 )
                 return 3
-            timestamp = utc_now().replace("-", "").replace(":", "")
-            run_id = f"{candidate['candidate_id']}-{args.matrix}-{timestamp}"
+            validate_checkout(candidate, args.repo_root)
+            run_id = new_run_id(candidate["candidate_id"], args.matrix)
             writer = EvidenceWriter(args.evidence_root, candidate["candidate_id"], run_id)
             writer.create_run(args.matrix)
             _json(
@@ -90,14 +100,18 @@ def main(argv: list[str] | None = None) -> int:
                 }
             )
             return 0
+        if args.command == "build-candidate":
+            path = build_candidate(args.repo_root, args.output_root, args.candidate_id)
+            _json({"candidate": str(path), "candidate_id": path.parent.name})
+            return 0
         if args.command == "run-automation":
             candidate = load_and_validate(
                 args.candidate, validate_candidate_manifest, args.candidate.parent
             )
+            validate_checkout(candidate, args.repo_root)
             if args.matrix != "python-smoke":
                 raise ValidationError(f"unsupported automation matrix: {args.matrix}")
-            timestamp = utc_now().replace("-", "").replace(":", "")
-            run_id = f"{candidate['candidate_id']}-{args.matrix}-{timestamp}"
+            run_id = new_run_id(candidate["candidate_id"], args.matrix)
             writer = EvidenceWriter(args.evidence_root, candidate["candidate_id"], run_id)
             verdict = run_plan(
                 writer=writer,
@@ -107,12 +121,24 @@ def main(argv: list[str] | None = None) -> int:
             )
             _json(verdict)
             return 0 if verdict["status"] == "passed" else 1
+        if args.command == "recover-automation":
+            run_root = args.run.resolve()
+            writer = EvidenceWriter(
+                run_root.parents[1], run_root.parent.name, run_root.name
+            )
+            recovered = recover_automation(writer)
+            _json({"status": "recovered" if recovered else "already_terminal"})
+            return 0
         if args.command == "verdict":
             verdict_path = args.run / "automation-verdict.json"
             source = verdict_path if verdict_path.is_file() else args.run / "run.json"
             value = json.loads(source.read_text(encoding="utf-8"))
             if source.name == "run.json":
                 validate_run(value)
+            else:
+                from .models import validate_automation_verdict
+
+                validate_automation_verdict(value, args.run)
             _json(
                 {
                     "status": value["status"],

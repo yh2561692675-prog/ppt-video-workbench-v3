@@ -2,6 +2,7 @@
 
 from .models import (
     ValidationError,
+    validate_automation_verdict,
     validate_candidate_manifest,
     validate_defect,
     validate_run,
@@ -13,6 +14,7 @@ __all__ = [
     "ValidationError",
     "validate_candidate_manifest",
     "validate_defect",
+    "validate_automation_verdict",
     "validate_run",
     "validate_scenario",
     "validate_signoff",

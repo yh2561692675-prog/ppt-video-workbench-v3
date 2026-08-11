@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.dev/schemas/debug-automation-verdict-v1.schema.json",
+  "title": "DebugAutomationVerdictV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "candidate_id", "run_id", "matrix", "status", "started_at", "finished_at", "commands", "first_failure"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "candidate_id": {"type": "string", "pattern": "^v1-rc-[a-z0-9]+-[0-9]{8}T[0-9]{6}Z$"},
+    "run_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{3,127}$"},
+    "matrix": {"type": "string", "minLength": 1},
+    "status": {"enum": ["passed", "failed", "blocked", "interrupted"]},
+    "started_at": {"type": "string", "format": "date-time"},
+    "finished_at": {"type": "string", "format": "date-time"},
+    "commands": {"type": "array", "items": {"$ref": "#/$defs/command"}},
+    "first_failure": {"anyOf": [{"$ref": "#/$defs/failure"}, {"type": "null"}]},
+    "notes": {"type": "array"}
+  },
+  "$defs": {
+    "resultPath": {"type": "string", "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(^|/|\\\\)\\.\\.(/|\\\\|$)).+"},
+    "command": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "exit_code", "status", "result"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "exit_code": {"type": "integer"},
+        "status": {"enum": ["passed", "failed"]},
+        "result": {"$ref": "#/$defs/resultPath"}
+      }
+    },
+    "failure": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "exit_code", "result"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "exit_code": {"type": "integer"},
+        "result": {"$ref": "#/$defs/resultPath"}
+      }
+    }
+  }
+}

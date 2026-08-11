@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .evidence import EvidenceWriter, sha256_file, utc_now
+from .models import validate_automation_verdict
 
 
 @dataclass(frozen=True)
@@ -42,12 +43,19 @@ def _write_new(path: Path, value: Any) -> None:
     )
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     fd = os.open(path, flags)
-    with os.fdopen(fd, "wb") as handle:
-        handle.write(payload)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(payload)
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
 
 
 def _slug(value: str) -> str:
-    return "".join(char if char.isalnum() or char in "-_" else "-" for char in value).strip("-")
+    slug = "".join(char if char.isalnum() or char in "-_" else "-" for char in value).strip("-")
+    if not slug:
+        raise ValueError("command name must contain at least one alphanumeric character")
+    return slug
 
 
 def execute_command(spec: CommandSpec, output_root: Path, index: int) -> CommandResult:
@@ -73,15 +81,16 @@ def execute_command(spec: CommandSpec, output_root: Path, index: int) -> Command
     exit_code = 0
     error: str | None = None
     try:
-        completed = subprocess.run(
-            list(spec.argv),
-            cwd=spec.cwd,
-            env={**os.environ, **spec.env},
-            stdout=stdout.open("wb"),
-            stderr=stderr.open("wb"),
-            timeout=spec.timeout_seconds,
-            check=False,
-        )
+        with stdout.open("wb") as stdout_handle, stderr.open("wb") as stderr_handle:
+            completed = subprocess.run(
+                list(spec.argv),
+                cwd=spec.cwd,
+                env={**os.environ, **spec.env},
+                stdout=stdout_handle,
+                stderr=stderr_handle,
+                timeout=spec.timeout_seconds,
+                check=False,
+            )
         exit_code = completed.returncode
         if exit_code != 0:
             status = "failed"
@@ -170,9 +179,59 @@ def run_plan(
         ],
         "first_failure": first_failure,
     }
+    validate_automation_verdict(verdict, writer.run_root)
     _write_new(writer.run_root / "automation-verdict.json", verdict)
     writer.manifest()
     return verdict
+
+
+def recover_automation(writer: EvidenceWriter) -> Path | None:
+    """Mark a running automation run interrupted without replacing any file."""
+
+    run_path = writer.run_root / "run.json"
+    verdict_path = writer.run_root / "automation-verdict.json"
+    if not run_path.is_file() or verdict_path.exists():
+        return None
+    run = json.loads(run_path.read_text(encoding="utf-8"))
+    if run.get("status") != "running":
+        return None
+    marker = writer.run_root / "automation-interrupted.json"
+    if not marker.exists():
+        _write_new(
+            marker,
+            {
+                "schema_version": "1.0",
+                "candidate_id": writer.candidate_id,
+                "run_id": writer.run_id,
+                "detected_at": utc_now(),
+                "reason": "automation run had no terminal verdict",
+            },
+        )
+    verdict = {
+        "schema_version": "1.0",
+        "candidate_id": writer.candidate_id,
+        "run_id": writer.run_id,
+        "matrix": run["matrix"],
+        "status": "interrupted",
+        "started_at": run["started_at"],
+        "finished_at": utc_now(),
+        "commands": [],
+        "first_failure": None,
+        "notes": ["recovered without overwriting the running run"],
+    }
+    validate_automation_verdict(verdict, writer.run_root)
+    _write_new(verdict_path, verdict)
+    writer.manifest()
+    return verdict_path
+
+
+def new_run_id(candidate_id: str, matrix: str) -> str:
+    """Return a collision-resistant, schema-safe run identifier."""
+
+    import secrets
+    import time
+
+    return f"{candidate_id}-{_slug(matrix)}-{time.time_ns()}-{secrets.token_hex(3)}"
 
 
 def python_smoke_plan(repo_root: Path) -> tuple[CommandSpec, ...]:

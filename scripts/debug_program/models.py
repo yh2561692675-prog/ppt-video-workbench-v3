@@ -263,6 +263,88 @@ def validate_run(data: Any) -> dict[str, Any]:
     return item
 
 
+def validate_automation_verdict(
+    data: Any, base_dir: Path | None = None
+) -> dict[str, Any]:
+    """Validate the append-only verdict emitted by the automation runner."""
+
+    item = _object(data, "automation_verdict")
+    _required(
+        item,
+        (
+            "schema_version",
+            "candidate_id",
+            "run_id",
+            "matrix",
+            "status",
+            "started_at",
+            "finished_at",
+            "commands",
+            "first_failure",
+        ),
+    )
+    _no_unknown(
+        item,
+        {
+            "schema_version",
+            "candidate_id",
+            "run_id",
+            "matrix",
+            "status",
+            "started_at",
+            "finished_at",
+            "commands",
+            "first_failure",
+            "notes",
+        },
+        "automation_verdict",
+    )
+    if item["schema_version"] != "1.0":
+        raise ValidationError("automation_verdict.schema_version must be 1.0")
+    if not isinstance(item["candidate_id"], str) or not _CANDIDATE.fullmatch(
+        item["candidate_id"]
+    ):
+        raise ValidationError("automation_verdict.candidate_id is invalid")
+    if not isinstance(item["run_id"], str) or not _RUN.fullmatch(item["run_id"]):
+        raise ValidationError("automation_verdict.run_id is invalid")
+    _string(item, "matrix")
+    if item["status"] not in {"passed", "failed", "blocked", "interrupted"}:
+        raise ValidationError("automation_verdict.status is invalid")
+    _rfc3339(item["started_at"], "started_at")
+    _rfc3339(item["finished_at"], "finished_at")
+    commands = item["commands"]
+    if not isinstance(commands, list):
+        raise ValidationError("automation_verdict.commands must be an array")
+    for index, command in enumerate(commands):
+        entry = _object(command, f"commands[{index}]")
+        _required(entry, ("name", "exit_code", "status", "result"))
+        _no_unknown(entry, {"name", "exit_code", "status", "result"}, f"commands[{index}]")
+        _string(entry, "name")
+        if not isinstance(entry["exit_code"], int):
+            raise ValidationError(f"commands[{index}].exit_code must be an integer")
+        if entry["status"] not in {"passed", "failed"}:
+            raise ValidationError(f"commands[{index}].status is invalid")
+        relative = _relative_path(entry["result"], f"commands[{index}].result")
+        if base_dir is not None and not (base_dir / relative).is_file():
+            raise ValidationError(f"missing automation result: {relative}")
+    failure = item["first_failure"]
+    if failure is not None:
+        entry = _object(failure, "first_failure")
+        _required(entry, ("name", "exit_code", "result"))
+        _no_unknown(entry, {"name", "exit_code", "result"}, "first_failure")
+        _string(entry, "name")
+        if not isinstance(entry["exit_code"], int):
+            raise ValidationError("first_failure.exit_code must be an integer")
+        relative = _relative_path(entry["result"], "first_failure.result")
+        if base_dir is not None and not (base_dir / relative).is_file():
+            raise ValidationError(f"missing first failure result: {relative}")
+    if item["status"] == "failed" and failure is None:
+        raise ValidationError("failed automation verdict requires first_failure")
+    if "notes" in item and not isinstance(item["notes"], list):
+        raise ValidationError("automation_verdict.notes must be an array")
+    return item
+
+
 def validate_defect(data: Any) -> dict[str, Any]:
     item = _object(data, "defect")
     _required(
