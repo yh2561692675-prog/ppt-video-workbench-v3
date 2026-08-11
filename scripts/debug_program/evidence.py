@@ -53,7 +53,15 @@ class EvidenceWriter:
             path.unlink(missing_ok=True)
             raise
 
-    def create_run(self, matrix: str, environment: dict[str, Any] | None = None) -> Path:
+    def create_run(
+        self,
+        matrix: str,
+        environment: dict[str, Any] | None = None,
+        *,
+        status: str = "planned",
+    ) -> Path:
+        if status not in {"planned", "running"}:
+            raise ValueError("run must start as planned or running")
         path = self.run_root / "run.json"
         self._create_json(
             path,
@@ -64,7 +72,7 @@ class EvidenceWriter:
                 "matrix": matrix,
                 "started_at": utc_now(),
                 "attempt": 1,
-                "status": "planned",
+                "status": status,
                 "artifacts": [],
                 "orphan_processes": [],
                 "environment": environment or {},

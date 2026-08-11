@@ -17,6 +17,7 @@ from scripts.debug_program.models import (
     validate_signoff,
 )
 from scripts.debug_program.registry import list_scenarios
+from scripts.debug_program.runner import CommandSpec, run_plan
 
 
 def candidate(tmp_path: Path) -> dict[str, object]:
@@ -126,3 +127,32 @@ def test_registry_restricts_destructive_and_paid_by_default() -> None:
     assert {item["scenario_id"] for item in safe} == {"DBG-core-001", "DBG-recovery-001"}
     release = list_scenarios(matrix="release", include_restricted=True)
     assert release[0]["destructive"] is True
+
+
+def test_runner_executes_and_preserves_first_failure(tmp_path: Path) -> None:
+    root = tmp_path / "evidence"
+    candidate_id = "v1-rc-abc1234-20260811T193000Z"
+    writer = EvidenceWriter(root, candidate_id, "run-python-smoke-001")
+    commands = (
+        CommandSpec(
+            "first-failure",
+            ("python", "-c", "import sys; print('first failure'); sys.exit(7)"),
+            tmp_path,
+            {},
+            30,
+        ),
+        CommandSpec("must-not-run", ("python", "-c", "raise SystemExit(8)"), tmp_path, {}, 30),
+    )
+    verdict = run_plan(writer=writer, matrix="python-smoke", commands=commands)
+    assert verdict["status"] == "failed"
+    assert verdict["first_failure"]["exit_code"] == 7
+    assert len(verdict["commands"]) == 1
+    result = (
+        root
+        / candidate_id
+        / "run-python-smoke-001"
+        / "commands"
+        / "001-first-failure"
+        / "result.json"
+    )
+    assert json.loads(result.read_text(encoding="utf-8"))["exit_code"] == 7
