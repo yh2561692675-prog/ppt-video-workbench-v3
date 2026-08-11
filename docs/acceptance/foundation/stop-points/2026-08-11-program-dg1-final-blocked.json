@@ -1,0 +1,157 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects-program",
+  "wave": "W1",
+  "gate": "DG1_AUTOMATION_GREEN",
+  "status": "BLOCKED_EXTERNAL_GITHUB_ORIGIN_AND_CI",
+  "generated_at": "2026-08-11T18:00:26Z",
+  "branch": "codex/program-integration-v1",
+  "audit_source": {
+    "commit": "d68695c589cb7ce8e44aa78f5b8fc2a5daa07c09",
+    "candidate_generated_for_audit_source": false,
+    "full_runs_generated_for_audit_source": false,
+    "worktree": "F:/ppt-video-workbench-v3/.worktrees/program-integration-v1",
+    "worktree_status": "clean"
+  },
+  "audited_phase11": {
+    "source_commit": "2bf3c1c2fe477d129050a2d1610f89a393e53488",
+    "candidate": {
+      "candidate_id": "v1-rc-2bf3c1c-20260812T005412Z",
+      "manifest": "test-results/debug-program/phase11-candidates/v1-rc-2bf3c1c-20260812T005412Z/candidate-manifest.json",
+      "manifest_sha256": "f9f2d29c33808e06cc1195dc5e2c553fdc3c23f513734053316550f9db3d4987",
+      "source_commit": "2bf3c1c2fe477d129050a2d1610f89a393e53488",
+      "dirty": false,
+      "contract_set_sha256": "de55cc1090e49b0ab4d7fb6375b4509cb878d5888e8bef54fd00407a34fbebf6"
+    },
+    "command_matrix": {
+      "matrix": "dp20-full",
+      "commands_001_to_014": "all exit=0",
+      "command_015": {
+        "name": "ci-wiring-check",
+        "exit_code": 2,
+        "status": "blocked_external_ci",
+        "first_failure": null
+      },
+      "dp23": {
+        "export_contracts_check": "passed",
+        "cloud_client_check": "passed"
+      },
+      "dp24": "blocked; external Windows and Ubuntu CI was not executed"
+    },
+    "runs": [
+      {
+        "run_id": "v1-rc-2bf3c1c-20-dp20-full-1786467291921994700-abf073",
+        "run_root": "test-results/debug-program/phase11-runs/v1-rc-2bf3c1c-20260812T005412Z/v1-rc-2bf3c1c-20-dp20-full-1786467291921994700-abf073",
+        "status": "blocked",
+        "verdict_sha256": "99489583630a03c18f9322893b8e9e31b9f84388e60ce4bc99c51e8b30b57421",
+        "evidence_manifest_sha256": "79811774df410dee363304f6e509bee3f25631c36a608744fce022254b8bdceb",
+        "first_blocker": {
+          "name": "ci-wiring-check",
+          "exit_code": 2,
+          "result": "commands/015-ci-wiring-check/result.json",
+          "reason": "external Windows/Ubuntu CI evidence is required"
+        }
+      },
+      {
+        "run_id": "v1-rc-2bf3c1c-20-dp20-full-1786468022519871600-c58ed7",
+        "run_root": "test-results/debug-program/phase11-runs2/v1-rc-2bf3c1c-20260812T005412Z/v1-rc-2bf3c1c-20-dp20-full-1786468022519871600-c58ed7",
+        "status": "blocked",
+        "verdict_sha256": "538be961825c1878d3f8a14b08d5995272d847a9dd7d94b1229e2f21127750ea",
+        "evidence_manifest_sha256": "9ccf347f16a325bf27b4eb02b935c0baf1c04cf419e4ed816c13178f16be8c42",
+        "first_blocker": {
+          "name": "ci-wiring-check",
+          "exit_code": 2,
+          "result": "commands/015-ci-wiring-check/result.json",
+          "reason": "external Windows/Ubuntu CI evidence is required"
+        }
+      }
+    ],
+    "release_output_comparison": {
+      "run_1": {
+        "relative_root": "test-results/debug-program/release/v1-rc-2bf3-94700-abf073",
+        "evidence": "commands/004-release-build/release-output.json",
+        "evidence_sha256": "353340289e7d052d1f03fc4c18d4bada8d2f8e4f3622a1aa6669facf250a112f",
+        "aggregate_sha256": "b56188402f40b723338afcbf86769bf25be5b90a83b3ff940264feb859eddf99"
+      },
+      "run_2": {
+        "relative_root": "test-results/debug-program/release/v1-rc-2bf3-71600-c58ed7",
+        "evidence": "commands/004-release-build/release-output.json",
+        "evidence_sha256": "bf135b69225b1b80df75e8dc45263e98cf4a4c3f01b3db75b6b5be39077193a5",
+        "aggregate_sha256": "7c8509de6e0fe18cdf9a05a986d91e06029ebfabe8ea8c4f45caea25ee162748"
+      },
+      "relative_file_set_equal": true,
+      "file_count_each": 6,
+      "exact_hash_matches": [
+        "payload/sbom/node-dependencies.json",
+        "payload/sbom/python-dependencies.json",
+        "payload/licenses/THIRD-PARTY-NOTICES.txt"
+      ],
+      "allowed_nondeterminism": [
+        "installer bytes and size differ because Inno Setup compression/build metadata is time-dependent",
+        "release-artifacts.json contains run-specific candidate paths and hashes",
+        "runtime-manifest.json built_at differs; 8412/8415 runtime entries retain identical hash and size, with only api/workbench.exe and two pnpm metadata files differing"
+      ]
+    }
+  },
+  "validator_hardening_after_phase11": {
+    "commits": [
+      "08c05a669533dd4a83aadc4146524ba2498416fb",
+      "1493ace38f1995335b9ee0283bb20eed7d718ef8",
+      "d68695c589cb7ce8e44aa78f5b8fc2a5daa07c09"
+    ],
+    "coverage": [
+      "strict external CI evidence schema and actual file hash validation",
+      "fixed six-command quality set and global artifact/log/report/trace de-duplication",
+      "trusted GitHub origin parsing, repository binding, and numeric run/job URL binding"
+    ],
+    "verification": {
+      "debug_program_tests_passed": 63,
+      "ruff": "passed",
+      "mypy_strict": "passed",
+      "schema_json_parse": "passed"
+    },
+    "not_generated": [
+      "d68695c candidate manifest",
+      "d68695c DP20 full run",
+      "d68695c DP25 second full run"
+    ]
+  },
+  "git_origin": {
+    "trusted_origin_name": "origin",
+    "status": "missing",
+    "observed_remotes": [
+      {
+        "name": "recovery-source",
+        "fetch": "F:/git仓库/ppt-video-workbench-v3",
+        "push": "F:/git仓库/ppt-video-workbench-v3",
+        "trusted_github_origin": false
+      }
+    ],
+    "effect": "ci_preflight must exit 2 blocked regardless of evidence contents"
+  },
+  "blockers": [
+    {
+      "type": "trusted_github_origin",
+      "status": "blocked",
+      "reason": "origin is absent; only local recovery-source remote exists"
+    },
+    {
+      "type": "external_ci",
+      "status": "blocked",
+      "reason": "strict Windows and Ubuntu CI evidence has not been generated"
+    }
+  ],
+  "recovery_steps": [
+    "user provides or authorizes a single canonical GitHub origin remote",
+    "generate a new candidate from current clean source commit d68695c",
+    "push the candidate source and trigger the Windows/Ubuntu CI matrix",
+    "download the strict external-ci-evidence-v1 attestation and referenced hashes",
+    "run DP20 and DP25 from the new candidate, preserving first failures append-only",
+    "perform the final DG1 audit and update the stop point only after external evidence passes"
+  ],
+  "scope_boundary": {
+    "dg1_green_claimed": false,
+    "w2_gate_released": false,
+    "long_matrix_started_in_this_audit": false
+  }
+}
