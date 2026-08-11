@@ -13,11 +13,7 @@ from peripheral_host.state_machine import (
 
 @pytest.mark.parametrize(
     ("source", "target"),
-    [
-        (source, target)
-        for source, targets in ALLOWED_TRANSITIONS.items()
-        for target in targets
-    ],
+    [(source, target) for source, targets in ALLOWED_TRANSITIONS.items() for target in targets],
 )
 def test_allowed_transition(source: JobStatus, target: JobStatus):
     assert can_transition(source, target)

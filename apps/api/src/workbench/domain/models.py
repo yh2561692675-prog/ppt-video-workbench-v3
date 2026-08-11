@@ -17,6 +17,7 @@ from .errors import UnsupportedManifestVersion
 from .extraction import PageExtraction
 from .issues import CleanupPlanRecord, IssueConfirmation, PreflightReport
 from .matching import PageMatch
+from .presenter import PresentationMode, PresenterSource, PresenterTimelineV1
 from .source_file import SourceFile
 
 
@@ -195,6 +196,9 @@ class ProjectManifest(ContractModel):
     issue_confirmations: list[IssueConfirmation] = Field(default_factory=list)
     cleanup_plans: list[CleanupPlanRecord] = Field(default_factory=list)
     effect_policy: EffectProjectPolicy = Field(default_factory=EffectProjectPolicy)
+    presentation_mode: PresentationMode = PresentationMode.AI_NARRATION
+    presenter_source: PresenterSource | None = None
+    presenter_timeline: PresenterTimelineV1 | None = None
 
     @model_validator(mode="after")
     def validate_page_identity(self) -> ProjectManifest:
@@ -204,6 +208,18 @@ class ProjectManifest(ContractModel):
         orders = [page.order for page in self.pages]
         if len(orders) != len(set(orders)):
             raise ValueError("duplicate page order")
+        if (
+            self.presentation_mode is PresentationMode.HUMAN_PRESENTER
+            and self.presenter_source is None
+        ):
+            raise ValueError("human_presenter requires presenter_source")
+        if self.presenter_timeline is not None:
+            if self.presenter_source is None:
+                raise ValueError("presenter_timeline requires presenter_source")
+            if self.presenter_timeline.source_id != self.presenter_source.id:
+                raise ValueError("presenter_timeline source does not match presenter_source")
+            if self.presenter_timeline.source_version != self.presenter_source.sha256:
+                raise ValueError("presenter_timeline source version is stale")
         return self
 
 
@@ -273,4 +289,7 @@ def migrate_manifest(payload: dict[str, Any], target_version: int) -> dict[str, 
         "subtitle_artifact": migrated.get("subtitle_artifact"),
         "video_preflight": migrated.get("video_preflight"),
         "video_export": migrated.get("video_export"),
+        "presentation_mode": migrated.get("presentation_mode", "ai_narration"),
+        "presenter_source": migrated.get("presenter_source"),
+        "presenter_timeline": migrated.get("presenter_timeline"),
     }

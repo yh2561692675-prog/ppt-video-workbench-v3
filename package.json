@@ -5,7 +5,7 @@
   "packageManager": "pnpm@11.7.0",
   "scripts": {
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
-    "lint": "eslint . --max-warnings=0 && prettier --check apps packages remotion scripts tests docs installer peripheral-platform schemas .github package.json tsconfig.json eslint.config.mjs playwright.config.ts",
+    "lint": "eslint . --max-warnings=0 && prettier --check apps packages remotion scripts tests docs installer peripheral-platform/README.md peripheral-platform/packaging peripheral-platform/schemas schemas .github package.json tsconfig.json eslint.config.mjs playwright.config.ts",
     "format": "prettier --write .",
     "typecheck": "pnpm --recursive typecheck",
     "test": "pnpm --recursive test",

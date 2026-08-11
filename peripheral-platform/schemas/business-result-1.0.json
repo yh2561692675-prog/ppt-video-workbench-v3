@@ -25,12 +25,7 @@
           "type": "integer"
         }
       },
-      "required": [
-        "logical_name",
-        "kind",
-        "size_bytes",
-        "sha256"
-      ],
+      "required": ["logical_name", "kind", "size_bytes", "sha256"],
       "title": "BusinessArtifact",
       "type": "object"
     },
@@ -62,18 +57,7 @@
       "type": "string"
     },
     "module_id": {
-      "enum": [
-        "P03",
-        "P04",
-        "P05",
-        "P06",
-        "P07",
-        "P08",
-        "P09",
-        "P10",
-        "P11",
-        "P12"
-      ],
+      "enum": ["P03", "P04", "P05", "P06", "P07", "P08", "P09", "P10", "P11", "P12"],
       "title": "Module Id",
       "type": "string"
     },

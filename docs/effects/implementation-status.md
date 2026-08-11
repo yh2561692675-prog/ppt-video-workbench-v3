@@ -1,6 +1,7 @@
 # 单页特效引擎 V2.0 Inline Execution 状态
 
 ### Task 0 — 现状审计、路径映射与非重复建设清单
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`docs/effects/current-state-audit.md`、`docs/effects/current-test-baseline.json`、`docs/effects/integration-map.md`、`docs/effects/implementation-status.md`
@@ -11,6 +12,7 @@
 - Commit：`6c7d10d`
 
 ### Task 1 — Feature flags、回滚开关与测试骨架
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/api/src/workbench/effects/__init__.py`、`apps/api/src/workbench/effects/flags.py`、`apps/web/src/effects/featureFlags.ts`、对应后端/前端测试
@@ -21,6 +23,7 @@
 - Commit：`8cf4c33`
 
 ### Task 2 — EffectPlan V2 契约、数据库迁移与跨端类型
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/api/src/workbench/effects/models.py`、`apps/api/src/workbench/effects/schemas/effect-plan-v2.schema.json`、`apps/api/migrations/0090_effect_plan_v2.sql`、`apps/web/src/effects/types.ts`、共享 fixture、契约文档和对应测试
@@ -31,6 +34,7 @@
 - Commit：`bf6e442`
 
 ### Task 3 — 统一页面模型与稳定模块标识
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/api/src/workbench/effects/slide_model.py`、`tests/unit/effects/test_slide_model.py`
@@ -41,6 +45,7 @@
 - Commit：`69f3666`
 
 ### Task 4 — 页面类型与教学意图分类器
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/api/src/workbench/effects/intent_classifier.py`、`fixtures/effects/education-v2/intent-cases.json`、`tests/unit/effects/test_intent_classifier.py`
@@ -51,6 +56,7 @@
 - Commit：`d95b6ed`
 
 ### Task 5 — 模块安全分级 L0—L3
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/api/src/workbench/effects/safety.py`、`fixtures/effects/module-safety-cases.json`、`tests/unit/effects/test_safety.py`
@@ -61,6 +67,7 @@
 - Commit：`b880b64`
 
 ### Task 6 — 音频主时钟与句子/模块提示点对齐
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/api/src/workbench/effects/cue_aligner.py`、`tests/unit/effects/test_cue_aligner.py`
@@ -71,6 +78,7 @@
 - Commit：`ec8dd12`
 
 ### Task 7 — 效果模板注册表与确定性计划器
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/api/src/workbench/effects/registry.py`、`apps/api/src/workbench/effects/planner.py`、`apps/api/src/workbench/effects/templates/education-v2.json`、对应测试
@@ -81,6 +89,7 @@
 - Commit：`c3046a3`
 
 ### Task 8 — EffectPlanValidator 与 effect gate
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/api/src/workbench/effects/validator.py`、`apps/api/src/workbench/effects/effect_gate.py`、对应测试
@@ -91,6 +100,7 @@
 - Commit：`5c801f8`
 
 ### Task 9 — 计划存储、人工锁和缓存失效
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/api/src/workbench/effects/repository.py`、`tests/unit/effects/test_repository.py`、`tests/unit/effects/test_cache_invalidation.py`
@@ -101,6 +111,7 @@
 - Commit：`d821b85`
 
 ### Task 10 — 页级协调器、幂等操作与 API 路由
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/api/src/workbench/effects/coordinator.py`、`apps/api/src/workbench/api/effects.py`、`apps/api/src/workbench/effects/repository.py`、`apps/api/src/workbench/main.py`、对应协调器与路由测试
@@ -111,6 +122,7 @@
 - Commit：`036cd14`
 
 ### Task 11 — Remotion 统一解释器与 L0—L2 原语
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`remotion/src/effects/types.ts`、`remotion/src/effects/interpreter.ts`、Remotion 页面模型和 `TechBoardTemplate`、`apps/api/src/workbench/video/models.py`、对应测试
@@ -121,6 +133,7 @@
 - Commit：`63ad73f`
 
 ### Task 12 — 教育讲解型模板与 L3 封装
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`remotion/src/video/EducationTemplate.tsx`、`remotion/src/video/TechBoardTemplate.tsx`、效果解释器原语扩展、对应测试
@@ -131,6 +144,7 @@
 - Commit：`0af4e76`
 
 ### Task 13 — 全页预览与时间轴联动
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/web/src/features/video/PreviewWorkspace.tsx`、对应预览工作区测试
@@ -141,6 +155,7 @@
 - Commit：`71abee1`
 
 ### Task 14 — 本页设置、人工锁、同类页应用与批量状态 UI
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/web/src/features/video/EffectSettingsPanel.tsx`、`EffectBatchStatus.tsx`、预览区集成和对应测试、页面样式
@@ -151,6 +166,7 @@
 - Commit：`2e69fa2`
 
 ### Task 15 — 页级重试、逐级降级、checkpoint 与恢复
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/api/src/workbench/effects/coordinator.py`、重试降级与 checkpoint 恢复测试
@@ -161,6 +177,7 @@
 - Commit：`b02fecf`
 
 ### Task 16 — 诊断报告、结构化日志、性能与资源保护
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/api/src/workbench/effects/diagnostics.py`、诊断/资源策略测试、`docs/effects/acceptance-template.md`
@@ -171,6 +188,7 @@
 - Commit：`048b469`
 
 ### Task 17 — 30 页标准样本、视觉回归与量化验收
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`fixtures/effects/education-v2/manifest.json`、`scripts/build_effect_fixture_manifest.py`、`scripts/render_effect_regression.py`、`apps/api/src/workbench/effects/acceptance.py`、对应后端/Web 测试
@@ -181,6 +199,7 @@
 - Commit：`7f081be`
 
 ### Task 18 — Windows 实机、发布、回滚与最终验收
+
 - 状态：ready_for_windows
 - 开始/结束：2026-08-09 / 2026-08-09（代码与文档部分）
 - 变更文件：`scripts/verify_effect_release.py`、`scripts/windows_effect_acceptance.ps1`、`docs/effects/operator-guide.md`、`docs/effects/release-and-rollback.md`、`docs/effects/windows-acceptance-report.md`、发布完整性测试
@@ -191,6 +210,7 @@
 - Commit：`a68d7ee`
 
 ### Task 19 — 消除 OpenAPI 快照漂移并冻结全绿基线
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`packages/contracts/openapi.json`、`docs/effects/current-test-baseline.json`、`docs/effects/implementation-status.md`
@@ -203,6 +223,7 @@
 - Commit：`1169409`
 
 ### Task 20 — 建立发布验收模型与 G0—G6 门禁
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/api/src/workbench/effects/release_models.py`、`apps/api/src/workbench/effects/release_gate.py`、`tests/unit/effects/test_release_gate.py`
@@ -214,6 +235,7 @@
 - Commit：`a601226`
 
 ### Task 21 — 建立真实 30 页样本接收、哈希与授权门禁
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`fixtures/effects/education-v2/sources/`、`fixtures/effects/education-v2/manifest.json`、`docs/effects/uploaded-sample-inventory.md`
@@ -227,6 +249,7 @@
 - Commit：`6864866`
 
 ### Task 22 — 完成 Ground Truth 与字幕安全区标注契约
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/api/src/workbench/effects/ground_truth.py`、`fixtures/effects/education-v2/ground-truth.json`、`tests/unit/effects/test_ground_truth.py`
@@ -238,6 +261,7 @@
 - Commit：`817dac6`
 
 ### Task 23 — 执行真实样本计划、关键帧与量化指标
+
 - 状态：passed
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/api/src/workbench/effects/acceptance_runner.py`、`apps/api/src/workbench/effects/frame_output.py`、`scripts/run_effect_acceptance.py`、`scripts/render_effect_regression.py`、`tests/unit/effects/test_effect_acceptance_runner.py`、`docs/effects/real-sample-acceptance-report.md`
@@ -249,6 +273,7 @@
 - Commit：`32eec78`
 
 ### Task 24 — 完成 30 页逐页视觉复核与缺陷闭环
+
 - 状态：passed_with_notes
 - 开始/结束：2026-08-09 / 2026-08-09
 - 变更文件：`apps/api/src/workbench/effects/visual_review.py`、`tests/unit/effects/test_visual_review.py`、`docs/effects/visual-review.json`、`docs/effects/real-sample-acceptance-report.md`
@@ -260,22 +285,24 @@
 - Commit：`4c9d8ce`
 
 ### Task 25 — 冻结单一 Windows RC 与完整哈希清单
-- 状态：blocked_windows_rc_unavailable
-- 开始/结束：2026-08-09 / 2026-08-09（Linux 可验证部分完成）
-- 变更文件：`apps/api/src/workbench/effects/rc_manifest.py`、`scripts/build_effect_rc_manifest.py`、`scripts/verify_effect_release.py`、`tests/release/test_effect_rc_manifest.py`
+
+- 状态：passed
+- 开始/结束：2026-08-09 / 2026-08-11
+- 变更文件：`apps/api/src/workbench/effects/rc_manifest.py`、`scripts/build_effect_rc_manifest.py`、`scripts/verify_effect_release.py`、`docs/effects/release-candidate-manifest.json`
 - 新增测试：7 个；覆盖确定性清单、缺安装包、工作树脏、安全默认值、关键资产缺失、哈希长度错误和 verifier 重检
-- Linux 结果：RC 清单模型与行为测试 7/7；Effects 全量 108/108；mypy 通过；ruff 在修正测试 fixture 行长后复验；无 RC 参数时 `verify_effect_release.py` 返回 `valid=true`、`sample_count=30`
-- Windows 硬门禁：当前 Linux 工程没有 `release/ppt-video-workbench-setup.exe`；RC 预检明确返回 `rc_manifest_blocked:installer_not_found`，未生成假安装包、未生成假 RC manifest
-- 恢复命令：在 Windows 的 `F:\ppt-video-workbench-v3` 执行 `scripts\build-release.ps1` 与 `scripts\build-release.ps1 -Verify`，然后使用 `scripts\build_effect_rc_manifest.py` 固定唯一 RC
-- Gate 25：阻断于真实 Windows RC 制品缺失；Task 26 及后续 Windows 门禁暂不提前进入
-- Commit：`3900bf5`
+- 验收结果：冻结 `effects-v2-rc1-20260811-full-ffmpeg`；安装包 SHA-256 为 `6f6f84a06b76a0f4638d767496de388b12251c2539de543849a42453c5b04d6d`；30 页 manifest、Ground Truth、visual review 哈希均匹配
+- Windows 硬门禁：`verify_effect_release.py` 返回 `valid=true`、`reason_codes=[]`；V2 仍保持 `v2_enabled=false`
+- Gate 25：通过；旧安装包先保存在 `.tmp/pre-task25-root-installer-ba588d7675a767b.exe`，未删除历史制品
+- Commit：`3900bf5`（基础实现；本次 RC 清单为未提交工作区验收证据）
 
 ### Task 26 — 扩展 ASCII-only Windows 隔离验收入口
-- 状态：ready_for_windows
-- 开始：2026-08-09
+
+- 状态：passed
+- 开始/结束：2026-08-09 / 2026-08-11
 - 变更文件：`scripts/windows_effect_acceptance_lib.ps1`、`scripts/windows_effect_acceptance.ps1`、`tests/release/windows-effect-isolation.Tests.ps1`、`tests/release/test_windows_effect_isolation_contract.py`、`docs/effects/windows-acceptance-report.md`
 - 已实现：正式数据库路径阻断、安装目录/验收工作区隔离、无破坏性端口探测、批次 PID 所有权、结构化 JSONL 证据记录；PowerShell 三个相关脚本保持 ASCII-only
-- Linux 结果：契约测试先红（3 failures，缺少 helper/入口接线/错误码），实现后 3/3 通过；Effects 与 RC 回归 118/118 通过，ruff、mypy、git diff check 通过；当前容器没有 `pwsh`/Pester，不能伪造 Windows 行为测试通过
-- Windows 门禁：必须在 Windows 上运行 Pester 与 `windows_effect_acceptance.ps1 -RunTests`；正式数据库路径固定禁止，安装包继续使用 Task 25 同一 RC
-- Gate 26：待 Windows 原生执行；未提前进入 Task 27
-- Commit：`ed32303`
+- Windows 结果：Pester 3.4 兼容验收 7/7；RC 完整性 `valid=true`；`windows_effect_acceptance.ps1 -RunTests` 后端 598 passed、Web 74 passed、Remotion 28 passed，类型检查全部通过；证据写入 `F:\Video\acceptance-effects-v2\acceptance-evidence.jsonl`
+- 修复项：验收入口优先使用 `uv run python`，并从 workspace 根目录用 pnpm filter 执行 Web/Remotion，避免无 TTY 时触发模块清理确认；隔离测试断言兼容现有 Pester 3.4
+- 警告：保留 2 条既有 Pydantic `UnsupportedFieldAttributeWarning` 和 Web `AudioContext is not supported` stderr，不影响断言
+- Gate 26：通过；可进入后续 Windows 实机功能清单
+- Commit：`ed32303`（基础实现；本次验收修复为未提交工作区变更）

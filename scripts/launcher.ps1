@@ -185,6 +185,8 @@ try {
     $env:WORKBENCH_OUTPUT_ROOT = $outputRoot
     $env:WORKBENCH_WEB_ROOT = $webRoot
     $env:WORKBENCH_RUNTIME_ROOT = $runtimeRoot
+    $env:WORKBENCH_FFMPEG = Join-Path $runtimeRoot "ffmpeg\ffmpeg.exe"
+    $env:WORKBENCH_FFPROBE = Join-Path $runtimeRoot "ffmpeg\ffprobe.exe"
     $env:PERIPHERAL_DEGRADED = "false"
     if ($env:PERIPHERAL_ENABLED -eq "true") {
         try {

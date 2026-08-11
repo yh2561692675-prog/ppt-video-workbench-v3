@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from collections.abc import Callable, Iterable
+from dataclasses import dataclass, field
 
 
 class PageRenderError(RuntimeError):
@@ -26,7 +26,11 @@ class BatchResult:
 
     @property
     def completed(self) -> set[str]:
-        return {page_id for page_id, record in self.records.items() if record.status in {"success", "fallback"}}
+        return {
+            page_id
+            for page_id, record in self.records.items()
+            if record.status in {"success", "fallback"}
+        }
 
     @property
     def failed(self) -> set[str]:

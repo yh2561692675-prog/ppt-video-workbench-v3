@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "window_id": "019feb46-8950-7213-b4ca-422988a6b032",
+  "task_name": "Shared Foundation contract slice",
+  "mode": "idle",
+  "repository": {
+    "path": "source-root",
+    "branch": "recovery/root-snapshot-20260810",
+    "head": "956929e7b75f80df8d17891420ccc812574a682e",
+    "status_manifest_sha256": "feaecc229a17969881bac8ac73afa9b2c592f88ff59c95380d455c333c71f047"
+  },
+  "owned_paths": [
+    "apps/api/src/workbench/foundation",
+    "schemas/foundation",
+    "scripts/foundation",
+    "tests/contract/test_foundation_freeze_contracts.py",
+    "tests/unit/foundation"
+  ],
+  "shared_paths_touched": [],
+  "completed": [
+    "Foundation V1 Pydantic contracts",
+    "Foundation JSON Schemas",
+    "read-state and collect-stop-point PowerShell tools",
+    "targeted tests and static checks"
+  ],
+  "remaining": [
+    "Ownership map and conflict review",
+    "Checkpoint and immutable snapshot",
+    "Full Foundation gates G0-G7",
+    "Real render and Windows release acceptance",
+    "Do not begin next project from this stop point"
+  ],
+  "evidence_refs": [
+    "docs/superpowers/specs/2026-08-11-shared-foundation-freeze-design.md",
+    "docs/superpowers/plans/2026-08-11-shared-foundation-freeze.md"
+  ],
+  "will_write_again": false,
+  "safe_resume": "Start by reading this stop point and re-running read-state; wait for the main recovery task to freeze the shared root before checkpoint work."
+}

@@ -90,10 +90,19 @@ Expected: FAIL，原因是 `workbench.effects`、显式 `template` 或对应 pay
 
 ```python
 TemplateName = Literal[
-    "ProgressiveReveal", "ChapterCurtain", "StatCounter",
-    "ChartNarration", "CompareMode", "FocusSpotlight",
-    "CardStack", "GaugeAndRatio", "PathBuilder", "TagMatrix",
-    "RiskAlert", "MapHighlight", "SafeSlide",
+    "ProgressiveReveal",
+    "ChapterCurtain",
+    "StatCounter",
+    "ChartNarration",
+    "CompareMode",
+    "FocusSpotlight",
+    "CardStack",
+    "GaugeAndRatio",
+    "PathBuilder",
+    "TagMatrix",
+    "RiskAlert",
+    "MapHighlight",
+    "SafeSlide",
 ]
 
 TemplatePayload = Annotated[
@@ -164,6 +173,7 @@ def test_v1_manifest_without_effect_fields_loads_without_rewrite(tmp_path: Path)
     assert manifest.effect_policy.aspect_ratio == "16:9"
     assert all(page.effect_plan is None for page in manifest.pages)
     assert project_file.read_bytes() == before
+
 
 def test_effect_record_rejects_client_hash_mismatch() -> None:
     record = build_effect_record(plan=valid_plan(), plan_hash="bad")
@@ -254,6 +264,7 @@ def test_planner_is_deterministic() -> None:
     assert first.plan_hash == second.plan_hash
     assert first.input_fingerprint == second.input_fingerprint
 
+
 def test_locked_changed_input_becomes_stale_without_overwrite() -> None:
     existing = ready_record(locked=True)
     result = planner.reconcile(changed_input(), existing)
@@ -276,8 +287,10 @@ Expected: FAIL，缺少规划服务。
 ```python
 def canonical_json(value: BaseModel | Mapping[str, object]) -> bytes: ...
 
+
 def calculate_plan_hash(plan: EffectPlanV2) -> str:
     return hashlib.sha256(canonical_json(plan)).hexdigest()
+
 
 def calculate_input_fingerprint(value: EffectPlanningInput) -> str: ...
 ```
@@ -345,6 +358,7 @@ def test_get_effect_workspace_has_no_write_side_effect(client, project_path) -> 
     assert response.status_code == 200
     assert snapshot_tree(project_path) == before
 
+
 def test_stale_revision_returns_409(client) -> None:
     response = client.put(
         f"/api/projects/{PROJECT_ID}/effects/pages/{PAGE_ID}",
@@ -369,9 +383,15 @@ Expected: FAIL，路由/服务不存在。
 ```python
 class EffectService:
     def get_workspace(self, project_id: UUID) -> EffectWorkspaceResponse: ...
-    def generate(self, project_id: UUID, request: GenerateEffectsRequest) -> GenerateEffectsResponse: ...
-    def update_page(self, project_id: UUID, page_id: UUID, request: UpdateEffectRequest) -> EffectMutationResponse: ...
-    def unlock_page(self, project_id: UUID, page_id: UUID, expected_revision: int) -> EffectMutationResponse: ...
+    def generate(
+        self, project_id: UUID, request: GenerateEffectsRequest
+    ) -> GenerateEffectsResponse: ...
+    def update_page(
+        self, project_id: UUID, page_id: UUID, request: UpdateEffectRequest
+    ) -> EffectMutationResponse: ...
+    def unlock_page(
+        self, project_id: UUID, page_id: UUID, expected_revision: int
+    ) -> EffectMutationResponse: ...
 ```
 
 读取接口只计算 current fingerprint 和 validation view，不保存。所有 mutation 在同一个项目级临界区内重新读取、检查 revision、写备份、原子保存并产生失效计划。
@@ -435,6 +455,7 @@ def test_props_v2_contains_exact_persisted_effect_hash(project_with_effects) -> 
     assert props.template_version == "effect-engine-v2"
     assert props.pages[0].effect_plan_hash == project_with_effects.pages[0].effect_plan.plan_hash
 
+
 @pytest.mark.parametrize(
     ("aspect", "width", "height"),
     [("16:9", 1920, 1080), ("9:16", 1080, 1920)],
@@ -459,6 +480,7 @@ class VideoPagePropsV2(VideoPageProps):
     effect_plan: EffectPlanV2
     effect_plan_revision: int = Field(ge=1)
     effect_plan_hash: str
+
 
 class ProjectVideoProps(BaseModel):
     schema_version: Literal[2] = 2
@@ -513,6 +535,7 @@ def test_effect_hash_changes_only_one_page_cache_key() -> None:
     after = cache_keys(project_props(page_2_effect_hash="changed"))
     assert before[0] == after[0]
     assert before[1] != after[1]
+
 
 def test_equal_regenerated_hash_does_not_invalidate() -> None:
     plan = dependency_graph.effect_plan_regenerated(PAGE_ID, changed=False)
@@ -594,17 +617,17 @@ git commit -m "feat(render): invalidate page cache by effect plan hash"
 
 ```ts
 it('registers all persisted template names exactly once', () => {
-  expect(Object.keys(effectTemplateRegistry).sort()).toEqual(
-    [...persistedTemplateNames].sort(),
-  );
+  expect(Object.keys(effectTemplateRegistry).sort()).toEqual([...persistedTemplateNames].sort());
 });
 
 it('rejects a payload that does not match the template', () => {
-  expect(() => parseEffectPlan({
-    ...validPlan,
-    template: 'StatCounter',
-    template_payload: {kind: 'progressive_reveal', items: ['A']},
-  })).toThrow(/effect_payload_invalid/);
+  expect(() =>
+    parseEffectPlan({
+      ...validPlan,
+      template: 'StatCounter',
+      template_payload: { kind: 'progressive_reveal', items: ['A'] },
+    }),
+  ).toThrow(/effect_payload_invalid/);
 });
 ```
 
@@ -693,7 +716,7 @@ git commit -m "feat(remotion): validate and register effect plan v2 templates"
 
 ```tsx
 it('renders subtitle above presenter and effect layers', () => {
-  const view = renderPageScene({frame: 45});
+  const view = renderPageScene({ frame: 45 });
   expect(view.layerOrder()).toEqual([
     'semantic-background',
     'source-page-image',
@@ -705,7 +728,7 @@ it('renders subtitle above presenter and effect layers', () => {
 
 it('passes page-local frame to the template', () => {
   renderProjectAtFrame(secondPage.startFrame + 12);
-  expect(templateSpy).toHaveBeenCalledWith(expect.objectContaining({localFrame: 12}));
+  expect(templateSpy).toHaveBeenCalledWith(expect.objectContaining({ localFrame: 12 }));
 });
 ```
 
@@ -722,13 +745,22 @@ Expected: FAIL，ProjectVideo 仍固定渲染 TechBoardTemplate。
 ### Step 3: 实现 PageScene
 
 ```tsx
-export const PageScene: React.FC<PageSceneProps> = ({page, fps, width, height, reducedMotion}) => {
+export const PageScene: React.FC<PageSceneProps> = ({
+  page,
+  fps,
+  width,
+  height,
+  reducedMotion,
+}) => {
   const localFrame = useCurrentFrame();
   return (
     <AbsoluteFill data-layer="page-scene">
-      <SemanticBackground {...{page, localFrame, fps, reducedMotion}} />
+      <SemanticBackground {...{ page, localFrame, fps, reducedMotion }} />
       <SourcePageImage page={page} />
-      <EffectInterpreter plan={page.effectPlan} {...{page, localFrame, fps, width, height, reducedMotion}} />
+      <EffectInterpreter
+        plan={page.effectPlan}
+        {...{ page, localFrame, fps, width, height, reducedMotion }}
+      />
       <PresenterLayer page={page} />
       <SubtitleLayer page={page} localFrame={localFrame} />
     </AbsoluteFill>
@@ -806,8 +838,8 @@ it('keeps edits local until Save is clicked', async () => {
   renderWorkspace();
   await user.selectOptions(screen.getByLabelText('模板'), 'StatCounter');
   expect(api.updatePage).not.toHaveBeenCalled();
-  await user.click(screen.getByRole('button', {name: '保存'}));
-  expect(api.updatePage).toHaveBeenCalledWith(expect.objectContaining({expectedRevision: 3}));
+  await user.click(screen.getByRole('button', { name: '保存' }));
+  expect(api.updatePage).toHaveBeenCalledWith(expect.objectContaining({ expectedRevision: 3 }));
 });
 
 it('preserves the draft on a revision conflict', async () => {
@@ -835,8 +867,16 @@ export interface EffectsApi {
   getCatalog(projectId: string): Promise<EffectCatalogResponse>;
   getWorkspace(projectId: string): Promise<EffectWorkspaceResponse>;
   generate(projectId: string, request: GenerateEffectsRequest): Promise<GenerateEffectsResponse>;
-  updatePage(projectId: string, pageId: string, request: UpdateEffectRequest): Promise<EffectMutationResponse>;
-  unlockPage(projectId: string, pageId: string, expectedRevision: number): Promise<EffectMutationResponse>;
+  updatePage(
+    projectId: string,
+    pageId: string,
+    request: UpdateEffectRequest,
+  ): Promise<EffectMutationResponse>;
+  unlockPage(
+    projectId: string,
+    pageId: string,
+    expectedRevision: number,
+  ): Promise<EffectMutationResponse>;
 }
 ```
 
@@ -894,6 +934,7 @@ def test_export_contains_effect_contract_and_hashes(exported_package: Path) -> N
     page_plan = read_json(exported_package / "Remotion工程/effect-plans/page-0001.json")
     props = read_json(exported_package / "Remotion工程/ProjectVideoProps.json")
     assert page_plan["plan_hash"] == props["pages"][0]["effect_plan_hash"]
+
 
 def test_probe_accepts_vertical_output_matching_props():
     validate_media_probe(probe(width=1080, height=1920), props(width=1080, height=1920))
@@ -1100,20 +1141,20 @@ git commit -m "chore(release): stage effect engine v2 mainline rollout"
 
 ## Final Verification Matrix
 
-| 门禁 | 命令/证据 | 必须结果 |
-|---|---|---|
-| Python 契约/单元 | `python -m pytest tests/contract tests/unit/effects tests/unit/domain tests/unit/video -q` | PASS |
-| API/集成 | `python -m pytest tests/integration/test_effect*.py tests/integration/test_video_props_effects.py tests/integration/test_partial_effect_rerender.py -q` | PASS |
-| E2E | `python -m pytest tests/e2e/test_effect_engine_*.py -q` | 6 页/40 页/重启 PASS |
-| Web | `pnpm --filter @workbench/web exec vitest run` | PASS |
-| Remotion | `pnpm --filter @workbench/remotion exec vitest run` | 13 模板与画幅 PASS |
-| 静态检查 | `pnpm lint` | PASS |
-| 类型检查 | `pnpm typecheck` | PASS |
-| 构建 | `pnpm build` 与现有 `scripts/build-release.ps1` | PASS，产物完整 |
-| 缓存 | 单页计划修改的 render spy 与缓存报告 | 仅目标页 miss |
-| 数据保护 | manifest 前后字段 diff 与备份 | 音频/字幕/旁白/页面/预览不变 |
-| 重启恢复 | 实际进程关闭重启后的 API 响应 | revision/hash 一致 |
-| 最终渲染 | 实际同步 render 请求 | 成功创建并开始 |
+| 门禁             | 命令/证据                                                                                                                                               | 必须结果                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| Python 契约/单元 | `python -m pytest tests/contract tests/unit/effects tests/unit/domain tests/unit/video -q`                                                              | PASS                         |
+| API/集成         | `python -m pytest tests/integration/test_effect*.py tests/integration/test_video_props_effects.py tests/integration/test_partial_effect_rerender.py -q` | PASS                         |
+| E2E              | `python -m pytest tests/e2e/test_effect_engine_*.py -q`                                                                                                 | 6 页/40 页/重启 PASS         |
+| Web              | `pnpm --filter @workbench/web exec vitest run`                                                                                                          | PASS                         |
+| Remotion         | `pnpm --filter @workbench/remotion exec vitest run`                                                                                                     | 13 模板与画幅 PASS           |
+| 静态检查         | `pnpm lint`                                                                                                                                             | PASS                         |
+| 类型检查         | `pnpm typecheck`                                                                                                                                        | PASS                         |
+| 构建             | `pnpm build` 与现有 `scripts/build-release.ps1`                                                                                                         | PASS，产物完整               |
+| 缓存             | 单页计划修改的 render spy 与缓存报告                                                                                                                    | 仅目标页 miss                |
+| 数据保护         | manifest 前后字段 diff 与备份                                                                                                                           | 音频/字幕/旁白/页面/预览不变 |
+| 重启恢复         | 实际进程关闭重启后的 API 响应                                                                                                                           | revision/hash 一致           |
+| 最终渲染         | 实际同步 render 请求                                                                                                                                    | 成功创建并开始               |
 
 ## 后续独立项目接口
 

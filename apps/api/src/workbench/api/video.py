@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Header, HTTPException, Response
 from fastapi.responses import FileResponse
-from typing import Literal
-
 from pydantic import BaseModel
 
 from workbench.api.projects import Envelope, envelope
@@ -73,13 +72,17 @@ def create_video_router(
     def render_video(
         project_id: UUID, response: Response
     ) -> Envelope[dict[str, object]] | Envelope[VideoExportResult]:
-        if render_jobs is not None and render_jobs.worker is not None and render_jobs.worker.enabled:
+        if (
+            render_jobs is not None
+            and render_jobs.worker is not None
+            and render_jobs.worker.enabled
+        ):
             try:
                 submission = render_jobs.submit(project_id)
                 response.status_code = 202 if submission.created else 200
                 response.headers["Deprecation"] = "true"
                 response.headers["Link"] = (
-                    f"</api/projects/{project_id}/video/render-jobs>; rel=\"successor-version\""
+                    f'</api/projects/{project_id}/video/render-jobs>; rel="successor-version"'
                 )
                 if submission.created:
                     render_jobs.worker.wake()
@@ -120,9 +123,7 @@ def create_video_router(
             ) from error
 
     @router.post("/render-jobs", status_code=202)
-    def create_render_job(
-        project_id: UUID, response: Response
-    ) -> Envelope[dict[str, object]]:
+    def create_render_job(project_id: UUID, response: Response) -> Envelope[dict[str, object]]:
         if render_jobs is None:
             raise HTTPException(status_code=503, detail="render worker unavailable")
         try:

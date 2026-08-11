@@ -21,6 +21,7 @@ if (-not [string]::IsNullOrWhiteSpace($InstallerOutputDirectory)) {
 $installerOutputRoot = [System.IO.Path]::GetFullPath($installerOutputRoot)
 $apiRoot = Join-Path $stageRoot "api"
 $pyInstallerDistRoot = Join-Path $stageRoot "_pyinstaller-dist"
+$pyInstallerWorkRoot = Join-Path $stageRoot "_pyinstaller-work"
 $pyInstallerBundleRoot = Join-Path $pyInstallerDistRoot "workbench"
 $stagePyInstallerBundle = Join-Path $repoRoot "scripts/stage_pyinstaller_onedir.py"
 $webRoot = Join-Path $stageRoot "web"
@@ -58,6 +59,32 @@ function Assert-ExecutableIdentity {
         -not $firstLine.StartsWith("$ExpectedName version", [StringComparison]::OrdinalIgnoreCase)
     ) {
         throw "Runtime executable is not an $ExpectedName executable: $Path"
+    }
+}
+
+function Assert-QualityFilterCapabilities {
+    param(
+        [string]$Executable
+    )
+
+    $filterOutput = @(& $Executable -hide_banner -filters 2>&1 | Out-String)
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        throw "FFmpeg filter capability probe failed: $Executable"
+    }
+    $filterText = ($filterOutput -join "`n")
+    $requiredFilters = @(
+        "blackdetect",
+        "freezedetect",
+        "ebur128",
+        "silencedetect",
+        "select",
+        "showinfo"
+    )
+    foreach ($filterName in $requiredFilters) {
+        if ($filterText -notmatch "(?im)\s$filterName(\s|$)") {
+            throw "FFmpeg runtime is missing required quality filter '$filterName': $Executable"
+        }
     }
 }
 
@@ -126,6 +153,7 @@ try {
         Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "runtime\ffmpeg\ffprobe.exe" -Description "FFprobe runtime"
         Assert-ExecutableIdentity -Path (Join-Path $stageRoot "runtime\ffmpeg\ffmpeg.exe") -ExpectedName "ffmpeg"
         Assert-ExecutableIdentity -Path (Join-Path $stageRoot "runtime\ffmpeg\ffprobe.exe") -ExpectedName "ffprobe"
+        Assert-QualityFilterCapabilities -Executable (Join-Path $stageRoot "runtime\ffmpeg\ffmpeg.exe")
         Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "runtime\remotion\node_modules\@remotion\cli\remotion-cli.js" -Description "Remotion CLI"
         Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "runtime\remotion\src\index.ts" -Description "Remotion entry"
         Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "runtime-manifest.json" -Description "runtime manifest"
@@ -157,15 +185,27 @@ try {
     }
 
     uv sync --frozen
+    if ($LASTEXITCODE -ne 0) {
+        throw "uv sync failed with exit code $LASTEXITCODE."
+    }
     pnpm install --frozen-lockfile
+    if ($LASTEXITCODE -ne 0) {
+        throw "pnpm install failed with exit code $LASTEXITCODE."
+    }
     pnpm check
+    if ($LASTEXITCODE -ne 0) {
+        throw "pnpm check failed with exit code $LASTEXITCODE."
+    }
     pnpm --filter remotion build
+    if ($LASTEXITCODE -ne 0) {
+        throw "Remotion build failed with exit code $LASTEXITCODE."
+    }
 
     uv run --with "pyinstaller==6.16.0" pyinstaller `
         --noconfirm `
         --clean `
         --distpath $pyInstallerDistRoot `
-        --workpath (Join-Path $repoRoot "dist/pyinstaller-work") `
+        --workpath $pyInstallerWorkRoot `
         (Join-Path $repoRoot "apps/api/workbench.spec")
     $pyInstallerExitCode = $LASTEXITCODE
     if ($pyInstallerExitCode -ne 0) {
@@ -179,6 +219,11 @@ try {
     if ($stagePyInstallerExitCode -ne 0) {
         throw "PyInstaller onedir staging failed with exit code $stagePyInstallerExitCode."
     }
+    foreach ($temporaryPath in @($pyInstallerWorkRoot, $pyInstallerDistRoot)) {
+        if (Test-Path -LiteralPath $temporaryPath) {
+            Remove-Item -LiteralPath $temporaryPath -Recurse -Force
+        }
+    }
 
     if (-not (Test-Path -LiteralPath (Join-Path $apiRoot "workbench.exe") -PathType Leaf)) {
         throw "PyInstaller did not produce the API runtime: $(Join-Path $apiRoot 'workbench.exe')"
@@ -187,8 +232,16 @@ try {
 
     Copy-Item -Path (Join-Path $repoRoot "apps/web/dist/*") -Destination $webRoot -Recurse -Force
     Copy-PreparedRuntime -SourceRoot $runtimeAssetsRoot -DestinationRoot $runtimeRoot
-    uv pip list --format json | Set-Content -LiteralPath (Join-Path $sbomRoot "python-dependencies.json") -Encoding UTF8
-    pnpm list --prod --depth -1 --json | Set-Content -LiteralPath (Join-Path $sbomRoot "node-dependencies.json") -Encoding UTF8
+    $pythonDependencies = @(uv pip list --format json)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Python dependency inventory failed with exit code $LASTEXITCODE."
+    }
+    $pythonDependencies | Set-Content -LiteralPath (Join-Path $sbomRoot "python-dependencies.json") -Encoding UTF8
+    $nodeDependencies = @(pnpm list --prod --depth -1 --json)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Node dependency inventory failed with exit code $LASTEXITCODE."
+    }
+    $nodeDependencies | Set-Content -LiteralPath (Join-Path $sbomRoot "node-dependencies.json") -Encoding UTF8
     @(
         "PPT Video Workbench third-party dependency inventory",
         "",
@@ -204,6 +257,9 @@ try {
         --runtime-root $runtimeRoot `
         --license-notice (Join-Path $licenseRoot "THIRD-PARTY-NOTICES.txt") `
         --sbom (Join-Path $sbomRoot "python-dependencies.json")
+    if ($LASTEXITCODE -ne 0) {
+        throw "Runtime manifest build failed with exit code $LASTEXITCODE."
+    }
 
     Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "api\workbench.exe" -Description "API runtime"
     Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "web\index.html" -Description "Web entry"
@@ -212,6 +268,7 @@ try {
     Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "runtime\ffmpeg\ffprobe.exe" -Description "FFprobe runtime"
     Assert-ExecutableIdentity -Path (Join-Path $stageRoot "runtime\ffmpeg\ffmpeg.exe") -ExpectedName "ffmpeg"
     Assert-ExecutableIdentity -Path (Join-Path $stageRoot "runtime\ffmpeg\ffprobe.exe") -ExpectedName "ffprobe"
+    Assert-QualityFilterCapabilities -Executable (Join-Path $stageRoot "runtime\ffmpeg\ffmpeg.exe")
     Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "runtime\remotion\node_modules\@remotion\cli\remotion-cli.js" -Description "Remotion CLI"
     Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "runtime\remotion\src\index.ts" -Description "Remotion entry"
     Assert-RequiredReleaseFile -StageRoot $stageRoot -RelativePath "runtime-manifest.json" -Description "runtime manifest"

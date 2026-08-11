@@ -1,0 +1,19 @@
+{
+  "fixture_id": "ai-narration",
+  "description": "AI narration over slide visuals with a music bed",
+  "network_required": false,
+  "canvas": { "width": 1920, "height": 1080, "fps_num": 30, "fps_den": 1, "duration_us": 12000000 },
+  "legacy_entrypoints": [
+    "workbench.video.render_service.RenderService",
+    "ffmpeg concat demuxer",
+    "video preflight"
+  ],
+  "legacy_output": {
+    "keyframes": [],
+    "audio_waveform": [],
+    "duration_us": 12000000,
+    "codec": "not-rendered-in-baseline",
+    "sha256": null
+  },
+  "notes": "Descriptor only; no network or external media is loaded by tests."
+}

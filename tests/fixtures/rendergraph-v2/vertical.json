@@ -1,0 +1,19 @@
+{
+  "fixture_id": "vertical",
+  "description": "9:16 portrait export with safe-area constraints",
+  "network_required": false,
+  "canvas": { "width": 1080, "height": 1920, "fps_num": 30, "fps_den": 1, "duration_us": 9000000 },
+  "legacy_entrypoints": [
+    "workbench.domain.effects aspect policy",
+    "Remotion composition",
+    "FFmpeg export preset"
+  ],
+  "legacy_output": {
+    "keyframes": [],
+    "audio_waveform": [],
+    "duration_us": 9000000,
+    "codec": "not-rendered-in-baseline",
+    "sha256": null
+  },
+  "notes": "Portrait framing is captured as deterministic metadata, not a rendered binary."
+}

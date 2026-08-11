@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from peripheral_contracts.schemas import write_schema_snapshots
@@ -22,4 +23,8 @@ def test_schema_snapshots_match_contract_models(tmp_path):
     }
     assert repository_names == generated_names
     for filename in sorted(generated_names):
-        assert (repository_snapshots / filename).read_bytes() == (tmp_path / filename).read_bytes()
+        # Prettier may normalize JSON whitespace in the checked-in snapshot;
+        # the schema contract is its canonical JSON structure, not formatting.
+        assert json.loads(
+            (repository_snapshots / filename).read_text(encoding="utf-8")
+        ) == json.loads((tmp_path / filename).read_text(encoding="utf-8"))

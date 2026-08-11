@@ -2,8 +2,9 @@ import { Player, PlayerRef } from '@remotion/player';
 import type { ReactNode } from 'react';
 import { useRef, useState } from 'react';
 
-import type { VideoPreflight } from '../../api/client';
+import type { RenderGraphV2Record, VideoPreflight } from '../../api/client';
 import { ProjectVideo } from '../../../../../remotion/src/video/ProjectVideo';
+import { RenderGraphPreview } from './RenderGraphPreview';
 import { SubtitleStylePanel } from './SubtitleStylePanel';
 
 export interface PreviewPage {
@@ -21,6 +22,7 @@ interface PreviewWorkspaceProps {
   onRender: () => void;
   effectPlanMeta?: { revision: string | number; hash: string };
   effectControls?: ReactNode;
+  renderGraph?: RenderGraphV2Record | null;
 }
 
 export function PreviewWorkspace({
@@ -31,6 +33,7 @@ export function PreviewWorkspace({
   onRender,
   effectPlanMeta,
   effectControls,
+  renderGraph,
 }: PreviewWorkspaceProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -83,6 +86,8 @@ export function PreviewWorkspace({
         </p>
       )}
       {effectControls}
+
+      {renderGraph ? <RenderGraphPreview projectId={projectId} graph={renderGraph} /> : null}
 
       {preflight === null ? (
         <p className="muted">正在等待预检结果……</p>

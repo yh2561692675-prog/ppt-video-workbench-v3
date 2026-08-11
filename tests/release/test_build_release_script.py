@@ -43,6 +43,42 @@ def test_build_release_validates_ffprobe_identity_before_installer() -> None:
     ) in source
 
 
+def test_build_release_requires_quality_filter_capabilities_before_installer() -> None:
+    """A minimal FFmpeg binary must not enter the release payload."""
+    script_path = Path(__file__).parents[2] / "scripts" / "build-release.ps1"
+    source = script_path.read_text(encoding="ascii")
+
+    assert "function Assert-QualityFilterCapabilities" in source
+    for filter_name in (
+        "blackdetect",
+        "freezedetect",
+        "ebur128",
+        "silencedetect",
+        "select",
+        "showinfo",
+    ):
+        assert f'"{filter_name}"' in source
+    assert source.count("Assert-QualityFilterCapabilities -Executable") >= 2
+
+
+def test_prepare_runtime_requires_quality_filter_capabilities_before_staging() -> None:
+    """Runtime staging must reject FFmpeg builds without quality analyzers."""
+    script_path = Path(__file__).parents[2] / "scripts" / "prepare-runtime.ps1"
+    source = script_path.read_text(encoding="ascii")
+
+    assert "function Assert-QualityFilterCapabilities" in source
+    assert "Assert-QualityFilterCapabilities -Executable $ffmpeg" in source
+    for filter_name in (
+        "blackdetect",
+        "freezedetect",
+        "ebur128",
+        "silencedetect",
+        "select",
+        "showinfo",
+    ):
+        assert f'"{filter_name}"' in source
+
+
 def test_build_release_requires_python_and_vc_runtime_dlls_in_api_payload() -> None:
     """The installer must not ship an API executable with an unloadable Python DLL."""
     script_path = Path(__file__).parents[2] / "scripts" / "build-release.ps1"
@@ -70,6 +106,16 @@ def test_build_release_promotes_the_pyinstaller_onedir_bundle_before_payload_gat
     assert (
         source.index("Assert-RequiredApiRuntime -StageRoot $stageRoot", stage_index) > stage_index
     )
+
+
+def test_build_release_isolates_pyinstaller_work_per_staging_root() -> None:
+    """Concurrent release builds must not delete each other's PyInstaller work tree."""
+    script_path = Path(__file__).parents[2] / "scripts" / "build-release.ps1"
+    source = script_path.read_text(encoding="ascii")
+
+    assert '$pyInstallerWorkRoot = Join-Path $stageRoot "_pyinstaller-work"' in source
+    assert "--workpath $pyInstallerWorkRoot" in source
+    assert 'Join-Path $repoRoot "dist/pyinstaller-work"' not in source
 
 
 def test_build_release_stops_when_inno_setup_compilation_fails() -> None:
@@ -249,6 +295,7 @@ def test_source_update_archive_includes_the_inno_setup_script(tmp_path: Path) ->
     assert "installer/workbench.iss" in names
     assert "scripts/build-release.ps1" in names
     assert "runtime-assets/node/node.exe" not in names
+    assert not any(name.startswith(("backup/", "cache/", "workspace-data/")) for name in names)
 
 
 def test_installer_uses_an_overridable_short_release_payload_root() -> None:

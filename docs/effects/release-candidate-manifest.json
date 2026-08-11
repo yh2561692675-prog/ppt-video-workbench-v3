@@ -1,0 +1,10 @@
+{
+  "rc_id": "effects-v2-rc1-20260811-full-ffmpeg",
+  "installer_sha256": "6f6f84a06b76a0f4638d767496de388b12251c2539de543849a42453c5b04d6d",
+  "assets": {
+    "education_manifest": "0c82cda2b652c925df53e962ca713845b049d9d13602efa5c1bec1294baacb15",
+    "ground_truth": "0a5f82524dd03d9f2b22b971b4f8247ee08e28a4ee9878d202ad9d1355490418",
+    "visual_review": "fa51b8eac2932b2abcf4ed46b2fd14fd6d95b4cb61c9b95547c63d169347bbe4"
+  },
+  "v2_enabled": false
+}

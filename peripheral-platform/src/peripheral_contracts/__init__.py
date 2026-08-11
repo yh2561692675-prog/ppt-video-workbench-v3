@@ -1,7 +1,7 @@
 """Versioned S0 contracts shared by the host, modules, and adapter."""
 
-from peripheral_contracts.enums import ActionType, ErrorCategory, JobStatus
 from peripheral_contracts.business_results import BusinessArtifact, BusinessResultManifest
+from peripheral_contracts.enums import ActionType, ErrorCategory, JobStatus
 from peripheral_contracts.models import (
     ActionRequest,
     ArtifactManifest,

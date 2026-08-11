@@ -37,11 +37,11 @@ def _raise_permission_error() -> DiagnosticCheck:
     raise PermissionError("C:/Users/Private/secret")
 
 
-def test_center_runs_all_thirteen_checks_in_stable_order(tmp_path: Path) -> None:
+def test_center_runs_all_checks_in_stable_order(tmp_path: Path) -> None:
     report = DiagnosticCenter(tmp_path, probes=_fixture_probes()).run()
 
     assert tuple(check.check_id for check in report.checks) == CHECK_IDS
-    assert report.summary == {"green": 13, "yellow": 0, "red": 0}
+    assert report.summary == {"green": len(CHECK_IDS), "yellow": 0, "red": 0}
 
 
 def test_one_broken_probe_does_not_stop_remaining_checks(tmp_path: Path) -> None:
@@ -50,14 +50,14 @@ def test_one_broken_probe_does_not_stop_remaining_checks(tmp_path: Path) -> None
         probes=_fixture_probes(crash="database_integrity"),
     ).run()
 
-    assert len(report.checks) == 13
+    assert len(report.checks) == len(CHECK_IDS)
     failed = next(check for check in report.checks if check.check_id == "database_integrity")
     assert failed.status == DiagnosticStatus.RED
     assert failed.category == DiagnosticCategory.INTERNAL
     assert failed.code == "DIAGNOSTIC_PROBE_FAILED"
     assert failed.evidence == {"exception_type": "PermissionError"}
     assert "Private" not in failed.summary
-    assert report.summary == {"green": 12, "yellow": 0, "red": 1}
+    assert report.summary == {"green": len(CHECK_IDS) - 1, "yellow": 0, "red": 1}
 
 
 def test_mismatched_probe_identifier_becomes_internal_failure(tmp_path: Path) -> None:

@@ -44,4 +44,3 @@ def test_s0_end_to_end(
         assert len(service.repositories.events.list_for_job(request.job_id)) >= 5
     finally:
         scheduler.stop(grace_seconds=2)
-

@@ -44,6 +44,9 @@ class RenderError(RuntimeError):
     pass
 
 
+REMOTION_TIMEOUT_MS = 120_000
+
+
 @dataclass(frozen=True)
 class RenderedPage:
     page_order: int
@@ -102,12 +105,21 @@ class RemotionPageRenderer:
     ) -> None:
         output.parent.mkdir(parents=True, exist_ok=True)
         props_path = output.with_name(f".{output.stem}.props.json")
+        render_props = props
+        frame_duration_ms = (1_000 + props.fps - 1) // props.fps
+        minimum_duration_ms = page.end_ms + frame_duration_ms
+        if minimum_duration_ms > props.duration_ms:
+            render_props = props.model_copy(update={"duration_ms": minimum_duration_ms})
         props_path.write_text(
-            json.dumps({"props": props.model_dump(mode="json")}, ensure_ascii=False),
+            json.dumps({"props": render_props.model_dump(mode="json")}, ensure_ascii=False),
             encoding="utf-8",
         )
         start_frame = (page.start_ms * props.fps + 500) // 1_000
-        end_frame = (page.end_ms * props.fps + 500) // 1_000 - 1
+        duration_frames = max(
+            1,
+            ((page.end_ms - page.start_ms) * props.fps + 999) // 1_000,
+        )
+        end_frame = start_frame + duration_frames - 1
         command = [
             str(self.runtime.node_executable),
             str(self.runtime.remotion_cli),
@@ -121,6 +133,7 @@ class RemotionPageRenderer:
             "--codec=h264",
             "--muted",
             "--concurrency=1",
+            f"--timeout={REMOTION_TIMEOUT_MS}",
             "--log=error",
         ]
         if self.browser_executable:
@@ -137,8 +150,8 @@ class RemotionPageRenderer:
     def _run(self, command: list[str], cwd: Path, control: ProcessControl) -> None:
         try:
             self.process_runner.run(command, cwd, control)
-        except ProcessCancelled:
-            raise
+        except ProcessCancelled as error:
+            raise RenderCancelled("render process cancelled") from error
         except ProcessExecutionError as error:
             raise RenderError("Remotion 页面渲染失败") from error
 

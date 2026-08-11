@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Mapping
 
 
 @dataclass(frozen=True)
@@ -12,7 +12,10 @@ class PresenterPlacement:
 
 
 def resolve_presenter_placement(
-    *, presenter_rect: Mapping[str, float], caption_safe_area: Mapping[str, float], aspect_ratio: str
+    *,
+    presenter_rect: Mapping[str, float],
+    caption_safe_area: Mapping[str, float],
+    aspect_ratio: str,
 ) -> PresenterPlacement:
     """Keep presenter outside captions; aspect ratio only selects deterministic candidates."""
     current = _normalise(presenter_rect)
@@ -40,8 +43,18 @@ def _normalise(rect: Mapping[str, float]) -> dict[str, float]:
 
 
 def _overlaps(left: Mapping[str, float], right: Mapping[str, float]) -> bool:
-    return left["x"] < right["x"] + right["width"] and right["x"] < left["x"] + left["width"] and left["y"] < right["y"] + right["height"] and right["y"] < left["y"] + left["height"]
+    return (
+        left["x"] < right["x"] + right["width"]
+        and right["x"] < left["x"] + left["width"]
+        and left["y"] < right["y"] + right["height"]
+        and right["y"] < left["y"] + left["height"]
+    )
 
 
 def _within(rect: Mapping[str, float]) -> bool:
-    return 0 <= rect["x"] and 0 <= rect["y"] and rect["x"] + rect["width"] <= 1 and rect["y"] + rect["height"] <= 1
+    return (
+        rect["x"] >= 0
+        and rect["y"] >= 0
+        and rect["x"] + rect["width"] <= 1
+        and rect["y"] + rect["height"] <= 1
+    )

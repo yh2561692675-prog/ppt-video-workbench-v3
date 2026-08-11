@@ -84,7 +84,9 @@ def test_one_broken_probe_does_not_stop_remaining_checks(tmp_path: Path) -> None
     center = DiagnosticCenter(tmp_path, probes=fixture_probes(crash="database_integrity"))
     report = center.run()
     assert len(report.checks) == 13
-    assert next(c for c in report.checks if c.check_id == "database_integrity").category == "INTERNAL"
+    assert (
+        next(c for c in report.checks if c.check_id == "database_integrity").category == "INTERNAL"
+    )
 ```
 
 - [ ] **Step 2: Verify RED**

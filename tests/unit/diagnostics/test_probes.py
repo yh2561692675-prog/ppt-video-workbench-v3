@@ -9,6 +9,7 @@ from workbench.diagnostics.probes import (
     _configuration_check,
     _database_integrity_check,
     _disk_space_check,
+    _render_worker_check,
     build_default_probes,
 )
 
@@ -95,3 +96,37 @@ def test_heygen_authentication_failure_is_not_misclassified_as_network(
     assert connectivity.code == "HEYGEN_AUTHENTICATION_FAILED"
     assert secret.status == DiagnosticStatus.GREEN
     assert "api" not in str(secret.evidence).lower()
+
+
+def test_render_worker_probe_exposes_safe_queue_heartbeat_and_failure_counts(
+    tmp_path: Path,
+) -> None:
+    import sqlite3
+
+    database = tmp_path / "workspace.db"
+    with sqlite3.connect(database) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE jobs (
+                status TEXT NOT NULL,
+                heartbeat_at TEXT,
+                error_code TEXT,
+                finished_at TEXT,
+                updated_at TEXT
+            );
+            INSERT INTO jobs VALUES ('queued', NULL, NULL, NULL, '2026-08-10T00:00:00+00:00');
+            INSERT INTO jobs VALUES (
+                'failed', NULL, 'render_page_failed',
+                '2026-08-10T00:01:00+00:00', '2026-08-10T00:01:00+00:00'
+            );
+            """
+        )
+
+    check = _render_worker_check(tmp_path, lambda: True)
+
+    assert check.status == DiagnosticStatus.GREEN
+    assert check.evidence["worker_alive"] is True
+    assert check.evidence["queued_jobs"] == 1
+    assert check.evidence["stale_running_jobs"] == 0
+    assert check.evidence["recent_failure_codes"] == {"render_page_failed": 1}
+    assert "workspace" not in str(check.evidence).lower()

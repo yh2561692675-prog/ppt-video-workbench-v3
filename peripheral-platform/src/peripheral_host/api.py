@@ -12,8 +12,8 @@ from peripheral_contracts import ActionRequest, JobEnvelope
 from peripheral_contracts.versioning import UnsupportedSchemaVersion
 from pydantic import ValidationError
 
-from peripheral_host.database import DatabaseIntegrityError, DatabaseMigrationError
 from peripheral_host.artifact_stream import get_streamable_artifact, stream_verified_file
+from peripheral_host.database import DatabaseIntegrityError, DatabaseMigrationError
 from peripheral_host.errors import (
     ArtifactIntegrityError,
     ArtifactPublishError,
@@ -147,9 +147,7 @@ def create_internal_app(*, service: JobService, scheduler: Scheduler) -> FastAPI
     @app.post("/internal/v1/jobs")
     async def submit_job(envelope: JobEnvelope, response: Response) -> dict[str, object]:
         result = service.submit_job(envelope)
-        response.status_code = (
-            status.HTTP_202_ACCEPTED if result.created else status.HTTP_200_OK
-        )
+        response.status_code = status.HTTP_202_ACCEPTED if result.created else status.HTTP_200_OK
         return {
             "job_id": str(result.job_id),
             "status": result.status.value,
@@ -208,9 +206,7 @@ async def _request_security_error(request: Request) -> JSONResponse | None:
             content_lengths.extend(
                 item.strip() for item in value.decode("ascii", errors="ignore").split(",")
             )
-    if content_lengths and (
-        len(content_lengths) != 1 or not content_lengths[0].isdigit()
-    ):
+    if content_lengths and (len(content_lengths) != 1 or not content_lengths[0].isdigit()):
         return _error_response(
             request,
             status.HTTP_400_BAD_REQUEST,

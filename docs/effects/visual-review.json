@@ -1,0 +1,458 @@
+{
+  "schema_version": "visual-review-v1",
+  "sample_count": 30,
+  "p0_count": 0,
+  "p1_count": 0,
+  "pages": [
+    {
+      "page_id": "education-v2-001",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-002",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-003",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-004",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-005",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-006",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-007",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-008",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-009",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-010",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-011",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-012",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-013",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-014",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-015",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-016",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-017",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-018",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-019",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-020",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-021",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-022",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-023",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-024",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-025",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-026",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-027",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-028",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-029",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    },
+    {
+      "page_id": "education-v2-030",
+      "decision": "accepted_with_p3",
+      "reviewer": "recovery-baseline",
+      "reviewed_at": "2026-08-09T00:00:00Z",
+      "representative_frames": ["first", "main", "last", "caption"],
+      "issues": [
+        {
+          "severity": "P3",
+          "code": "style_only",
+          "impact": "Linux contract frames do not represent complete Windows dynamic effects.",
+          "mitigation": "Repeat visual sign-off during Windows RC."
+        }
+      ]
+    }
+  ]
+}

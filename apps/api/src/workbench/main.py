@@ -1,8 +1,10 @@
+import json
 import os
+import shutil
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
@@ -17,25 +19,37 @@ from workbench_peripheral_adapter import (
     create_peripheral_client,
 )
 
+from workbench.api.assets import create_assets_router
 from workbench.api.audio import create_audio_router
 from workbench.api.confirmations import create_confirmations_router
+from workbench.api.continuity import create_continuity_router
 from workbench.api.diagnostics import create_diagnostics_router
 from workbench.api.effects import create_effects_router
 from workbench.api.environment import create_environment_router
+from workbench.api.export_presets import create_export_presets_router
+from workbench.api.fidelity import create_fidelity_router
 from workbench.api.heygen_settings import create_heygen_settings_router
 from workbench.api.matching import create_matching_router
+from workbench.api.material_collections import create_material_collections_router
 from workbench.api.materials import create_materials_router
 from workbench.api.narrations import create_narrations_router
 from workbench.api.peripheral import create_peripheral_router
 from workbench.api.peripheral_s1 import create_peripheral_s1_router
 from workbench.api.preflight import create_preflight_router
+from workbench.api.presenter import create_presenter_router
 from workbench.api.projects import create_projects_router
+from workbench.api.quality import create_quality_router
+from workbench.api.scheduler import create_scheduler_router
+from workbench.api.secure_updates import create_secure_updates_router
 from workbench.api.settings import create_settings_router
 from workbench.api.sources import create_sources_router
 from workbench.api.storage import create_storage_router
+from workbench.api.subtitle_workbench import create_subtitle_workbench_router
 from workbench.api.subtitles import create_subtitle_router
+from workbench.api.timeline_production import TimelineWorkspaceService, create_timeline_router
 from workbench.api.updates import create_updates_router
 from workbench.api.video import create_video_router
+from workbench.assets.service import AssetRegistryService
 from workbench.audio.difference_service import DifferenceService
 from workbench.audio.heygen_service import HeyGenService
 from workbench.audio.importer import AudioImportService
@@ -45,6 +59,7 @@ from workbench.audio.timeline_service import TimelineService
 from workbench.audio.transcriber import Transcriber, TranscriptionBackend
 from workbench.audio.transcription_service import TranscriptionService
 from workbench.cache.cleanup import CleanupService
+from workbench.continuity.service import ContinuityService
 from workbench.diagnostics.center import (
     DiagnosticCenter,
     DiagnosticCenterProtocol,
@@ -54,21 +69,35 @@ from workbench.diagnostics.package import DiagnosticPackager
 from workbench.diagnostics.probes import build_default_probes, create_heygen_health_probe
 from workbench.effects.service import EffectService
 from workbench.environment.detector import EnvironmentDetector
+from workbench.exports.presets import ExportPresetService
+from workbench.fidelity.jobs import FidelityJobService
+from workbench.fidelity.scanner import PptxFidelityScanner
+from workbench.fidelity.static_renderer import build_static_previews
 from workbench.integrations.heygen.client import HeyGenClient
 from workbench.integrations.llm.client import LlmClient
+from workbench.jobs.execution import PersistentRenderExecutionContext
 from workbench.jobs.worker import RenderJobWorker
+from workbench.materials.service import MaterialCollectionService
+from workbench.media.presenter_audio import AnalysisAudio
+from workbench.media.presenter_service import PresenterImportService, PresenterProbe
 from workbench.narration.repository import NarrationRepository
 from workbench.ocr.paddle_adapter import OcrEngine
-from workbench.preflight.engine import PreflightEngine, RuntimeProbe
 from workbench.peripheral_s1.coordinator import S1Coordinator
 from workbench.peripheral_s1.inbox import ProjectionInbox
 from workbench.peripheral_s1.projector import ProjectorRegistry
+from workbench.preflight.engine import PreflightEngine, RuntimeProbe
+from workbench.quality.jobs import QualityJobService
+from workbench.rendering.export_pipeline import RenderGraphExportPipeline
+from workbench.rendering.feature_flags import RenderFeatureFlags
+from workbench.rendering.models import RenderGraphV2
 from workbench.runtime.layout import RuntimeComponentMissingError, RuntimeLayout
+from workbench.scheduler.service import BatchSchedulerService
 from workbench.services.import_service import ImportService
 from workbench.services.matching_service import MatchingService
 from workbench.services.material_processing_service import MaterialProcessingService
 from workbench.services.narration_generation_service import NarrationGenerationService
 from workbench.services.preflight_service import PreflightService
+from workbench.services.presenter_analysis_service import PresenterAnalysisService
 from workbench.services.project_service import ProjectService
 from workbench.settings.heygen_store import HeyGenProfileStore
 from workbench.settings.peripheral import WorkbenchPeripheralSettings
@@ -79,6 +108,8 @@ from workbench.settings.secret_store import (
 )
 from workbench.storage.project_paths import ProjectStorageRoots
 from workbench.subtitles.service import SubtitleService
+from workbench.subtitles.workbench_service import SubtitleWorkbenchService
+from workbench.updates.secure import SecureUpdateClient, TrustedRoot
 from workbench.updates.service import UpdateService
 from workbench.video.package_service import VideoExportService
 from workbench.video.preview_service import VideoPreviewService
@@ -115,6 +146,8 @@ def create_app(
     update_service: UpdateService | None = None,
     peripheral_client: PeripheralClientProtocol | None = None,
     diagnostic_center_factory: Callable[[Path], DiagnosticCenterProtocol] | None = None,
+    presenter_probe: PresenterProbe | None = None,
+    presenter_audio_extractor: Callable[[Path, Path], AnalysisAudio] | None = None,
 ) -> FastAPI:
     configured_root = workspace_root or Path(
         os.environ.get("WORKBENCH_WORKSPACE", Path.cwd() / "workspace-data")
@@ -169,6 +202,13 @@ def create_app(
                         heygen_profile_store,
                         heygen_client,
                     ),
+                    render_worker_alive=lambda: bool(
+                        getattr(
+                            getattr(app.state, "render_job_worker", None),
+                            "is_alive",
+                            False,
+                        )
+                    ),
                 ),
             )
         )
@@ -182,6 +222,13 @@ def create_app(
     app.state.diagnostic_center = configured_diagnostic_center
     narration_repository = NarrationRepository(service)
     subtitle_service = SubtitleService(service, audio_gate, audio_service)
+    subtitle_workbench_service = SubtitleWorkbenchService(
+        configured_root,
+        project_dir_resolver=lambda project_id: service.get(project_id).project_dir,
+        projects=service,
+        legacy_getter=subtitle_service.get,
+    )
+    app.state.subtitle_workbench_service = subtitle_workbench_service
     video_preview_service = VideoPreviewService(
         service, subtitle_service, VideoPropsService(audio_service)
     )
@@ -202,8 +249,105 @@ def create_app(
         renderer=video_renderer,
         preflight_gate=preflight_service.render_gate,
     )
+    quality_job_service = QualityJobService(
+        configured_root,
+        project_dir_resolver=lambda project_id: service.get(project_id).project_dir,
+    )
+    asset_registry_service = AssetRegistryService(
+        configured_root,
+        project_dir_resolver=lambda project_id: service.get(project_id).project_dir,
+    )
+    app.state.asset_registry_service = asset_registry_service
+    material_collection_service = MaterialCollectionService(
+        configured_root,
+        project_dir_resolver=lambda project_id: service.get(project_id).project_dir,
+    )
+    app.state.material_collection_service = material_collection_service
+    continuity_service = ContinuityService(
+        configured_root,
+        project_dir_resolver=lambda project_id: service.get(project_id).project_dir,
+        projects=service,
+    )
+    app.state.continuity_service = continuity_service
+    export_preset_service = ExportPresetService(
+        configured_root,
+        project_dir_resolver=lambda project_id: service.get(project_id).project_dir,
+        projects=service,
+    )
+    app.state.export_preset_service = export_preset_service
+    batch_scheduler_service = BatchSchedulerService(
+        configured_root,
+        project_dir_resolver=lambda project_id: service.get(project_id).project_dir,
+        repository=service.jobs,
+        preset_exists=lambda preset_id: any(
+            preset.id == preset_id for preset in export_preset_service.presets()
+        ),
+    )
+    app.state.batch_scheduler_service = batch_scheduler_service
+    app.state.quality_job_service = quality_job_service
+    fidelity_job_service = FidelityJobService(
+        configured_root,
+        scanner=PptxFidelityScanner(static_renderer=build_static_previews),
+        project_dir_resolver=lambda project_id: service.get(project_id).project_dir,
+    )
+    timeline_workspace_service = TimelineWorkspaceService(
+        configured_root,
+        project_dir_resolver=lambda project_id: service.get(project_id).project_dir,
+    )
+    app.state.fidelity_job_service = fidelity_job_service
+    app.state.timeline_workspace_service = timeline_workspace_service
     app.state.video_export_service = video_export_service
-    render_job_service = RenderJobService(service, video_preview_service, video_export_service)
+    render_feature_flags = RenderFeatureFlags.from_environment()
+
+    def render_graph_provider(project_id: UUID) -> RenderGraphV2:
+        return timeline_workspace_service.compile_v2(
+            project_id,
+            continuity=continuity_service.get(project_id),
+            subtitles=subtitle_workbench_service.get(project_id),
+            assets=asset_registry_service.list_assets(project_id),
+        )
+
+    def render_graph_exporter(
+        project_id: UUID,
+        graph: RenderGraphV2,
+        context: PersistentRenderExecutionContext,
+    ) -> dict[str, object]:
+        project = service.get(project_id)
+        root = (configured_root / project.project_dir).resolve()
+        run_id = str(context.job_id or uuid4())
+        staging = root / "08_输出" / ".render-graph-jobs" / run_id
+        pipeline = RenderGraphExportPipeline(
+            root,
+            ffmpeg=(str(renderer_runtime.ffmpeg_executable) if renderer_runtime else "ffmpeg"),
+        )
+        result = pipeline.export(
+            graph,
+            staging,
+            context=context,
+            strict_assets=render_feature_flags.strict_assets,
+        )
+        output_root = root / "08_输出"
+        output_root.mkdir(parents=True, exist_ok=True)
+        published_video = output_root / "最终视频.mp4"
+        shutil.copy2(result.video_path, published_video)
+        package = output_root / "制作包"
+        shutil.copytree(staging, package, dirs_exist_ok=True)
+        return {
+            "mp4_relative_path": published_video.relative_to(root).as_posix(),
+            "package_relative_path": package.relative_to(root).as_posix(),
+            "graph_hash": graph.graph_hash,
+            "artifact_count": len(result.subtitle_artifacts) + 4,
+        }
+
+    app.state.render_feature_flags = render_feature_flags
+    render_job_service = RenderJobService(
+        service,
+        video_preview_service,
+        video_export_service,
+        graph_provider=render_graph_provider,
+        graph_exporter=render_graph_exporter,
+        feature_flags=render_feature_flags,
+    )
     render_job_worker = RenderJobWorker(
         service.jobs,
         render_job_service.handle,
@@ -222,6 +366,8 @@ def create_app(
     app.state.environment_detector = configured_environment_detector
     configured_update_service = update_service or UpdateService(configured_root)
     app.state.update_service = configured_update_service
+    secure_update_client = _build_secure_update_client(configured_root)
+    app.state.secure_update_client = secure_update_client
     configured_peripheral_client = peripheral_client or create_peripheral_client(
         WorkbenchPeripheralSettings.from_env()
     )
@@ -232,7 +378,9 @@ def create_app(
         inbox=ProjectionInbox(service.database),
         projector=ProjectorRegistry(),
         database=service.database,
-        project_dir_resolver=lambda project_id: configured_root / service.get(project_id).project_dir,
+        project_dir_resolver=lambda project_id: (
+            configured_root / service.get(project_id).project_dir
+        ),
     )
     app.state.s1_coordinator = s1_coordinator
     app.include_router(
@@ -243,8 +391,20 @@ def create_app(
         )
     )
     app.include_router(create_effects_router(app.state.effect_service))
+    presenter_models = WhisperModelManager(configured_root / "settings" / "asr-models")
+    app.include_router(
+        create_presenter_router(
+            PresenterImportService(service, presenter_probe),
+            PresenterAnalysisService(
+                service,
+                backend=transcription_backend,
+                models=presenter_models,
+                audio_extractor=presenter_audio_extractor,
+            ),
+        )
+    )
     transcriber = Transcriber(
-        WhisperModelManager(configured_root / "settings" / "asr-models"),
+        presenter_models,
         transcription_backend,
     )
     app.include_router(
@@ -259,9 +419,18 @@ def create_app(
         )
     )
     app.include_router(create_subtitle_router(subtitle_service))
+    app.include_router(create_subtitle_workbench_router(subtitle_workbench_service))
     app.include_router(
         create_video_router(video_preview_service, video_export_service, render_job_service)
     )
+    app.include_router(create_quality_router(quality_job_service))
+    app.include_router(create_assets_router(asset_registry_service))
+    app.include_router(create_material_collections_router(material_collection_service))
+    app.include_router(create_continuity_router(continuity_service))
+    app.include_router(create_export_presets_router(export_preset_service))
+    app.include_router(create_scheduler_router(batch_scheduler_service))
+    app.include_router(create_fidelity_router(fidelity_job_service))
+    app.include_router(create_timeline_router(timeline_workspace_service))
     app.include_router(create_preflight_router(preflight_service, video_export_service))
     app.include_router(create_sources_router(ImportService(service)))
     app.include_router(create_matching_router(MatchingService(service)))
@@ -284,6 +453,8 @@ def create_app(
     app.include_router(create_environment_router(configured_environment_detector))
     app.include_router(create_diagnostics_router(configured_diagnostic_center, diagnostic_packager))
     app.include_router(create_updates_router(configured_update_service))
+    if secure_update_client is not None:
+        app.include_router(create_secure_updates_router(secure_update_client))
     app.include_router(create_peripheral_router(configured_peripheral_client))
     app.include_router(create_peripheral_s1_router(configured_peripheral_client, s1_coordinator))
 
@@ -312,13 +483,20 @@ def create_app(
             code = str(detail.get("code", code))
             message = str(detail.get("message", message))
             action = str(detail.get("action", "请检查输入后重试"))
+            details = {
+                key: value
+                for key, value in detail.items()
+                if key not in {"code", "message", "action"}
+            }
         else:
             action = "请检查输入后重试"
+            details = None
         return _error_response(
             error.status_code,
             code=code,
             message=message,
             action=action,
+            details=details,
         )
 
     @app.get("/api/health")
@@ -334,6 +512,19 @@ def create_app(
         )
 
     return app
+
+
+def _build_secure_update_client(workspace_root: Path) -> SecureUpdateClient | None:
+    root_path = os.environ.get("WORKBENCH_UPDATE_TRUST_ROOT")
+    if not root_path:
+        return None
+    try:
+        trusted_root = TrustedRoot.model_validate(
+            json.loads(Path(root_path).read_text(encoding="utf-8"))
+        )
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    return SecureUpdateClient(workspace_root, trusted_root=trusted_root)
 
 
 def _diagnostic_log_paths(workspace_root: Path) -> tuple[Path, ...]:
@@ -354,19 +545,23 @@ def _error_response(
     code: str,
     message: str,
     action: str,
+    details: dict[str, object] | None = None,
 ) -> JSONResponse:
+    error_payload: dict[str, object] = {
+        "code": code,
+        "message": message,
+        "action": action,
+        "blocking": True,
+        "page_id": None,
+        "job_id": None,
+    }
+    if details:
+        error_payload.update(details)
     return JSONResponse(
         status_code=status_code,
         content={
             "data": None,
-            "error": {
-                "code": code,
-                "message": message,
-                "action": action,
-                "blocking": True,
-                "page_id": None,
-                "job_id": None,
-            },
+            "error": error_payload,
             "request_id": str(uuid4()),
         },
     )

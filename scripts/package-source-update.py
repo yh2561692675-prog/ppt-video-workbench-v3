@@ -13,7 +13,26 @@ REQUIRED_FILES = frozenset(
     }
 )
 EXCLUDED_TOP_LEVEL = frozenset(
-    {".git", ".venv", ".worktrees", "dist", "node_modules", "runtime-assets"}
+    {
+        ".git",
+        ".mypy_cache",
+        ".pnpm-store",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".tmp",
+        ".tmp-tests",
+        ".venv",
+        ".worktrees",
+        "backup",
+        "cache",
+        "dist",
+        "node_modules",
+        "release",
+        "release-effect-v2",
+        "runtime-assets",
+        "test-results",
+        "workspace-data",
+    }
 )
 EXCLUDED_FILENAMES = frozenset({".env"})
 
@@ -43,9 +62,7 @@ def source_files(repository_root: Path) -> list[Path]:
 def should_include(path: Path) -> bool:
     parts = PurePosixPath(path.as_posix()).parts
     return (
-        bool(parts)
-        and parts[0] not in EXCLUDED_TOP_LEVEL
-        and path.name not in EXCLUDED_FILENAMES
+        bool(parts) and parts[0] not in EXCLUDED_TOP_LEVEL and path.name not in EXCLUDED_FILENAMES
     )
 
 

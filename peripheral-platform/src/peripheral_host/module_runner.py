@@ -5,7 +5,7 @@ import re
 import shutil
 import subprocess
 import sys
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -22,6 +22,10 @@ _INHERITED_ENVIRONMENT = (
     "TEMP",
     "TMP",
     "LOCALAPPDATA",
+    "WORKBENCH_RUNTIME_ROOT",
+    "WORKBENCH_WHISPER_MODEL_ROOT",
+    "WORKBENCH_FFMPEG",
+    "WORKBENCH_FFPROBE",
 )
 _BEARER_PATTERN = re.compile(r"(?i)Bearer\s+[A-Za-z0-9._~+/=-]+")
 
@@ -90,6 +94,7 @@ class RunningModule:
     attempt: JobAttemptRecord
     registered_module: RegisteredModule
     process: subprocess.Popen[str]
+    secrets: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,12 +115,14 @@ class ModuleRunner:
         attempts_root: Path,
         *,
         workspace_root: Path | None = None,
+        job_environment_resolver: Callable[[JobEnvelope], Mapping[str, str]] | None = None,
     ) -> None:
         self.registry = registry
         self.attempts_root = attempts_root.resolve()
         self.workspace_root = (
             workspace_root.resolve() if workspace_root is not None else self.attempts_root
         )
+        self.job_environment_resolver = job_environment_resolver
 
     def run(
         self,
@@ -137,6 +144,7 @@ class ModuleRunner:
         if attempt.job_id != job.job_id:
             raise ValueError("attempt job_id does not match request job_id")
         attempt.root.mkdir(parents=True, exist_ok=False)
+        _restore_recovery_state(attempt)
         module_job = _stage_job_inputs(job, attempt.root, self.workspace_root)
         _write_text_atomic(attempt.request_path, module_job.model_dump_json(indent=2) + "\n")
 
@@ -147,10 +155,15 @@ class ModuleRunner:
             "--result",
             str(attempt.result_path),
         ]
+        job_environment = (
+            dict(self.job_environment_resolver(module_job))
+            if self.job_environment_resolver is not None
+            else {}
+        )
         process = subprocess.Popen(
             command,
             cwd=attempt.root,
-            env=_module_environment(registered),
+            env=_module_environment(registered, job_environment),
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -165,6 +178,7 @@ class ModuleRunner:
             attempt=attempt,
             registered_module=registered,
             process=process,
+            secrets=tuple(value for value in job_environment.values() if value),
         )
 
     def wait(
@@ -200,10 +214,11 @@ class ModuleRunner:
         timed_out: bool,
     ) -> ModuleExecutionResult:
 
-        redacted_stderr = _redact_stderr(stderr)
-        running.attempt.stdout_path.write_text(stdout, encoding="utf-8")
+        redacted_stdout = _redact_output(stdout, running.secrets)
+        redacted_stderr = _redact_output(stderr, running.secrets)
+        running.attempt.stdout_path.write_text(redacted_stdout, encoding="utf-8")
         running.attempt.stderr_path.write_text(redacted_stderr, encoding="utf-8")
-        events, event_error = _parse_events(stdout)
+        events, event_error = _parse_events(redacted_stdout)
         result, result_error = _read_result(running.attempt.result_path, running.job.job_id)
         validation_error = event_error or result_error
         if timed_out:
@@ -256,13 +271,17 @@ def echo_registered_module() -> RegisteredModule:
     )
 
 
-def _module_environment(module: RegisteredModule) -> dict[str, str]:
+def _module_environment(
+    module: RegisteredModule, job_environment: Mapping[str, str] | None = None
+) -> dict[str, str]:
     environment = {
         name: value
         for name in _INHERITED_ENVIRONMENT
         if (value := os.environ.get(name)) is not None
     }
     environment.update(module.environment)
+    if job_environment is not None:
+        environment.update(job_environment)
     environment["PYTHONIOENCODING"] = "utf-8"
     environment["PYTHONUTF8"] = "1"
     return environment
@@ -292,8 +311,11 @@ def _read_result(path: Path, job_id: UUID) -> tuple[JobResult | None, str | None
     return result, None
 
 
-def _redact_stderr(stderr: str) -> str:
-    return _BEARER_PATTERN.sub("Bearer ***", stderr)
+def _redact_output(value: str, secrets: tuple[str, ...]) -> str:
+    redacted = _BEARER_PATTERN.sub("Bearer ***", value)
+    for secret in secrets:
+        redacted = redacted.replace(secret, "[REDACTED]")
+    return redacted
 
 
 def _write_text_atomic(path: Path, content: str) -> None:
@@ -326,3 +348,45 @@ def _stage_job_inputs(job: JobEnvelope, attempt_root: Path, workspace_root: Path
             reference.model_copy(update={"path": target.relative_to(attempt_root).as_posix()})
         )
     return job.model_copy(update={"inputs": tuple(staged)})
+
+
+def _restore_recovery_state(attempt: JobAttemptRecord) -> None:
+    if attempt.attempt_number <= 1:
+        return
+    previous = attempt.root.parent / f"{attempt.attempt_number - 1:04d}" / "recovery"
+    if not previous.is_dir() or previous.is_symlink():
+        return
+    destination = attempt.root / "recovery"
+    allowed = {"paid-requests.json", "transcription.json"}
+    for source in previous.iterdir():
+        if source.name not in allowed or source.is_symlink() or not source.is_file():
+            continue
+        if source.stat().st_size > 10 * 1024 * 1024:
+            continue
+        destination.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, destination / source.name)
+    render_project = previous / "render-project"
+    if render_project.is_dir() and not render_project.is_symlink():
+        _copy_render_recovery(render_project, destination / "render-project")
+
+
+def _copy_render_recovery(source_root: Path, destination_root: Path) -> None:
+    allowed_suffixes = {".json", ".mp4", ".wav", ".png", ".jpg", ".jpeg", ".srt"}
+    total_size = 0
+    for source in source_root.rglob("*"):
+        if (
+            source.is_symlink()
+            or not source.is_file()
+            or source.suffix.lower() not in allowed_suffixes
+        ):
+            continue
+        size = source.stat().st_size
+        if size > 2 * 1024 * 1024 * 1024:
+            continue
+        total_size += size
+        if total_size > 20 * 1024 * 1024 * 1024:
+            raise ValueError("render recovery state exceeds the safety limit")
+        relative = source.relative_to(source_root)
+        target = destination_root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)

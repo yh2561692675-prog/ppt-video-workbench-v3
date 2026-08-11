@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/material-collection-v1.schema.json",
+  "title": "MaterialCollectionV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "collection_id",
+    "revision",
+    "project_id",
+    "documents",
+    "presentations",
+    "sections",
+    "page_sequence",
+    "outline_mode",
+    "merge_policy",
+    "content_hash"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "collection_id": { "type": "string", "format": "uuid" },
+    "revision": { "type": "integer", "minimum": 1 },
+    "project_id": { "type": "string", "format": "uuid" },
+    "documents": { "type": "array", "items": { "type": "object" } },
+    "presentations": { "type": "array", "items": { "type": "object" } },
+    "sections": { "type": "array", "items": { "type": "object" } },
+    "page_sequence": { "type": "array", "items": { "type": "object" } },
+    "outline_mode": { "enum": ["none", "generated", "selected", "merged"] },
+    "merge_policy": { "enum": ["manual", "append", "chapter_match"] },
+    "content_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

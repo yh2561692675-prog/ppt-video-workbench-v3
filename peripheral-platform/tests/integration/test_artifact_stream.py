@@ -40,9 +40,7 @@ def _publish_sample_artifact(scheduler_bundle, job):
 
 def test_artifact_content_stream_is_verified_and_hides_physical_path(scheduler_bundle, job) -> None:
     service, artifact, payload = _publish_sample_artifact(scheduler_bundle, job)
-    client = TestClient(
-        create_internal_app(service=service, scheduler=scheduler_bundle[0])
-    )
+    client = TestClient(create_internal_app(service=service, scheduler=scheduler_bundle[0]))
 
     response = client.get(
         f"/internal/v1/jobs/{job.job_id}/artifacts/{artifact.artifact_id}/content"
@@ -58,13 +56,9 @@ def test_artifact_content_stream_is_verified_and_hides_physical_path(scheduler_b
 
 def test_artifact_content_rejects_artifact_from_another_job(scheduler_bundle, job) -> None:
     service, artifact, _ = _publish_sample_artifact(scheduler_bundle, job)
-    client = TestClient(
-        create_internal_app(service=service, scheduler=scheduler_bundle[0])
-    )
+    client = TestClient(create_internal_app(service=service, scheduler=scheduler_bundle[0]))
 
-    response = client.get(
-        f"/internal/v1/jobs/{uuid4()}/artifacts/{artifact.artifact_id}/content"
-    )
+    response = client.get(f"/internal/v1/jobs/{uuid4()}/artifacts/{artifact.artifact_id}/content")
 
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "JOB_NOT_FOUND"

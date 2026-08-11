@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/quality-policy-v1.schema.json",
+  "title": "QualityPolicyV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "name",
+    "black_frame_min_ms",
+    "freeze_min_ms",
+    "silence_min_ms",
+    "max_subtitle_text_length",
+    "p2_blocks"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "name": { "enum": ["strict", "standard", "fast"] },
+    "black_frame_min_ms": { "type": "integer", "minimum": 1 },
+    "freeze_min_ms": { "type": "integer", "minimum": 1 },
+    "silence_min_ms": { "type": "integer", "minimum": 1 },
+    "max_subtitle_text_length": { "type": "integer", "minimum": 1 },
+    "p2_blocks": { "type": "boolean" }
+  }
+}

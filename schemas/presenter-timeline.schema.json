@@ -1,0 +1,128 @@
+{
+  "$defs": {
+    "PresenterSegment": {
+      "additionalProperties": false,
+      "properties": {
+        "start_ms": { "minimum": 0, "title": "Start Ms", "type": "integer" },
+        "end_ms": { "exclusiveMinimum": 0, "title": "End Ms", "type": "integer" },
+        "layout": {
+          "enum": [
+            "top_left",
+            "top_right",
+            "bottom_left",
+            "bottom_right",
+            "center",
+            "split",
+            "hidden"
+          ],
+          "title": "Layout",
+          "type": "string"
+        },
+        "width_ratio": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Width Ratio",
+          "type": "number"
+        },
+        "manual_lock": { "default": false, "title": "Manual Lock", "type": "boolean" },
+        "source_revision": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source Revision"
+        }
+      },
+      "required": ["start_ms", "end_ms", "layout", "width_ratio"],
+      "title": "PresenterSegment",
+      "type": "object"
+    },
+    "PresenterTimeRange": {
+      "additionalProperties": false,
+      "properties": {
+        "start_ms": { "minimum": 0, "title": "Start Ms", "type": "integer" },
+        "end_ms": { "exclusiveMinimum": 0, "title": "End Ms", "type": "integer" },
+        "reason": { "default": "unassigned", "title": "Reason", "type": "string" }
+      },
+      "required": ["start_ms", "end_ms"],
+      "title": "PresenterTimeRange",
+      "type": "object"
+    },
+    "SlideAnchor": {
+      "additionalProperties": false,
+      "properties": {
+        "page_id": { "format": "uuid", "title": "Page Id", "type": "string" },
+        "start_ms": { "minimum": 0, "title": "Start Ms", "type": "integer" },
+        "end_ms": { "exclusiveMinimum": 0, "title": "End Ms", "type": "integer" },
+        "sentence_ids": {
+          "items": { "type": "string" },
+          "title": "Sentence Ids",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "status": {
+          "enum": ["auto", "review", "blocked", "confirmed"],
+          "title": "Status",
+          "type": "string"
+        },
+        "manual_lock": { "default": false, "title": "Manual Lock", "type": "boolean" },
+        "source_revision": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source Revision"
+        }
+      },
+      "required": ["page_id", "start_ms", "end_ms", "confidence", "status"],
+      "title": "SlideAnchor",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "revision": { "default": 1, "minimum": 1, "title": "Revision", "type": "integer" },
+    "source_id": { "format": "uuid", "title": "Source Id", "type": "string" },
+    "source_version": { "minLength": 1, "title": "Source Version", "type": "string" },
+    "duration_ms": {
+      "exclusiveMinimum": 0,
+      "title": "Duration Ms",
+      "type": "integer"
+    },
+    "anchors": {
+      "items": { "$ref": "#/$defs/SlideAnchor" },
+      "title": "Anchors",
+      "type": "array"
+    },
+    "segments": {
+      "items": { "$ref": "#/$defs/PresenterSegment" },
+      "title": "Segments",
+      "type": "array"
+    },
+    "unassigned_ranges": {
+      "items": { "$ref": "#/$defs/PresenterTimeRange" },
+      "title": "Unassigned Ranges",
+      "type": "array"
+    },
+    "timeline_hash": {
+      "anyOf": [{ "type": "string" }, { "type": "null" }],
+      "default": null,
+      "title": "Timeline Hash"
+    },
+    "generated_at": {
+      "anyOf": [{ "format": "date-time", "type": "string" }, { "type": "null" }],
+      "default": null,
+      "title": "Generated At"
+    }
+  },
+  "required": ["source_id", "source_version", "duration_ms"],
+  "title": "PresenterTimelineV1",
+  "type": "object"
+}

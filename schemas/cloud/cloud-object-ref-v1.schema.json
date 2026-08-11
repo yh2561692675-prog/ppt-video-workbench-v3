@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/cloud/cloud-object-ref-v1.schema.json",
+  "title": "Cloud Object Reference v1",
+  "description": "A tenant-scoped reference to a content-addressed binary object. It never contains a local absolute path or storage credential.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "object_id", "sha256", "size_bytes", "media_type", "logical_path"],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "object_id": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "size_bytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1099511627776
+    },
+    "media_type": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^[A-Za-z0-9!#$&^_.+-]+/[A-Za-z0-9!#$&^_.+-]+$"
+    },
+    "logical_path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)(?!.*\\u0000)[^/]+(?:/[^/]+)*$"
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "etag": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "scan_status": {
+      "type": "string",
+      "enum": ["pending", "clean", "rejected"]
+    }
+  }
+}

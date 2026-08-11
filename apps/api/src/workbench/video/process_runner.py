@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import subprocess
 import time
+from collections import deque
 from collections.abc import Callable, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Thread
 from typing import Any, Protocol
 
 from workbench.diagnostics.redaction import redact_text
@@ -75,6 +77,18 @@ class CancellableProcessRunner:
         except OSError as error:
             raise ProcessExecutionError("无法启动渲染进程") from error
 
+        stdout_chunks: deque[str] = deque(maxlen=32)
+        stderr_chunks: deque[str] = deque(maxlen=32)
+        drain_threads: list[Thread] = []
+        for stream, chunks in (
+            (getattr(process, "stdout", None), stdout_chunks),
+            (getattr(process, "stderr", None), stderr_chunks),
+        ):
+            if stream is not None:
+                thread = Thread(target=_drain_output, args=(stream, chunks), daemon=True)
+                thread.start()
+                drain_threads.append(thread)
+
         last_heartbeat = self.clock()
         while True:
             if control.cancel_requested:
@@ -89,7 +103,13 @@ class CancellableProcessRunner:
                 last_heartbeat = now
             self.sleeper(0.25)
 
-        stdout, stderr = process.communicate()
+        if drain_threads:
+            process.wait()
+            for thread in drain_threads:
+                thread.join(timeout=3.0)
+            stdout, stderr = "".join(stdout_chunks), "".join(stderr_chunks)
+        else:
+            stdout, stderr = process.communicate()
         result = ProcessResult(
             returncode=int(returncode),
             stdout=_safe_output(stdout),
@@ -110,8 +130,19 @@ class CancellableProcessRunner:
             process.kill()
             process.wait(timeout=3.0)
         finally:
-            with suppress(Exception):
-                process.communicate()
+            for stream_name in ("stdout", "stderr"):
+                with suppress(Exception):
+                    stream = getattr(process, stream_name, None)
+                    if stream is not None:
+                        stream.close()
+
+
+def _drain_output(stream: Any, chunks: deque[str]) -> None:
+    while True:
+        chunk = stream.read(4096)
+        if not chunk:
+            return
+        chunks.append(str(chunk))
 
 
 def _safe_output(value: object) -> str:

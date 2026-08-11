@@ -1,5 +1,6 @@
 import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame } from 'remotion';
 
+import { PresenterLayer } from '../presenter/PresenterLayer';
 import { PageScene } from './PageScene';
 import type { ProjectVideoProps, VideoPageProps } from './types';
 import { msToFrames } from './types';
@@ -18,16 +19,30 @@ export function ProjectVideo({ props }: { props: ProjectVideoProps }) {
           <PageAtLocalFrame page={page} props={props} />
         </Sequence>
       ))}
-      {props.pages.map((item) => (
-        <Sequence
-          key={`${item.page_id}-audio`}
-          from={msToFrames(item.start_ms, fps)}
-          durationInFrames={msToFrames(item.end_ms - item.start_ms, fps)}
-          premountFor={fps}
-        >
-          <Audio src={assetSource(item.audio_path)} />
-        </Sequence>
-      ))}
+      {props.presenter_timeline && props.presenter_source_path ? (
+        <>
+          <PresenterLayer
+            source={props.presenter_source_path}
+            timeline={props.presenter_timeline}
+            fps={fps}
+            width={props.width}
+            height={props.height}
+            reducedMotion={props.reduced_motion}
+          />
+          <Audio src={assetSource(props.presenter_source_path)} />
+        </>
+      ) : (
+        props.pages.map((item) => (
+          <Sequence
+            key={`${item.page_id}-audio`}
+            from={msToFrames(item.start_ms, fps)}
+            durationInFrames={msToFrames(item.end_ms - item.start_ms, fps)}
+            premountFor={fps}
+          >
+            <Audio src={assetSource(item.audio_path)} />
+          </Sequence>
+        ))
+      )}
     </AbsoluteFill>
   );
 }

@@ -6,12 +6,12 @@ This report contains automated and isolated Windows evidence. It does not claim 
 
 ## Automated evidence
 
-| Area                                   | Result                                              |
-| -------------------------------------- | --------------------------------------------------- |
-| EffectPlan V2 contract and migration   | Passed in focused contract tests                    |
-| Templates and interpreter              | Passed in Remotion tests and typecheck              |
-| 40-page visual manifest structure      | Passed: 40 pages, 10 categories, both aspect ratios |
-| Batch recovery and presenter collision | Passed: 3 integration tests                         |
+| Area                                   | Result                                                          |
+| -------------------------------------- | --------------------------------------------------------------- |
+| EffectPlan V2 contract and migration   | Passed in focused contract tests                                |
+| Templates and interpreter              | Passed in Remotion tests and typecheck                          |
+| 40-page visual manifest structure      | Passed: 40 pages, 10 categories, both aspect ratios             |
+| Batch recovery and presenter collision | Passed: 3 integration tests                                     |
 | Windows installer / GUI / real project | Installer + isolated API/UI verified; operator sign-off pending |
 
 ## Manual evidence placeholders

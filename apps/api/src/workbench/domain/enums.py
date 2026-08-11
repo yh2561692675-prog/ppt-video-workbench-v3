@@ -29,3 +29,4 @@ class JobType(StrEnum):
     BUILD_SUBTITLES = "build_subtitles"
     RENDER_PAGE = "render_page"
     EXPORT_PACKAGE = "export_package"
+    PRESENTER_SYNC = "presenter_sync"

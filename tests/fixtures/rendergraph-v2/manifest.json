@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "purpose": "offline migration fixtures for RenderGraph V2 Phase 0",
+  "network_required": false,
+  "fixtures": [
+    { "id": "ai-narration", "path": "ai-narration.json", "network_required": false },
+    { "id": "presenter", "path": "presenter.json", "network_required": false },
+    { "id": "vertical", "path": "vertical.json", "network_required": false },
+    { "id": "overlay-subtitles", "path": "overlay-subtitles.json", "network_required": false }
+  ]
+}

@@ -5,6 +5,7 @@ from uuid import UUID
 from workbench.audio.service import AudioService
 from workbench.domain.confirmation import GateReason, GateResult
 from workbench.domain.models import PageRecord, ProjectManifest
+from workbench.domain.presenter import PresentationMode
 
 
 class AudioGateService:
@@ -21,6 +22,20 @@ class AudioGateService:
                         "项目尚无可配音页面",
                         project.id,
                         "请先完成课件解析并生成页面",
+                    )
+                ],
+            )
+        if project.presentation_mode is PresentationMode.HUMAN_PRESENTER:
+            if project.presenter_source is not None and project.presenter_timeline is not None:
+                return GateResult(allowed=True, reasons=[])
+            return GateResult(
+                allowed=False,
+                reasons=[
+                    _reason(
+                        "presenter_timeline_missing",
+                        "真人讲解视频尚未完成分析与分页对齐",
+                        project.pages[0].id,
+                        "请先运行真人视频分析并检查页面锚点",
                     )
                 ],
             )

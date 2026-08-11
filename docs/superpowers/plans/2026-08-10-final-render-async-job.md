@@ -27,25 +27,25 @@
 
 ## File Responsibility Map
 
-| 文件 | 单一职责 |
-| --- | --- |
-| `apps/api/src/workbench/domain/enums.py` | 作业状态枚举与现有任务类型 |
-| `apps/api/src/workbench/domain/models.py` | 持久化 `JobRecord` 契约 |
-| `apps/api/src/workbench/storage/workspace_db.py` | 当前 schema 表定义与数据库初始化 |
-| `apps/api/src/workbench/storage/migrations.py` | schema v1 → v2 的事务迁移 |
-| `apps/api/src/workbench/jobs/repository.py` | 幂等入队、原子领取、状态转换与结果事务 |
-| `apps/api/src/workbench/jobs/worker.py` | 单消费者线程生命周期，不包含视频业务 |
-| `apps/api/src/workbench/jobs/execution.py` | 持久化检查点、进度、暂停和取消上下文 |
-| `apps/api/src/workbench/video/process_runner.py` | 可取消的 Remotion/FFmpeg/FFprobe 子进程执行 |
-| `apps/api/src/workbench/video/errors.py` | 最终渲染稳定错误类型与错误码 |
-| `apps/api/src/workbench/video/render_job.py` | 输入快照、指纹、提交服务与渲染任务 Handler |
-| `apps/api/src/workbench/video/render_service.py` | 可报告页级进度的 Remotion 分页渲染 |
-| `apps/api/src/workbench/video/package_service.py` | 阶段化导出、暂存、校验和原子发布 |
-| `apps/api/src/workbench/api/video.py` | 渲染任务创建、查询、控制和兼容路由 |
-| `apps/api/src/workbench/main.py` | 服务组装及 Worker lifespan 启停 |
-| `apps/web/src/api/client.ts` | Render Job DTO 与请求方法 |
-| `apps/web/src/features/video/RenderJobPanel.tsx` | 第 7 步任务交互与状态展示 |
-| `apps/web/src/features/workflow/WorkflowShell.tsx` | 将第 6/7 步接到统一任务入口 |
+| 文件                                               | 单一职责                                    |
+| -------------------------------------------------- | ------------------------------------------- |
+| `apps/api/src/workbench/domain/enums.py`           | 作业状态枚举与现有任务类型                  |
+| `apps/api/src/workbench/domain/models.py`          | 持久化 `JobRecord` 契约                     |
+| `apps/api/src/workbench/storage/workspace_db.py`   | 当前 schema 表定义与数据库初始化            |
+| `apps/api/src/workbench/storage/migrations.py`     | schema v1 → v2 的事务迁移                   |
+| `apps/api/src/workbench/jobs/repository.py`        | 幂等入队、原子领取、状态转换与结果事务      |
+| `apps/api/src/workbench/jobs/worker.py`            | 单消费者线程生命周期，不包含视频业务        |
+| `apps/api/src/workbench/jobs/execution.py`         | 持久化检查点、进度、暂停和取消上下文        |
+| `apps/api/src/workbench/video/process_runner.py`   | 可取消的 Remotion/FFmpeg/FFprobe 子进程执行 |
+| `apps/api/src/workbench/video/errors.py`           | 最终渲染稳定错误类型与错误码                |
+| `apps/api/src/workbench/video/render_job.py`       | 输入快照、指纹、提交服务与渲染任务 Handler  |
+| `apps/api/src/workbench/video/render_service.py`   | 可报告页级进度的 Remotion 分页渲染          |
+| `apps/api/src/workbench/video/package_service.py`  | 阶段化导出、暂存、校验和原子发布            |
+| `apps/api/src/workbench/api/video.py`              | 渲染任务创建、查询、控制和兼容路由          |
+| `apps/api/src/workbench/main.py`                   | 服务组装及 Worker lifespan 启停             |
+| `apps/web/src/api/client.ts`                       | Render Job DTO 与请求方法                   |
+| `apps/web/src/features/video/RenderJobPanel.tsx`   | 第 7 步任务交互与状态展示                   |
+| `apps/web/src/features/workflow/WorkflowShell.tsx` | 将第 6/7 步接到统一任务入口                 |
 
 ---
 
@@ -114,14 +114,13 @@ Expose this exact entry point:
 ```python
 CURRENT_SCHEMA_VERSION = 2
 
+
 def migrate_workspace_database(connection: Connection, source_version: int) -> None:
     if source_version == 1:
         migrate_v1_to_v2(connection)
         return
     if source_version != CURRENT_SCHEMA_VERSION:
-        raise WorkspaceMigrationError(
-            f"unsupported workspace schema version: {source_version}"
-        )
+        raise WorkspaceMigrationError(f"unsupported workspace schema version: {source_version}")
 ```
 
 Use `ALTER TABLE ... ADD COLUMN` for additive fields and convert legacy statuses in one transaction. Before creating the index, rank duplicate active `export_package` rows by `updated_at DESC, created_at DESC, id DESC`; keep rank 1 active and mark later ranks `failed` with `render_job_superseded_during_migration`. Create a partial unique index whose predicate includes `job_type = 'export_package'`, then update `schema_meta.version` last. Do not drop or recreate `jobs`; do not constrain multiple `render_page` rows for one project.
@@ -193,6 +192,7 @@ class JobSpec:
     paid: bool = False
     max_attempts: int | None = None
 
+
 @dataclass(frozen=True)
 class EnqueueResult:
     record: JobRecord
@@ -208,10 +208,14 @@ Use a single transaction to query matching active/succeeded work and insert only
 ```python
 ALLOWED_TRANSITIONS: dict[JobStatus, frozenset[JobStatus]] = {
     JobStatus.QUEUED: frozenset({JobStatus.RUNNING, JobStatus.PAUSED, JobStatus.CANCELLED}),
-    JobStatus.RUNNING: frozenset({
-        JobStatus.PAUSE_REQUESTED, JobStatus.CANCEL_REQUESTED,
-        JobStatus.SUCCEEDED, JobStatus.FAILED,
-    }),
+    JobStatus.RUNNING: frozenset(
+        {
+            JobStatus.PAUSE_REQUESTED,
+            JobStatus.CANCEL_REQUESTED,
+            JobStatus.SUCCEEDED,
+            JobStatus.FAILED,
+        }
+    ),
     JobStatus.PAUSE_REQUESTED: frozenset({JobStatus.PAUSED, JobStatus.CANCEL_REQUESTED}),
     JobStatus.PAUSED: frozenset({JobStatus.QUEUED, JobStatus.CANCELLED}),
     JobStatus.CANCEL_REQUESTED: frozenset({JobStatus.CANCELLED, JobStatus.FAILED}),
@@ -361,6 +365,7 @@ class ProcessControl(Protocol):
     def cancel_requested(self) -> bool: ...
     def heartbeat(self) -> None: ...
 
+
 @dataclass(frozen=True)
 class ProcessResult:
     returncode: int
@@ -432,8 +437,13 @@ Expected: FAIL on import.
 class RenderExecutionContext(Protocol):
     job_id: UUID | None
     input_fingerprint: str | None
+
     def checkpoint(
-        self, *, stage: str, progress: float, message: str,
+        self,
+        *,
+        stage: str,
+        progress: float,
+        message: str,
         artifacts: Iterable[Path] = (),
         payload: Mapping[str, object] | None = None,
     ) -> None: ...
@@ -586,6 +596,7 @@ Expected: FAIL on import.
 class RenderJobResultView(BaseModel):
     job: JobRecord
     created: bool
+
 
 RenderJobSubmission = RenderJobResultView
 ```
@@ -839,7 +850,7 @@ Expose only counts and stable codes:
   "worker_alive": true,
   "queued_jobs": 2,
   "stale_running_jobs": 0,
-  "recent_failure_codes": {"render_page_failed": 1}
+  "recent_failure_codes": { "render_page_failed": 1 }
 }
 ```
 

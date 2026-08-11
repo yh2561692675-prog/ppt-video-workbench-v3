@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/cloud/cloud-project-revision-v1.schema.json",
+  "title": "Cloud Project Revision v1",
+  "description": "An immutable snapshot of the project manifest and its content object references.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "revision_id",
+    "project_id",
+    "workspace_id",
+    "parent_revision_ids",
+    "manifest_sha256",
+    "content_sha256",
+    "objects",
+    "created_at",
+    "created_by"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "revision_id": {
+      "$ref": "#/$defs/uuid"
+    },
+    "project_id": {
+      "$ref": "#/$defs/uuid"
+    },
+    "workspace_id": {
+      "$ref": "#/$defs/uuid"
+    },
+    "parent_revision_ids": {
+      "type": "array",
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/uuid"
+      }
+    },
+    "manifest_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "content_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "objects": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {
+        "$ref": "cloud-object-ref-v1.schema.json"
+      }
+    },
+    "created_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "created_by": {
+      "$ref": "#/$defs/uuid"
+    },
+    "message": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    }
+  }
+}

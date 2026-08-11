@@ -7,7 +7,11 @@ export interface PeripheralTaskState {
   error?: { message: string } | null;
 }
 
-export function TaskPanel({ task, onCancel, onRetry }: {
+export function TaskPanel({
+  task,
+  onCancel,
+  onRetry,
+}: {
   task: PeripheralTaskState | null;
   onCancel?: () => void;
   onRetry?: () => void;

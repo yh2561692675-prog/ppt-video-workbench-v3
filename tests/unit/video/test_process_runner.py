@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -92,6 +93,23 @@ def test_runner_raises_for_nonzero_exit(tmp_path: Path) -> None:
 
     with pytest.raises(ProcessExecutionError, match="exit code 7"):
         runner.run(["ffmpeg"], tmp_path, FakeControl())
+
+
+def test_runner_drains_output_larger_than_pipe_capacity(tmp_path: Path) -> None:
+    runner = CancellableProcessRunner()
+
+    result = runner.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys; sys.stdout.write('o' * 200000); sys.stderr.write('e' * 200000)",
+        ],
+        tmp_path,
+        FakeControl(),
+    )
+
+    assert len(result.stdout) == 64 * 1024
+    assert len(result.stderr) == 64 * 1024
 
 
 def test_cancel_terminates_then_kills_after_three_seconds(tmp_path: Path) -> None:

@@ -88,15 +88,15 @@ SHA-256: C09C80E0B3F596036971676063819BA2760C0C85C031BB71F6B9952875855659
 
 ## 4. 截图中的原 Codex 窗口映射
 
-| 原任务 | 原 Thread ID | 对话恢复文件 | 主要代码/文档继续点 |
-|---|---|---|---|
-| PPT 自动生成视频特效节奏与表现形式引擎 | `019fe75f-3f52-7e42-be3c-1417c4d77864` | `F:\Codex-Full-Recovery-2026-08-10\05_threads_from_logs\readable_latest_context\019fe75f-3f52-7e42-be3c-1417c4d77864.md` | 根目录；`docs/reference-video-engine/`；V1.0 设计文档 |
-| 直接接管当前项目 / Task26 | `019fe774-0e9f-7c30-bdc3-f7d22a703612` | `F:\Codex-Full-Recovery-2026-08-10\05_threads_from_logs\readable_latest_context\019fe774-0e9f-7c30-bdc3-f7d22a703612.md` | 根目录；Task26 补丁；Windows 验收；航空航天项目 |
-| 本地自动修复与验收代理 | `019fe787-9623-74d2-9084-df719c9f3e2b` | `F:\Codex-Full-Recovery-2026-08-10\05_threads_from_logs\readable_latest_context\019fe787-9623-74d2-9084-df719c9f3e2b.md` | 根目录、`F:\app\app`、用户 workspace-data、`F:\Video` |
-| 最终渲染异步任务化 | `019fe8e5-eb44-7060-bafe-3bdd1eea480e` | `F:\Codex-Full-Recovery-2026-08-10\05_threads_from_logs\readable_latest_context\019fe8e5-eb44-7060-bafe-3bdd1eea480e.md` | 两份设计文档；jobs、video、API、Web 面板；任务 1-10 已有实现记录 |
-| 外围平台 S1/P03-P12 | `019fe8e6-db49-7a20-be39-2a8529caa3ff` | `F:\Codex-Full-Recovery-2026-08-10\05_threads_from_logs\readable_latest_context\019fe8e6-db49-7a20-be39-2a8529caa3ff.md` | 两份设计文档；`peripheral-platform/`；business_modules；协调器持久化 |
-| 特效编辑器与模板管理工作台 | `019fe8ea-3b97-7960-93af-2720739eb562` | `F:\Codex-Full-Recovery-2026-08-10\05_threads_from_logs\readable_latest_context\019fe8ea-3b97-7960-93af-2720739eb562.md` | 独立 worktree，HEAD `727bec5` |
-| 创建可识别 Git 仓库 | `019fe8fb-2082-7160-b0b0-d61c4eb90c1b` | `F:\Codex-Full-Recovery-2026-08-10\05_threads_from_logs\readable_latest_context\019fe8fb-2082-7160-b0b0-d61c4eb90c1b.md` | `F:\git仓库\ppt-video-workbench-v3` 和本次根目录 Git 修复 |
+| 原任务                                 | 原 Thread ID                           | 对话恢复文件                                                                                                             | 主要代码/文档继续点                                                  |
+| -------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| PPT 自动生成视频特效节奏与表现形式引擎 | `019fe75f-3f52-7e42-be3c-1417c4d77864` | `F:\Codex-Full-Recovery-2026-08-10\05_threads_from_logs\readable_latest_context\019fe75f-3f52-7e42-be3c-1417c4d77864.md` | 根目录；`docs/reference-video-engine/`；V1.0 设计文档                |
+| 直接接管当前项目 / Task26              | `019fe774-0e9f-7c30-bdc3-f7d22a703612` | `F:\Codex-Full-Recovery-2026-08-10\05_threads_from_logs\readable_latest_context\019fe774-0e9f-7c30-bdc3-f7d22a703612.md` | 根目录；Task26 补丁；Windows 验收；航空航天项目                      |
+| 本地自动修复与验收代理                 | `019fe787-9623-74d2-9084-df719c9f3e2b` | `F:\Codex-Full-Recovery-2026-08-10\05_threads_from_logs\readable_latest_context\019fe787-9623-74d2-9084-df719c9f3e2b.md` | 根目录、`F:\app\app`、用户 workspace-data、`F:\Video`                |
+| 最终渲染异步任务化                     | `019fe8e5-eb44-7060-bafe-3bdd1eea480e` | `F:\Codex-Full-Recovery-2026-08-10\05_threads_from_logs\readable_latest_context\019fe8e5-eb44-7060-bafe-3bdd1eea480e.md` | 两份设计文档；jobs、video、API、Web 面板；任务 1-10 已有实现记录     |
+| 外围平台 S1/P03-P12                    | `019fe8e6-db49-7a20-be39-2a8529caa3ff` | `F:\Codex-Full-Recovery-2026-08-10\05_threads_from_logs\readable_latest_context\019fe8e6-db49-7a20-be39-2a8529caa3ff.md` | 两份设计文档；`peripheral-platform/`；business_modules；协调器持久化 |
+| 特效编辑器与模板管理工作台             | `019fe8ea-3b97-7960-93af-2720739eb562` | `F:\Codex-Full-Recovery-2026-08-10\05_threads_from_logs\readable_latest_context\019fe8ea-3b97-7960-93af-2720739eb562.md` | 独立 worktree，HEAD `727bec5`                                        |
+| 创建可识别 Git 仓库                    | `019fe8fb-2082-7160-b0b0-d61c4eb90c1b` | `F:\Codex-Full-Recovery-2026-08-10\05_threads_from_logs\readable_latest_context\019fe8fb-2082-7160-b0b0-d61c4eb90c1b.md` | `F:\git仓库\ppt-video-workbench-v3` 和本次根目录 Git 修复            |
 
 这些父窗口的原 rollout 文件已经缺失，Codex 后台直接读取时返回 `thread not loaded`；但状态数据库、日志、结构化 transport、文件变更和子任务仍在恢复库中。特效任务的后续子任务可直接读取，能够验证提交 `727bec5` 和最终测试记录。
 
@@ -135,21 +135,21 @@ Downloads 中识别到 88 个与 PPT Video Workbench 直接相关的恢复文件
 
 ChatGPT 云端已找回 13 个强相关聊天，共 504 轮、430 个附件/生成内容引用：
 
-| ChatGPT 对话 | ID | 轮数 | 引用数 |
-|---|---|---:|---:|
-| 自动生成视频工作流1 | `6a704ac5-5820-83ec-9da2-aae4ff4e5fa4` | 92 | 57 |
-| 视频工作流进度 | `6a70beda-178c-83ec-afab-912e7ec1dc55` | 16 | 0 |
-| 自动生成视频工作流2 | `6a717794-0978-83ec-840b-e957cb38c4a8` | 134 | 115 |
-| 自动生成视频工作流3 | `6a730f5d-8ba0-83ec-8924-751de8383587` | 146 | 148 |
-| 视频工作流拓展项目 | `6a76d592-1dbc-83ec-9997-871f14ffe8f1` | 57 | 68 |
-| PPT 视频生成进度 | `6a776358-4604-83ec-8510-db8e272f11c0` | 4 | 1 |
-| PPT 转视频进度查询 | `6a776a00-f9dc-83ec-919e-ba575bd5119a` | 8 | 0 |
-| PPT 视频特效优化建议 | `6a7804ff-b8e4-83ec-a7f1-58ffb7d229fa` | 14 | 1 |
-| PPT 转视频工作流设计 | `6a7847ef-6c6c-83ec-aff3-3c7fd32ffd96` | 4 | 9 |
-| 视频单页特效设计 | `6a784dd1-53b8-83ec-a2d2-0126ba6c1dcf` | 10 | 24 |
-| 文档生成 PPT 封存 | `6a787855-745c-83ec-8c47-037367fdafcb` | 3 | 2 |
-| PPT 自动生成视频进度 | `6a788c1b-5da0-83ec-b8ce-7185a66a213f` | 12 | 5 |
-| PPT 自动生成视频进度 | `6a78c030-35ac-83ec-93a9-8f1d20b41795` | 4 | 0 |
+| ChatGPT 对话         | ID                                     | 轮数 | 引用数 |
+| -------------------- | -------------------------------------- | ---: | -----: |
+| 自动生成视频工作流1  | `6a704ac5-5820-83ec-9da2-aae4ff4e5fa4` |   92 |     57 |
+| 视频工作流进度       | `6a70beda-178c-83ec-afab-912e7ec1dc55` |   16 |      0 |
+| 自动生成视频工作流2  | `6a717794-0978-83ec-840b-e957cb38c4a8` |  134 |    115 |
+| 自动生成视频工作流3  | `6a730f5d-8ba0-83ec-8924-751de8383587` |  146 |    148 |
+| 视频工作流拓展项目   | `6a76d592-1dbc-83ec-9997-871f14ffe8f1` |   57 |     68 |
+| PPT 视频生成进度     | `6a776358-4604-83ec-8510-db8e272f11c0` |    4 |      1 |
+| PPT 转视频进度查询   | `6a776a00-f9dc-83ec-919e-ba575bd5119a` |    8 |      0 |
+| PPT 视频特效优化建议 | `6a7804ff-b8e4-83ec-a7f1-58ffb7d229fa` |   14 |      1 |
+| PPT 转视频工作流设计 | `6a7847ef-6c6c-83ec-aff3-3c7fd32ffd96` |    4 |      9 |
+| 视频单页特效设计     | `6a784dd1-53b8-83ec-a2d2-0126ba6c1dcf` |   10 |     24 |
+| 文档生成 PPT 封存    | `6a787855-745c-83ec-8c47-037367fdafcb` |    3 |      2 |
+| PPT 自动生成视频进度 | `6a788c1b-5da0-83ec-b8ce-7185a66a213f` |   12 |      5 |
+| PPT 自动生成视频进度 | `6a78c030-35ac-83ec-93a9-8f1d20b41795` |    4 |      0 |
 
 云端聊天正文目前可读取；连接器只返回附件引用标记，不能直接下载全部二进制附件。很多对应 ZIP/Markdown 已在 Downloads 找到。完整云端文本导出位于：
 
@@ -173,15 +173,15 @@ ChatGPT 网页端项目不能直接读取 `F:` 本地目录；必须把恢复索
 
 已在原 `ppt-video-workbench-v3` 本地项目下重建 7 个只读恢复窗口，全部返回 `RECOVERY_RECOGNIZED`：
 
-| 恢复窗口 | 新 Thread ID | 复核结论 |
-|---|---|---|
-| PPT 视频特效节奏与表现形式引擎 | `019feb46-7f8b-7af3-82a8-280c691dc786` | 根 Git、V1.0 文档、E00-E12 记录和参考 MP4 均识别；正式 Windows 人工门禁与 HeyGen 外部服务验收未完成 |
-| Task26 本地项目接管 | `019feb46-8950-7213-b4ca-422988a6b032` | 当前状态为 `ready_for_windows`；补丁尚未合入根快照；航空航天 8 页音频仍在；Task26 隔离验收目录尚不存在 |
-| 本地自动修复验收 | `019feb46-93fa-7752-b68c-61d4d6dc2dac` | 四个目录边界和航空航天项目 ID 已识别，安全继续点已恢复 |
-| 最终渲染异步任务化 | `019feb46-9d8c-75a2-b88a-950aa70c5a41` | Task 1-9 核心文件存在，但 Task 10 和完整发布门禁未闭环，不能把旧窗口的 completed 当作全部完成 |
-| 外围平台 S1 P03-P12 | `019feb46-a8ea-7f43-b9ff-bc4fe9b31fea` | 十模块入口、契约和部分真实逻辑存在，但 P07/P11/P12 等仍是骨架，尚未达到完整 S1 发布门禁 |
-| 特效编辑器与模板管理工作台 | `019feb46-b286-72f0-903e-40807973392c` | Task 1-4 完成并通过最终复审；Task 5 只有 brief，后续应从 Task 5 Step 1 继续 |
-| Git 仓库与项目识别 | `019feb46-bb1c-7412-a5df-cfba9d4f253e` | 根快照、特效 worktree、独立保管库、bundle/ZIP、恢复引用和断链备份全部识别 |
+| 恢复窗口                       | 新 Thread ID                           | 复核结论                                                                                                 |
+| ------------------------------ | -------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| PPT 视频特效节奏与表现形式引擎 | `019feb46-7f8b-7af3-82a8-280c691dc786` | 根 Git、V1.0 文档、E00-E12 记录和参考 MP4 均识别；正式 Windows 人工门禁与 HeyGen 外部服务验收未完成      |
+| Task26 本地项目接管            | `019feb46-8950-7213-b4ca-422988a6b032` | RC `effects-v2-rc1-20260811-full-ffmpeg` 已冻结；Task26 隔离验收与完整回归通过；产品功能人工流程仍待执行 |
+| 本地自动修复验收               | `019feb46-93fa-7752-b68c-61d4d6dc2dac` | 四个目录边界和航空航天项目 ID 已识别，安全继续点已恢复                                                   |
+| 最终渲染异步任务化             | `019feb46-9d8c-75a2-b88a-950aa70c5a41` | Task 1-9 核心文件存在，但 Task 10 和完整发布门禁未闭环，不能把旧窗口的 completed 当作全部完成            |
+| 外围平台 S1 P03-P12            | `019feb46-a8ea-7f43-b9ff-bc4fe9b31fea` | 十模块入口、契约和部分真实逻辑存在，但 P07/P11/P12 等仍是骨架，尚未达到完整 S1 发布门禁                  |
+| 特效编辑器与模板管理工作台     | `019feb46-b286-72f0-903e-40807973392c` | Task 1-4 完成并通过最终复审；Task 5 只有 brief，后续应从 Task 5 Step 1 继续                              |
+| Git 仓库与项目识别             | `019feb46-bb1c-7412-a5df-cfba9d4f253e` | 根快照、特效 worktree、独立保管库、bundle/ZIP、恢复引用和断链备份全部识别                                |
 
 ### 深度复核后的重要修正
 

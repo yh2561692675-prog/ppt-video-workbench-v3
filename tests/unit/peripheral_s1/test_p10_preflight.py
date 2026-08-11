@@ -9,7 +9,10 @@ def test_p10_preflight_report_blocks_missing_project_materials(tmp_path) -> None
     from workbench.domain.models import ProjectManifest
 
     project = ProjectManifest(
-        id=uuid4(), name="demo", project_dir="demo", created_at=datetime.now(UTC),
+        id=uuid4(),
+        name="demo",
+        project_dir="demo",
+        created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
     )
     (tmp_path / "demo").mkdir()

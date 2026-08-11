@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "workbench://schemas/foundation/foundation-freeze-manifest-v1.schema.json",
+  "title": "FoundationFreezeManifestV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "foundation_id",
+    "created_at",
+    "repository",
+    "checkpoint_ref",
+    "snapshot_sha256",
+    "stop_point_ids",
+    "ownership_map_sha256",
+    "conflict_resolution_sha256",
+    "boundaries",
+    "includes",
+    "excludes",
+    "dependency_lock_sha256",
+    "gate_evidence_refs",
+    "release_level"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "foundation_id": {
+      "type": "string",
+      "pattern": "^foundation-[0-9]{8}-[0-9]{6}-[0-9a-f]{7,40}$"
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "branch", "head", "status_manifest_sha256"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "branch": { "type": "string", "minLength": 1 },
+        "head": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "status_manifest_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "checkpoint_ref": { "type": "string", "minLength": 1 },
+    "snapshot_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "stop_point_ids": { "type": "array", "items": { "type": "string" } },
+    "ownership_map_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "conflict_resolution_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "boundaries": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["boundary_id", "logical_root", "exists", "writable", "containment_verified"],
+        "properties": {
+          "boundary_id": { "enum": ["source", "installed", "workspace_data", "video"] },
+          "logical_root": { "type": "string", "minLength": 1 },
+          "exists": { "type": "boolean" },
+          "writable": { "type": "boolean" },
+          "containment_verified": { "type": "boolean" }
+        }
+      }
+    },
+    "includes": { "type": "array", "items": { "type": "string" } },
+    "excludes": { "type": "array", "items": { "type": "string" } },
+    "dependency_lock_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "gate_evidence_refs": { "type": "array", "items": { "type": "string" } },
+    "release_level": {
+      "enum": [
+        "inventory",
+        "waiting_for_stop_points",
+        "candidate",
+        "foundation_ready",
+        "render_ready",
+        "release_ready",
+        "rejected"
+      ]
+    }
+  }
+}

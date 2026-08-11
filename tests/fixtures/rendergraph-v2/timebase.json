@@ -1,0 +1,47 @@
+{
+  "fps": { "num": 30, "den": 1 },
+  "cases": [
+    { "start_us": 0, "end_us": 33333, "start_frame": 0, "end_frame_exclusive": 1 },
+    { "start_us": 33333, "end_us": 66667, "start_frame": 0, "end_frame_exclusive": 2 },
+    { "start_us": 1000000, "end_us": 2500000, "start_frame": 30, "end_frame_exclusive": 75 }
+  ],
+  "fps_matrix": [
+    {
+      "fps": 24,
+      "duration_us": 1000000,
+      "duration_frames": 24,
+      "start_us": 1,
+      "end_us": 1000001,
+      "start_frame": 0,
+      "end_frame_exclusive": 24
+    },
+    {
+      "fps": 25,
+      "duration_us": 1000000,
+      "duration_frames": 25,
+      "start_us": 1,
+      "end_us": 1000001,
+      "start_frame": 0,
+      "end_frame_exclusive": 25
+    },
+    {
+      "fps": 30,
+      "duration_us": 1000000,
+      "duration_frames": 30,
+      "start_us": 1,
+      "end_us": 1000001,
+      "start_frame": 0,
+      "end_frame_exclusive": 30
+    },
+    {
+      "fps": 60,
+      "duration_us": 1000000,
+      "duration_frames": 60,
+      "start_us": 1,
+      "end_us": 1000001,
+      "start_frame": 0,
+      "end_frame_exclusive": 60
+    }
+  ],
+  "rule": "half-open microsecond ranges use floor(start) and ceil(end - 1)"
+}

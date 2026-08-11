@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import io
-import json
 from pathlib import Path
 
 import pytest
@@ -29,7 +28,10 @@ def test_material_runner_validates_and_naturally_orders_images(tmp_path: Path) -
 
 
 def test_material_runner_rejects_extension_mismatch_and_empty_file(tmp_path: Path) -> None:
-    from workbench.business_modules.p03_material.runner import MaterialRejected, stage_material_bytes
+    from workbench.business_modules.p03_material.runner import (
+        MaterialRejected,
+        stage_material_bytes,
+    )
 
     with pytest.raises(MaterialRejected):
         stage_material_bytes([("bad.pdf", _png_bytes())], tmp_path)

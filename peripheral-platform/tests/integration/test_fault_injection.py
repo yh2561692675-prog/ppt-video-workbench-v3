@@ -103,12 +103,8 @@ def test_echo_permanent_and_invalid_result_fail_without_artifacts(
 ) -> None:
     scheduler, service, _, _ = scheduler_bundle
     permanent = service.submit_job(_mode(job, "permanent"))
-    second_job = job.model_copy(
-        update={"job_id": uuid4(), "idempotency_key": uuid4().hex}
-    )
-    invalid = service.submit_job(
-        _mode(second_job, "invalid_result")
-    )
+    second_job = job.model_copy(update={"job_id": uuid4(), "idempotency_key": uuid4().hex})
+    invalid = service.submit_job(_mode(second_job, "invalid_result"))
 
     scheduler.run_once()
     scheduler.run_once()

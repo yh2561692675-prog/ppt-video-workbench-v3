@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/production-timeline-v1.schema.json",
+  "title": "ProductionTimelineV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "project_id",
+    "revision",
+    "fps",
+    "width",
+    "height",
+    "duration_us",
+    "tracks",
+    "markers",
+    "input_fingerprint",
+    "content_hash"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "project_id": { "type": "string", "format": "uuid" },
+    "revision": { "type": "integer", "minimum": 1 },
+    "fps": { "type": "integer", "minimum": 1 },
+    "width": { "type": "integer", "minimum": 1 },
+    "height": { "type": "integer", "minimum": 1 },
+    "duration_us": { "type": "integer", "minimum": 0 },
+    "tracks": { "type": "array", "items": { "$ref": "#/$defs/track" } },
+    "markers": { "type": "array", "items": { "$ref": "#/$defs/marker" } },
+    "input_fingerprint": { "type": "string" },
+    "content_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  },
+  "$defs": {
+    "clip": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "track_id",
+        "kind",
+        "start_us",
+        "duration_us",
+        "source_in_us",
+        "source_ref",
+        "locked",
+        "payload"
+      ],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "track_id": { "type": "string", "format": "uuid" },
+        "kind": { "type": "string" },
+        "start_us": { "type": "integer", "minimum": 0 },
+        "duration_us": { "type": "integer", "exclusiveMinimum": 0 },
+        "source_in_us": { "type": "integer", "minimum": 0 },
+        "source_duration_us": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+        "source_ref": { "type": "string", "minLength": 1 },
+        "locked": { "type": "boolean" },
+        "link_group_id": { "type": ["string", "null"], "format": "uuid" },
+        "payload": { "type": "object" }
+      }
+    },
+    "track": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "name", "order", "muted", "locked", "clips"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "kind": { "type": "string" },
+        "name": { "type": "string", "minLength": 1 },
+        "order": { "type": "integer", "minimum": 0 },
+        "muted": { "type": "boolean" },
+        "locked": { "type": "boolean" },
+        "clips": { "type": "array", "items": { "$ref": "#/$defs/clip" } }
+      }
+    },
+    "marker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "start_us", "label", "kind"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "start_us": { "type": "integer", "minimum": 0 },
+        "label": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["chapter", "review", "quality", "note"] }
+      }
+    }
+  }
+}

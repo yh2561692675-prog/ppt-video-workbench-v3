@@ -8,9 +8,11 @@ from uuid import uuid4
 import pytest
 from peripheral_contracts import ArtifactRef, JobEnvelope
 from peripheral_host.module_runner import (
+    JobAttemptRecord,
     ModuleNotRegistered,
     ModuleRegistry,
     ModuleRunner,
+    _restore_recovery_state,
     echo_registered_module,
 )
 
@@ -71,3 +73,21 @@ def test_runner_stages_verified_inputs_inside_attempt(tmp_path: Path, job: JobEn
     assert execution.exit_code == 0
     assert staged_path.read_bytes() == b"verified input"
     assert staged_path.is_relative_to(execution.attempt.root)
+
+
+def test_runner_restores_only_previous_attempt_recovery_state(tmp_path: Path) -> None:
+    job_id = uuid4()
+    previous = tmp_path / "0001" / "recovery"
+    previous.mkdir(parents=True)
+    (previous / "paid-requests.json").write_text('{"schema_version":1}', encoding="utf-8")
+    (previous / "untrusted.bin").write_bytes(b"must not copy")
+    (tmp_path / "0001" / "stderr.log").write_text("must not copy", encoding="utf-8")
+    current_root = tmp_path / "0002"
+    current_root.mkdir()
+    attempt = JobAttemptRecord(uuid4(), job_id, 2, current_root)
+
+    _restore_recovery_state(attempt)
+
+    assert (current_root / "recovery" / "paid-requests.json").is_file()
+    assert not (current_root / "recovery" / "untrusted.bin").exists()
+    assert not (current_root / "stderr.log").exists()

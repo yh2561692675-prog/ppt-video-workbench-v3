@@ -45,3 +45,38 @@ it('preserves the server error code and recovery action for batch retry decision
     status: 422,
   });
 });
+
+it('sends a cancel action to the project-owned render job endpoint', async () => {
+  const cancelledJob = { id: 'job-1', status: 'cancel_requested' };
+  const fetch = vi.fn(
+    async () =>
+      new Response(JSON.stringify({ data: { job: cancelledJob, created: false }, error: null }), {
+        headers: { 'Content-Type': 'application/json' },
+      }),
+  );
+  vi.stubGlobal('fetch', fetch);
+
+  await api.actOnRenderJob('project-1', 'job-1', 'cancel');
+
+  expect(fetch).toHaveBeenCalledWith(
+    '/api/projects/project-1/video/render-jobs/job-1/actions',
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ action: 'cancel' }),
+    }),
+  );
+});
+
+it('supports a nullable current render job response', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(
+      async () =>
+        new Response(JSON.stringify({ data: null, error: null }), {
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    ),
+  );
+
+  await expect(api.getCurrentRenderJob('project-1')).resolves.toBeNull();
+});

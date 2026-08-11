@@ -30,6 +30,42 @@ export type SubtitlePlacement = {
   reason: string | null;
 };
 
+export type PresenterTimeline = {
+  schema_version: '1.0';
+  revision: number;
+  source_id: string;
+  source_version: string;
+  duration_ms: number;
+  anchors: Array<{
+    page_id: string;
+    start_ms: number;
+    end_ms: number;
+    sentence_ids: string[];
+    confidence: number;
+    status: 'auto' | 'review' | 'blocked' | 'confirmed';
+    manual_lock: boolean;
+    source_revision: string | null;
+  }>;
+  segments: Array<{
+    start_ms: number;
+    end_ms: number;
+    layout:
+      | 'top_left'
+      | 'top_right'
+      | 'bottom_left'
+      | 'bottom_right'
+      | 'center'
+      | 'split'
+      | 'hidden';
+    width_ratio: number;
+    manual_lock: boolean;
+    source_revision: string | null;
+  }>;
+  unassigned_ranges: Array<{ start_ms: number; end_ms: number; reason: string }>;
+  timeline_hash: string | null;
+  generated_at: string | null;
+};
+
 export type ProjectVideoProps = {
   schema_version: 1 | 2;
   project_id: string;
@@ -43,6 +79,10 @@ export type ProjectVideoProps = {
   subtitles: SubtitleCue[];
   subtitle_placements: SubtitlePlacement[];
   catalog_version?: string | null;
+  presenter_timeline?: PresenterTimeline | null;
+  presenter_source_path?: string | null;
+  timeline_revision?: number | null;
+  timeline_hash?: string | null;
 };
 
 export function msToFrames(milliseconds: number, fps: number): number {
@@ -69,12 +109,19 @@ export function parseProjectVideoProps(input: unknown): ProjectVideoProps {
     'pages',
     'subtitles',
     'subtitle_placements',
+    'catalog_version',
+    'presenter_timeline',
+    'presenter_source_path',
+    'timeline_revision',
+    'timeline_hash',
   ]);
   for (const key of Object.keys(record)) {
     if (!allowed.has(key)) throw new Error(`未知字段: ${key}`);
   }
-  if (record.width !== 1920 && record.width !== 1080) throw new Error('视频画布宽度必须为 1920 或 1080');
-  if (record.height !== 1080 && record.height !== 1920) throw new Error('视频画布高度必须为 1080 或 1920');
+  if (record.width !== 1920 && record.width !== 1080)
+    throw new Error('视频画布宽度必须为 1920 或 1080');
+  if (record.height !== 1080 && record.height !== 1920)
+    throw new Error('视频画布高度必须为 1080 或 1920');
   if (record.fps !== 30) throw new Error('视频 FPS 必须为 30');
   if (!Array.isArray(record.pages) || record.pages.length === 0) {
     throw new Error('视频 Props 至少需要一个页面');
@@ -91,6 +138,18 @@ export function parseProjectVideoProps(input: unknown): ProjectVideoProps {
       if (!page.effect_plan || typeof page.effect_plan_hash !== 'string') {
         throw new Error('V2 视频 Props 缺少页面特效计划');
       }
+    }
+  }
+  if (record.presenter_timeline) {
+    const timeline = record.presenter_timeline as PresenterTimeline;
+    if (record.timeline_revision !== timeline.revision) {
+      throw new Error('presenter timeline revision mismatch');
+    }
+    if (record.timeline_hash !== timeline.timeline_hash) {
+      throw new Error('presenter timeline hash mismatch');
+    }
+    if (typeof record.presenter_source_path !== 'string' || !record.presenter_source_path) {
+      throw new Error('presenter timeline requires source path');
     }
   }
   return input as ProjectVideoProps;

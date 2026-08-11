@@ -9,6 +9,7 @@ import sys
 import tempfile
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
@@ -59,9 +60,16 @@ def build_default_probes(
     workspace_root: Path,
     *,
     heygen_probe: HeyGenProbe | None = None,
+    render_worker_alive: Callable[[], bool] | None = None,
 ) -> Mapping[str, CheckProbe]:
     root = workspace_root.resolve()
     selected_heygen_probe = heygen_probe or _unconfigured_heygen
+    selected_worker_alive = render_worker_alive or (
+        lambda: (
+            os.environ.get("WORKBENCH_ASYNC_RENDER_ENABLED", "true").lower()
+            not in {"0", "false", "no"}
+        )
+    )
 
     @lru_cache(maxsize=1)
     def heygen_snapshot() -> HeyGenHealthSnapshot:
@@ -81,39 +89,131 @@ def build_default_probes(
         "secret_references": lambda: _secret_reference_check(heygen_snapshot()),
         "temporary_directory": _temporary_directory_check,
         "video_encoder": _video_encoder_check,
-        "render_worker": lambda: _render_worker_check(root),
+        "render_worker": lambda: _render_worker_check(root, selected_worker_alive),
     }
 
 
-def _render_worker_check(root: Path) -> DiagnosticCheck:
+def _render_worker_check(
+    root: Path, worker_alive: Callable[[], bool] | None = None
+) -> DiagnosticCheck:
     database = root / "workspace.db"
     if not database.is_file():
         return _check(
-            "render_worker", "渲染任务工作器", DiagnosticStatus.YELLOW,
-            DiagnosticCategory.PROCESSING, "RENDER_WORKER_NO_DATABASE",
-            "工作区尚未创建任务数据库", "无法统计异步渲染队列状态", "先创建或打开一个工作区",
-            {"worker_alive": False, "queue_length": 0},
+            "render_worker",
+            "渲染任务工作器",
+            DiagnosticStatus.YELLOW,
+            DiagnosticCategory.PROCESSING,
+            "RENDER_WORKER_NO_DATABASE",
+            "工作区尚未创建任务数据库",
+            "无法统计异步渲染队列状态",
+            "先创建或打开一个工作区",
+            {
+                "worker_alive": False,
+                "queued_jobs": 0,
+                "queue_length": 0,
+                "stale_running_jobs": 0,
+                "recent_failure_codes": {},
+            },
         )
     try:
         with sqlite3.connect(database) as connection:
-            row = connection.execute(
-                "SELECT COUNT(*) FROM jobs "
-                "WHERE status IN "
+            active_row = connection.execute(
+                "SELECT COUNT(*) FROM jobs WHERE status IN "
                 "('queued','running','pause_requested','paused','cancel_requested')"
             ).fetchone()
-        queue_length = int(row[0] if row else 0)
+            queued_row = connection.execute(
+                "SELECT COUNT(*) FROM jobs WHERE status = 'queued'"
+            ).fetchone()
+            running_rows = connection.execute(
+                "SELECT heartbeat_at FROM jobs WHERE status = 'running'"
+            ).fetchall()
+            failure_rows = connection.execute(
+                "SELECT error_code FROM jobs "
+                "WHERE status = 'failed' AND error_code IS NOT NULL "
+                "ORDER BY COALESCE(finished_at, updated_at) DESC LIMIT 20"
+            ).fetchall()
+        queue_length = int(active_row[0] if active_row else 0)
+        queued_jobs = int(queued_row[0] if queued_row else 0)
+        stale_cutoff = datetime.now(UTC) - timedelta(seconds=30)
+        stale_running_jobs = 0
+        for (heartbeat_at,) in running_rows:
+            if not heartbeat_at:
+                stale_running_jobs += 1
+                continue
+            try:
+                heartbeat = datetime.fromisoformat(str(heartbeat_at))
+            except ValueError:
+                stale_running_jobs += 1
+                continue
+            if heartbeat < stale_cutoff:
+                stale_running_jobs += 1
+        failure_counts: dict[str, int] = {}
+        for (error_code,) in failure_rows:
+            code = str(error_code)
+            failure_counts[code] = failure_counts.get(code, 0) + 1
+        recent_failure_codes: dict[str, JsonValue] = {
+            code: count for code, count in failure_counts.items()
+        }
+        alive = worker_alive() if worker_alive is not None else True
+        evidence: dict[str, JsonValue] = {
+            "worker_alive": alive,
+            "queued_jobs": queued_jobs,
+            "queue_length": queue_length,
+            "stale_running_jobs": stale_running_jobs,
+            "recent_failure_codes": cast(JsonValue, recent_failure_codes),
+        }
+        if not alive:
+            return _check(
+                "render_worker",
+                "渲染任务工作器",
+                DiagnosticStatus.YELLOW,
+                DiagnosticCategory.PROCESSING,
+                "RENDER_WORKER_DISABLED",
+                "渲染任务工作器未运行",
+                "排队任务不会自动执行",
+                "启用异步渲染工作器或检查应用生命周期",
+                evidence,
+            )
+        if stale_running_jobs:
+            return _check(
+                "render_worker",
+                "渲染任务工作器",
+                DiagnosticStatus.RED,
+                DiagnosticCategory.PROCESSING,
+                "RENDER_WORKER_STALE_HEARTBEAT",
+                "存在长时间无心跳的渲染任务",
+                "任务可能已中断",
+                "重启应用并从暂停检查点继续",
+                evidence,
+            )
         return _check(
-            "render_worker", "渲染任务工作器", DiagnosticStatus.GREEN,
-            DiagnosticCategory.PROCESSING, "RENDER_WORKER_QUEUE_OK",
-            "异步渲染任务队列可读", "无", "无需处理",
-            {"worker_alive": True, "queue_length": queue_length},
+            "render_worker",
+            "渲染任务工作器",
+            DiagnosticStatus.GREEN,
+            DiagnosticCategory.PROCESSING,
+            "RENDER_WORKER_QUEUE_OK",
+            "异步渲染任务队列可读",
+            "无",
+            "无需处理",
+            evidence,
         )
     except sqlite3.Error:
         return _check(
-            "render_worker", "渲染任务工作器", DiagnosticStatus.RED,
-            DiagnosticCategory.PROCESSING, "RENDER_WORKER_DATABASE_ERROR",
-            "无法读取渲染任务队列", "异步渲染任务可能无法继续", "检查 workspace.db 完整性",
-            {"worker_alive": False},
+            "render_worker",
+            "渲染任务工作器",
+            DiagnosticStatus.RED,
+            DiagnosticCategory.PROCESSING,
+            "RENDER_WORKER_DATABASE_ERROR",
+            "无法读取渲染任务队列",
+            "异步渲染任务可能无法继续",
+            "检查 workspace.db 完整性",
+            {
+                "worker_alive": False,
+                "queued_jobs": 0,
+                "queue_length": 0,
+                "stale_running_jobs": 0,
+                "recent_failure_codes": {},
+            },
         )
 
 

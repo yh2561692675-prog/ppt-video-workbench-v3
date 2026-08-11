@@ -108,3 +108,30 @@ def test_project_snapshot_participates_in_submission_identity(tmp_path: Path) ->
 
     assert first.job_id != second.job_id
     assert len(adapter.requests) == 2
+
+
+def test_artifact_destination_finds_nested_descriptor() -> None:
+    from workbench.peripheral_s1.coordinator import _artifact_destination
+
+    payload = {
+        "video": {
+            "logical_name": "final-video",
+            "relative_path": "08_输出/最终视频.mp4",
+            "sha256": "a" * 64,
+        }
+    }
+
+    assert (
+        _artifact_destination(payload, logical_name="final-video", sha256="a" * 64)
+        == "08_输出/最终视频.mp4"
+    )
+
+
+def test_artifact_destination_preserves_material_safe_name_rule() -> None:
+    from workbench.peripheral_s1.coordinator import _artifact_destination
+
+    payload = {"sources": [{"safe_name": "slides.pdf", "sha256": "b" * 64}]}
+
+    assert _artifact_destination(payload, logical_name="source-slides", sha256="b" * 64) == str(
+        Path("01_源文件") / "slides.pdf"
+    )

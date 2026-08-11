@@ -122,29 +122,31 @@ class HttpPeripheralClient:
     def stream_artifact(self, job_id: UUID, artifact_id: UUID) -> Iterator[bytes]:
         def chunks() -> Iterator[bytes]:
             try:
-                with httpx.Client(
-                    base_url=self.base_url,
-                    timeout=self.timeout_seconds,
-                    transport=self.transport,
-                ) as client:
-                    with client.stream(
+                with (
+                    httpx.Client(
+                        base_url=self.base_url,
+                        timeout=self.timeout_seconds,
+                        transport=self.transport,
+                    ) as client,
+                    client.stream(
                         "GET",
                         f"/internal/v1/jobs/{job_id}/artifacts/{artifact_id}/content",
-                    ) as response:
-                        if response.status_code >= 400:
-                            raise _rejected(response)
-                        content_length = response.headers.get("content-length")
-                        digest = response.headers.get("digest", "")
-                        if not content_length or not content_length.isdigit():
-                            raise PeripheralUnavailable("artifact response has invalid length")
-                        if not digest.startswith("sha-256="):
-                            raise PeripheralUnavailable("artifact response has invalid digest")
-                        total = 0
-                        for chunk in response.iter_bytes():
-                            total += len(chunk)
-                            yield chunk
-                        if total != int(content_length):
-                            raise PeripheralUnavailable("artifact response length changed")
+                    ) as response,
+                ):
+                    if response.status_code >= 400:
+                        raise _rejected(response)
+                    content_length = response.headers.get("content-length")
+                    digest = response.headers.get("digest", "")
+                    if not content_length or not content_length.isdigit():
+                        raise PeripheralUnavailable("artifact response has invalid length")
+                    if not digest.startswith("sha-256="):
+                        raise PeripheralUnavailable("artifact response has invalid digest")
+                    total = 0
+                    for chunk in response.iter_bytes():
+                        total += len(chunk)
+                        yield chunk
+                    if total != int(content_length):
+                        raise PeripheralUnavailable("artifact response length changed")
             except httpx.RequestError as error:
                 raise PeripheralUnavailable(type(error).__name__) from error
 

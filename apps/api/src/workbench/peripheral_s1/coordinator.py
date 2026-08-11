@@ -174,20 +174,11 @@ class S1Coordinator:
             for artifact in artifacts:
                 if artifact.logical_name == "business-result":
                     continue
-                destination_name = artifact.logical_name
-                for value in business_result.payload.values():
-                    if isinstance(value, list):
-                        for item in value:
-                            if isinstance(item, dict) and item.get("sha256") == artifact.sha256:
-                                safe_name = item.get("safe_name")
-                                if isinstance(safe_name, str):
-                                    destination_name = str(Path("01_源文件") / safe_name)
-                                relative_path = item.get("relative_path")
-                                if isinstance(relative_path, str) and not isinstance(
-                                    safe_name, str
-                                ):
-                                    destination_name = relative_path
-                                break
+                destination_name = _artifact_destination(
+                    business_result.payload,
+                    logical_name=artifact.logical_name,
+                    sha256=artifact.sha256,
+                )
                 materialize_artifact(
                     self.adapter,
                     job_id=job_id,
@@ -380,3 +371,35 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _artifact_destination(payload: object, *, logical_name: str, sha256: str) -> str:
+    descriptor = _find_artifact_descriptor(payload, logical_name=logical_name, sha256=sha256)
+    if descriptor is None:
+        return logical_name
+    safe_name = descriptor.get("safe_name")
+    if isinstance(safe_name, str):
+        return str(Path("01_源文件") / safe_name)
+    relative_path = descriptor.get("relative_path")
+    return relative_path if isinstance(relative_path, str) else logical_name
+
+
+def _find_artifact_descriptor(
+    value: object, *, logical_name: str, sha256: str
+) -> dict[str, object] | None:
+    if isinstance(value, dict):
+        declared_name = value.get("logical_name")
+        if value.get("sha256") == sha256 and (
+            declared_name is None or declared_name == logical_name
+        ):
+            return value
+        for child in value.values():
+            match = _find_artifact_descriptor(child, logical_name=logical_name, sha256=sha256)
+            if match is not None:
+                return match
+    elif isinstance(value, (list, tuple)):
+        for child in value:
+            match = _find_artifact_descriptor(child, logical_name=logical_name, sha256=sha256)
+            if match is not None:
+                return match
+    return None

@@ -2,8 +2,17 @@
 
 ## Unreleased
 
+- Completed the asynchronous final-render API, resumable checkpoints, safe
+  cancellation cleanup, artifact-verified result reuse, diagnostic queue
+  counters, and the accessible React render-job panel.
 - Added the reference-video effect engine E00-E11 artifacts, deterministic
   validation/fallback, 40-page visual manifest, and Windows RC1 acceptance plan.
+- Added the optional human-presenter P00-P12 implementation: explicit opt-in,
+  local ASR and slide matching, lockable presenter timeline, single-master-audio
+  rendering, content-aware placement, recovery/fallback, and RC1 evidence gates.
+- Keep presenter mode `internal` while private-fixture performance, Windows
+  recovery, antivirus, AI-mode installed-RC regression, and operator sign-off
+  remain `pending_manual_windows`.
 - Windows installer, GUI, real-project rendering, and operator sign-off remain
   pending manual acceptance; no release claim is made by automated tests.
 - Keep v1.0.0 release status explicit while RC1 awaits Windows manual sign-off.

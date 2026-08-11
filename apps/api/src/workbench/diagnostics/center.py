@@ -34,6 +34,7 @@ CHECK_IDS: tuple[str, ...] = (
     "secret_references",
     "temporary_directory",
     "video_encoder",
+    "render_worker",
 )
 
 _CHECK_LABELS = {
@@ -50,6 +51,7 @@ _CHECK_LABELS = {
     "secret_references": "密钥引用",
     "temporary_directory": "临时目录",
     "video_encoder": "视频编码能力",
+    "render_worker": "渲染任务工作器",
 }
 
 

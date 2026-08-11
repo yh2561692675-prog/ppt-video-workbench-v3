@@ -132,13 +132,7 @@ def test_publish_output_rejects_existing_version_directory(tmp_path: Path):
     staged_path = attempt_root / "echo.txt"
     staged_path.write_text("new", encoding="utf-8")
     version_root = (
-        tmp_path
-        / "projects"
-        / str(project_id)
-        / "state"
-        / "artifacts"
-        / "echo-text"
-        / "v0001"
+        tmp_path / "projects" / str(project_id) / "state" / "artifacts" / "echo-text" / "v0001"
     )
     version_root.mkdir(parents=True)
 

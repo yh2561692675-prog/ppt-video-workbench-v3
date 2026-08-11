@@ -53,3 +53,16 @@ PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-m6 pnpm exec playwright test
 ```
 
 Task 27—31 的专项回归、契约快照、全量 Python、前端/Remotion、生产构建与 Playwright 均已通过。当前容器没有 PowerShell，因此 `scripts/kill-recovery-test.ps1` 仅在 Windows 验证；Linux 等价恢复矩阵已通过。
+
+## 2026-08-11 恢复窗口复核
+
+以下结果是在恢复分支 `recovery/root-snapshot-20260810` 的当前工作树上重新执行，覆盖 Task 27—31 的专项实现；它们不替换上面的历史记录，也不表示已经创建新的 Git 提交：
+
+```text
+Python focused M6 suites: 61 passed, 1 existing pytest cache warning
+Ruff (preflight/cache/jobs and focused tests): All checks passed
+mypy (preflight/cache/jobs): Success: no issues found in 22 source files
+Web PreflightWorkspace: 2 passed
+```
+
+当前恢复分支的 HEAD 为 `956929e`；Task 27—31 的变更仍属于恢复工作树中的未提交内容，历史表中的提交号只作来源记录。后续若要合入主线，必须先按文件审查并单独提交，不能把恢复快照直接视为已合入。

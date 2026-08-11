@@ -5,6 +5,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from peripheral_contracts.business_results import BusinessResultManifest
 from peripheral_contracts.models import (
     ArtifactManifest,
     EventEnvelope,
@@ -12,7 +13,6 @@ from peripheral_contracts.models import (
     JobResult,
     ModuleManifest,
 )
-from peripheral_contracts.business_results import BusinessResultManifest
 
 SCHEMA_MODELS: dict[str, type[BaseModel]] = {
     "job-envelope-1.0.json": JobEnvelope,

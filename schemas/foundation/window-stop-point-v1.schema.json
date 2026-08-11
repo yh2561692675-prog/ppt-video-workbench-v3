@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "workbench://schemas/foundation/window-stop-point-v1.schema.json",
+  "title": "WindowStopPointV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "window_id",
+    "task_name",
+    "mode",
+    "repository",
+    "owned_paths",
+    "shared_paths_touched",
+    "completed",
+    "remaining",
+    "evidence_refs",
+    "will_write_again",
+    "safe_resume"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "window_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "task_name": { "type": "string", "minLength": 1, "maxLength": 240 },
+    "mode": { "enum": ["writer", "read_only", "idle"] },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "branch", "head", "status_manifest_sha256"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "branch": { "type": "string", "minLength": 1 },
+        "head": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "status_manifest_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "owned_paths": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "shared_paths_touched": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "completed": { "type": "array", "items": { "type": "string" } },
+    "remaining": { "type": "array", "items": { "type": "string" } },
+    "evidence_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "will_write_again": { "type": "boolean" },
+    "safe_resume": { "type": "string", "minLength": 1, "maxLength": 4000 }
+  }
+}

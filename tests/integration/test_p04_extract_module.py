@@ -29,23 +29,33 @@ def test_p04_projector_updates_pages_and_extractions(tmp_path: Path) -> None:
         input_fingerprint="a" * 64,
         cache_key="b" * 64,
         result_type="document_extraction",
-        payload={"documents": [{
-            "source_name": "demo.pptx",
+        payload={
+            "operation": "extract",
+            "documents": [
+                {
+                    "source_name": "demo.pptx",
+                    "page_count": 1,
+                    "cache_key": "d" * 64,
+                    "outline": {"source_name": "demo.pptx", "blocks": []},
+                    "pages": [
+                        {
+                            "id": str(page_id),
+                            "order": 1,
+                            "text": "hello",
+                            "title": "Title",
+                            "spans": [],
+                            "hidden": False,
+                            "rotation": 0,
+                            "needs_confirmation": False,
+                            "extraction_method": "pptx",
+                            "source_ref": "slide:1",
+                        }
+                    ],
+                }
+            ],
+            "previews": [],
             "page_count": 1,
-            "outline": {"source_name": "demo.pptx", "blocks": []},
-            "pages": [{
-                "id": str(page_id),
-                "order": 1,
-                "text": "hello",
-                "title": "Title",
-                "spans": [],
-                "hidden": False,
-                "rotation": 0,
-                "needs_confirmation": False,
-                "extraction_method": "pptx",
-                "source_ref": "slide:1",
-            }],
-        }]},
+        },
     )
 
     project_document_extraction(result, tmp_path)

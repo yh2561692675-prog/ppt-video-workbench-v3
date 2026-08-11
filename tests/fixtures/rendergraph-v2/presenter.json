@@ -1,0 +1,19 @@
+{
+  "fixture_id": "presenter",
+  "description": "Presenter layer with slide fallback and narration ownership",
+  "network_required": false,
+  "canvas": { "width": 1920, "height": 1080, "fps_num": 30, "fps_den": 1, "duration_us": 15000000 },
+  "legacy_entrypoints": [
+    "workbench.rendering.exporter.render_with_presenter_fallback",
+    "Remotion ProjectVideoProps",
+    "FFmpeg mux"
+  ],
+  "legacy_output": {
+    "keyframes": [],
+    "audio_waveform": [],
+    "duration_us": 15000000,
+    "codec": "not-rendered-in-baseline",
+    "sha256": null
+  },
+  "notes": "Presenter media is represented by metadata only so the fixture remains offline."
+}

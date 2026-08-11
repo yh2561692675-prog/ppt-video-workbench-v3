@@ -4,6 +4,7 @@ from pathlib import Path
 
 from workbench.domain.issues import IssueLevel, IssueLocation, PreflightIssue
 from workbench.domain.models import ProjectManifest
+from workbench.domain.presenter import PresentationMode
 
 from .common import digest, issue
 
@@ -22,6 +23,17 @@ def fingerprint(project: ProjectManifest, root: Path) -> str:
             "timeline": (
                 project.audio_timeline.model_dump(mode="json") if project.audio_timeline else None
             ),
+            "presentation_mode": project.presentation_mode,
+            "presenter_source": (
+                project.presenter_source.model_dump(mode="json")
+                if project.presenter_source
+                else None
+            ),
+            "presenter_timeline": (
+                project.presenter_timeline.model_dump(mode="json")
+                if project.presenter_timeline
+                else None
+            ),
             "root": str(root),
         }
     )
@@ -29,6 +41,8 @@ def fingerprint(project: ProjectManifest, root: Path) -> str:
 
 def check_audio(project: ProjectManifest, root: Path) -> tuple[str, list[PreflightIssue]]:
     check_fingerprint = fingerprint(project, root)
+    if project.presentation_mode is PresentationMode.HUMAN_PRESENTER:
+        return check_fingerprint, []
     issues: list[PreflightIssue] = []
     for page in project.pages:
         audio = page.audio

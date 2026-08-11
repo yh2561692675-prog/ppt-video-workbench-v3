@@ -17,6 +17,14 @@ import { SubtitleActions } from '../subtitles/SubtitleActions';
 import { PreviewWorkspace } from '../video/PreviewWorkspace';
 import { EffectWorkspace } from '../effects/EffectWorkspace';
 import { RenderJobPanel } from '../video/RenderJobPanel';
+import { PresenterWorkspace } from '../presenter/PresenterWorkspace';
+import { PresenterModeEntry } from '../presenter/PresenterModeEntry';
+import { QualityPanel } from '../quality/QualityPanel';
+import { SubtitleWorkbench } from '../subtitles/SubtitleWorkbench';
+import { TimelineWorkspace, type TimelineTrackView } from '../timeline/TimelineWorkspace';
+import { ContinuityWorkspace } from '../continuity/ContinuityWorkspace';
+import { ExportPresetWorkspace } from '../exports/ExportPresetWorkspace';
+import { BatchProductionWorkspace } from '../scheduler/BatchProductionWorkspace';
 
 const STEPS = [
   '新建项目',
@@ -52,6 +60,39 @@ export function WorkflowShell() {
     queryKey: ['preflight', projectId],
     queryFn: () => api.getPreflight(projectId),
     enabled: Boolean(projectId) && (projectQuery.data?.current_step ?? 0) >= 6,
+  });
+  const timelineQuery = useQuery({
+    queryKey: ['production-timeline', projectId],
+    queryFn: () => api.getTimeline(projectId),
+    enabled: Boolean(projectId) && (projectQuery.data?.current_step ?? 0) >= 6,
+    retry: false,
+  });
+  const subtitleWorkbenchQuery = useQuery({
+    queryKey: ['subtitle-workbench', projectId],
+    queryFn: () => api.getSubtitleWorkbench(projectId),
+    enabled: Boolean(projectId) && (projectQuery.data?.current_step ?? 0) >= 6,
+    retry: false,
+  });
+  const continuityQuery = useQuery({
+    queryKey: ['continuity-plan', projectId],
+    queryFn: () => api.getContinuityPlan(projectId),
+    enabled: Boolean(projectId) && (projectQuery.data?.current_step ?? 0) >= 6,
+    retry: false,
+  });
+  const exportPresetsQuery = useQuery({
+    queryKey: ['export-presets', projectId],
+    queryFn: () => api.exportPresets(projectId),
+    enabled: Boolean(projectId) && (projectQuery.data?.current_step ?? 0) >= 7,
+  });
+  const exportPlansQuery = useQuery({
+    queryKey: ['export-plans', projectId],
+    queryFn: () => api.exportPlans(projectId),
+    enabled: Boolean(projectId) && (projectQuery.data?.current_step ?? 0) >= 7,
+  });
+  const batchProductionsQuery = useQuery({
+    queryKey: ['batch-productions', projectId],
+    queryFn: () => api.listBatchProductions(projectId),
+    enabled: Boolean(projectId) && (projectQuery.data?.current_step ?? 0) >= 7,
   });
   const [selectedAudioRoute, setSelectedAudioRoute] = useState<AudioRoute>(null);
   const persistedAudioRoute = inferAudioRoute(projectQuery.data);
@@ -112,6 +153,66 @@ export function WorkflowShell() {
       api.confirmPreflightIssue(projectId, issueId, actor, note),
     onSuccess: (result) => queryClient.setQueryData(['preflight', projectId], result),
   });
+  const timelineCommandMutation = useMutation({
+    mutationFn: (command: { kind: string; payload: Record<string, unknown> }) =>
+      api.timelineCommand(projectId, {
+        command_id: crypto.randomUUID(),
+        expected_revision: timelineQuery.data?.revision ?? 1,
+        kind: command.kind,
+        payload: command.payload,
+      }),
+    onSuccess: (result) => queryClient.setQueryData(['production-timeline', projectId], result),
+  });
+  const timelineCompileMutation = useMutation({
+    mutationFn: () => api.compileTimeline(projectId),
+  });
+  const subtitleWorkbenchMutation = useMutation({
+    mutationFn: (command: { kind: string; payload: Record<string, unknown> }) =>
+      api.subtitleWorkbenchCommand(projectId, {
+        command_id: crypto.randomUUID(),
+        expected_revision: subtitleWorkbenchQuery.data?.revision ?? 1,
+        kind: command.kind,
+        payload: command.payload,
+      }),
+    onSuccess: (result) => queryClient.setQueryData(['subtitle-workbench', projectId], result),
+  });
+  const subtitleTranslateMutation = useMutation({
+    mutationFn: (language: string) =>
+      api.subtitleWorkbenchTranslate(projectId, {
+        language,
+        label: language === 'en' ? 'English' : language,
+      }),
+    onSuccess: (result) =>
+      queryClient.setQueryData(['subtitle-workbench', projectId], result.document),
+  });
+  const continuityMutation = useMutation({
+    mutationFn: (command: { kind: string; payload: Record<string, unknown> }) =>
+      api.continuityCommand(projectId, {
+        command_id: crypto.randomUUID(),
+        expected_revision: continuityQuery.data?.revision ?? 1,
+        kind: command.kind,
+        payload: command.payload,
+      }),
+    onSuccess: (result) => queryClient.setQueryData(['continuity-plan', projectId], result),
+  });
+  const exportPlanMutation = useMutation({
+    mutationFn: (presetId: string) => api.createExportPlan(projectId, { preset_id: presetId }),
+    onSuccess: () => void exportPlansQuery.refetch(),
+  });
+  const batchCreateMutation = useMutation({
+    mutationFn: (payload: Record<string, unknown>) => api.createBatchProduction(projectId, payload),
+    onSuccess: () => void batchProductionsQuery.refetch(),
+  });
+  const batchDispatchMutation = useMutation({
+    mutationFn: ({ batchId, allowNight }: { batchId: string; allowNight: boolean }) =>
+      api.dispatchBatchProduction(projectId, batchId, { allow_night: allowNight }),
+    onSuccess: () => void batchProductionsQuery.refetch(),
+  });
+  const batchRerunMutation = useMutation({
+    mutationFn: ({ batchId, itemIds }: { batchId: string; itemIds: string[] }) =>
+      api.rerunBatchFailures(projectId, batchId, itemIds),
+    onSuccess: () => void batchProductionsQuery.refetch(),
+  });
   const pauseMutation = useMutation({ mutationFn: () => api.pause(projectId), onSuccess: accept });
   const resumeMutation = useMutation({
     mutationFn: () => api.resume(projectId),
@@ -125,6 +226,22 @@ export function WorkflowShell() {
   const paused = project.status === 'paused';
   const legacyRenderPanelEnabled = false;
   const subtitlesUnlocked = audioGateQuery.data?.allowed === true;
+  const timelineTracks: TimelineTrackView[] = (timelineQuery.data?.tracks ?? []).map((track) => ({
+    id: track.id,
+    name: track.name,
+    kind: track.kind,
+    order: track.order,
+    muted: track.muted,
+    locked: track.locked,
+    clips: track.clips.map((clip) => ({
+      id: clip.id,
+      kind: clip.kind,
+      start_us: clip.start_us,
+      duration_us: clip.duration_us,
+      source_ref: clip.source_ref,
+      locked: clip.locked,
+    })),
+  }));
   const pageLabels = Object.fromEntries(
     project.pages.map((page) => [page.id, `第${page.order}页`]),
   );
@@ -193,46 +310,79 @@ export function WorkflowShell() {
               matches={project.matches ?? []}
             />
           )}
-          {project.current_step === 5 && (
-            <>
-              <AudioImport
-                projectId={project.id}
-                initialAudio={project.audio_import ?? null}
-                disabled={audioRoute === 'heygen'}
-                disabledReason="HeyGen 页面配音路线已启用，不能同时导入本地录音。"
-                onImported={() => claimAudioRoute('local')}
-              />
-              <HeyGenAudioPanel
-                projectId={project.id}
-                pages={project.pages}
-                localAudioActive={audioRoute === 'local'}
-                isLocalAudioActive={() => audioRouteRef.current === 'local'}
-                onStarted={() => claimAudioRoute('heygen')}
-                onChanged={refreshAudioState}
-              />
-              <AudioPipelineActions projectId={project.id} onChanged={refreshAudioState} />
-              <AudioGatePanel gate={audioGateQuery.data ?? null} pageLabels={pageLabels} />
-              <SubtitleActions
-                projectId={project.id}
-                allowed={subtitlesUnlocked}
-                onChanged={refreshVideoState}
-              />
-              <AudioDifferences
-                projectId={project.id}
-                differences={project.audio_differences ?? []}
-                onChanged={refreshAudioState}
-              />
-              {project.audio_timeline && (
-                <AudioTimeline
+          {project.current_step === 5 &&
+            (project.presentation_mode === 'human_presenter' ? (
+              <PresenterWorkspace project={project} onChanged={accept} />
+            ) : (
+              <>
+                <PresenterModeEntry projectId={project.id} onChanged={accept} />
+                <AudioImport
                   projectId={project.id}
-                  initialTimeline={project.audio_timeline}
+                  initialAudio={project.audio_import ?? null}
+                  disabled={audioRoute === 'heygen'}
+                  disabledReason="HeyGen 页面配音路线已启用，不能同时导入本地录音。"
+                  onImported={() => claimAudioRoute('local')}
+                />
+                <HeyGenAudioPanel
+                  projectId={project.id}
+                  pages={project.pages}
+                  localAudioActive={audioRoute === 'local'}
+                  isLocalAudioActive={() => audioRouteRef.current === 'local'}
+                  onStarted={() => claimAudioRoute('heygen')}
                   onChanged={refreshAudioState}
                 />
-              )}
-            </>
-          )}
+                <AudioPipelineActions projectId={project.id} onChanged={refreshAudioState} />
+                <AudioGatePanel gate={audioGateQuery.data ?? null} pageLabels={pageLabels} />
+                <SubtitleActions
+                  projectId={project.id}
+                  allowed={subtitlesUnlocked}
+                  onChanged={refreshVideoState}
+                />
+                <AudioDifferences
+                  projectId={project.id}
+                  differences={project.audio_differences ?? []}
+                  onChanged={refreshAudioState}
+                />
+                {project.audio_timeline && (
+                  <AudioTimeline
+                    projectId={project.id}
+                    initialTimeline={project.audio_timeline}
+                    onChanged={refreshAudioState}
+                  />
+                )}
+              </>
+            ))}
           {project.current_step === 6 && (
             <>
+              {continuityQuery.data && (
+                <ContinuityWorkspace
+                  plan={continuityQuery.data}
+                  pageLabels={pageLabels}
+                  onCommand={(command) => continuityMutation.mutate(command)}
+                />
+              )}
+              {subtitleWorkbenchQuery.data && (
+                <SubtitleWorkbench
+                  document={subtitleWorkbenchQuery.data}
+                  onCommand={(command) => subtitleWorkbenchMutation.mutate(command)}
+                  onTranslate={(language) => subtitleTranslateMutation.mutate(language)}
+                />
+              )}
+              {timelineQuery.data && (
+                <TimelineWorkspace
+                  durationUs={timelineQuery.data.duration_us}
+                  revision={timelineQuery.data.revision}
+                  tracks={timelineTracks}
+                  onSelectClip={() => undefined}
+                  onCommand={(command) => {
+                    if (command.kind === 'compile') {
+                      timelineCompileMutation.mutate();
+                      return;
+                    }
+                    timelineCommandMutation.mutate(command);
+                  }}
+                />
+              )}
               <EffectWorkspace projectId={project.id} />
               <PreviewWorkspace
                 projectId={project.id}
@@ -265,13 +415,38 @@ export function WorkflowShell() {
               />
             </>
           )}
-          {project.current_step === 7 && <RenderJobPanel projectId={project.id} enabled />}
+          {project.current_step === 7 && (
+            <>
+              {exportPresetsQuery.data && exportPlansQuery.data && (
+                <ExportPresetWorkspace
+                  presets={exportPresetsQuery.data}
+                  plans={exportPlansQuery.data}
+                  onCreatePlan={(presetId) => exportPlanMutation.mutate(presetId)}
+                />
+              )}
+              {exportPresetsQuery.data && batchProductionsQuery.data && (
+                <BatchProductionWorkspace
+                  batches={batchProductionsQuery.data}
+                  presetIds={exportPresetsQuery.data.map((preset) => preset.id)}
+                  onCreate={(payload) => batchCreateMutation.mutate(payload)}
+                  onDispatch={(batchId, allowNight) =>
+                    batchDispatchMutation.mutate({ batchId, allowNight })
+                  }
+                  onRerun={(batchId, itemIds) => batchRerunMutation.mutate({ batchId, itemIds })}
+                />
+              )}
+              <RenderJobPanel projectId={project.id} enabled />
+              <QualityPanel project={project} />
+            </>
+          )}
           {legacyRenderPanelEnabled && project!.current_step === 7 && (
             <section className="video-render-panel" aria-label="渲染与导出">
               <p className="success">完整预检已通过，可以开始渲染与导出。</p>
               <button
                 className="primary"
-                disabled={createRenderJobMutation.isPending || preflightQuery.data?.allowed !== true}
+                disabled={
+                  createRenderJobMutation.isPending || preflightQuery.data?.allowed !== true
+                }
                 onClick={() => createRenderJobMutation.mutate()}
               >
                 {createRenderJobMutation.isPending ? '正在提交任务…' : '开始渲染与导出'}
@@ -280,9 +455,7 @@ export function WorkflowShell() {
                 <p className="error">渲染失败。请检查预检结果和本地渲染环境后重试。</p>
               )}
               {createRenderJobMutation.data && (
-                <p className="success">
-                  渲染任务已提交：{createRenderJobMutation.data?.job.id}
-                </p>
+                <p className="success">渲染任务已提交：{createRenderJobMutation.data?.job.id}</p>
               )}
             </section>
           )}

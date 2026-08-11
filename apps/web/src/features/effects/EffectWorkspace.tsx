@@ -22,16 +22,28 @@ export function EffectWorkspace({ projectId }: { projectId: string }) {
       <div className="preview-heading">
         <div>
           <h3>特效引擎 V2</h3>
-          <p className="muted">目录 {workspace.data.catalog_version} · {pages.length} 页</p>
+          <p className="muted">
+            目录 {workspace.data.catalog_version} · {pages.length} 页
+          </p>
         </div>
-        <button className="secondary" disabled={generate.isPending} onClick={() => generate.mutate()}>
-          {generate.isPending ? '正在生成……' : missing ? `生成缺失计划（${missing}）` : '重新生成未锁定页'}
+        <button
+          className="secondary"
+          disabled={generate.isPending}
+          onClick={() => generate.mutate()}
+        >
+          {generate.isPending
+            ? '正在生成……'
+            : missing
+              ? `生成缺失计划（${missing}）`
+              : '重新生成未锁定页'}
         </button>
       </div>
       <ul className="effect-page-status">
         {pages.map((page) => (
           <li key={page.page_id}>
-            <span>第{page.page_order}页 {page.title ?? ''}</span>
+            <span>
+              第{page.page_order}页 {page.title ?? ''}
+            </span>
             <span className="status-pill">
               {page.record ? `${page.record.status} · r${page.record.revision}` : '未生成'}
             </span>

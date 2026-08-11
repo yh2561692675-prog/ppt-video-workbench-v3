@@ -1,4 +1,6 @@
 import type { EffectPlanV2 } from '../../../../remotion/src/types';
+import type { RenderGraphV2 } from '../../../../remotion/src/render-graph/types';
+import type { PresenterSource, PresenterTimeline } from '../features/presenter/api';
 
 export type NodeStatus =
   | 'not_started'
@@ -29,6 +31,10 @@ export interface Project {
   audio_timeline?: AudioTimelineRecord | null;
   preflight_report?: PreflightReport | null;
   preflight_history?: string[];
+  presentation_mode?: 'ai_narration' | 'human_presenter';
+  presenter_source?: PresenterSource | null;
+  presenter_timeline?: PresenterTimeline | null;
+  video_export?: VideoExportResult | null;
 }
 
 export interface AudioTimelineRecord {
@@ -190,6 +196,141 @@ export interface VideoExportResult {
   cached_pages: number;
 }
 
+export interface QualityIssue {
+  issue_id: string;
+  code: string;
+  severity: 'P0' | 'P1' | 'P2' | 'P3';
+  scope: string;
+  message: string;
+  action: string;
+  start_ms?: number | null;
+  end_ms?: number | null;
+  page_id?: string | null;
+}
+
+export interface QualityReport {
+  result: 'pass' | 'pass_with_warnings' | 'blocked';
+  issues: QualityIssue[];
+  sampled_frames: number[];
+  analyzer_versions: Record<string, string>;
+  report_path?: string | null;
+}
+
+export interface QualityJobRecord {
+  job_id: string;
+  project_id: string;
+  render_job_id: string;
+  status: 'running' | 'succeeded' | 'blocked' | 'failed';
+  report: QualityReport | null;
+  error_code: string | null;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductionTimelineRecord {
+  schema_version: string;
+  project_id: string;
+  revision: number;
+  fps: number;
+  width: number;
+  height: number;
+  duration_us: number;
+  tracks: Array<{
+    id: string;
+    kind: string;
+    name: string;
+    order: number;
+    muted: boolean;
+    locked: boolean;
+    clips: Array<{
+      id: string;
+      track_id: string;
+      kind: string;
+      start_us: number;
+      duration_us: number;
+      source_ref: string;
+      locked: boolean;
+      payload: Record<string, unknown>;
+    }>;
+  }>;
+  markers: Array<{ id: string; start_us: number; label: string; kind: string }>;
+  input_fingerprint: string;
+  content_hash: string;
+}
+
+export interface RenderGraphRecord {
+  schema_version: string;
+  project_id: string;
+  timeline_revision: number;
+  duration_us: number;
+  content_hash: string;
+  nodes: Array<{
+    id: string;
+    clip_id: string;
+    track_id: string;
+    kind: string;
+    start_us: number;
+    end_us: number;
+    source_ref: string;
+    cache_key: string;
+    depends_on: string[];
+  }>;
+}
+
+export type RenderGraphV2Record = RenderGraphV2;
+
+export interface AssetRecord {
+  asset_id: string;
+  revision: number;
+  project_id: string;
+  kind: string;
+  content_hash: string;
+  relative_object_path: string;
+  original_name: string;
+  mime_type: string;
+  size_bytes: number;
+  license: { status: 'unknown' | 'confirmed' | 'expired' | 'blocked'; owner?: string | null };
+  tags: string[];
+  brand_pack_id?: string | null;
+  derived_from?: string | null;
+  operation?: string | null;
+}
+
+export interface MaterialCollectionRecord {
+  schema_version: string;
+  collection_id: string;
+  revision: number;
+  project_id: string;
+  outline_mode: 'none' | 'generated' | 'selected' | 'merged';
+  merge_policy: 'manual' | 'append' | 'chapter_match';
+  documents: Array<{ document_id: string; title: string; role: string; enabled: boolean }>;
+  presentations: Array<{
+    presentation_id: string;
+    title: string;
+    enabled: boolean;
+    page_count?: number | null;
+  }>;
+  sections: Array<{
+    section_id: string;
+    order: number;
+    title: string;
+    enabled: boolean;
+    page_ids: string[];
+  }>;
+  page_sequence: Array<{
+    material_page_id: string;
+    source_ref: string;
+    order: number;
+    title: string;
+    section_id?: string | null;
+    enabled: boolean;
+  }>;
+  content_hash: string;
+}
+
+export type QualityIssueAction = 'confirm' | 'retry';
+
 export type RenderJobStatus =
   | 'queued'
   | 'running'
@@ -291,6 +432,161 @@ export interface SubtitleTimelineRecord {
     text: string;
     source_word_indexes: number[];
   }>;
+}
+
+export interface SubtitleStyleTemplateRecord {
+  id: string;
+  name: string;
+  font_family: string;
+  font_size: number;
+  color: string;
+  outline_color: string;
+  outline_width: number;
+  background_color: string;
+  background_opacity: number;
+  position: 'top' | 'center' | 'bottom';
+  animation: 'none' | 'fade' | 'word_highlight';
+  highlight_color: string;
+}
+
+export interface SubtitleWorkbenchCueRecord {
+  id: string;
+  start_ms: number;
+  end_ms: number;
+  text: string;
+  translation: string | null;
+  words: Array<{ text: string; start_ms: number; end_ms: number; highlighted: boolean }>;
+  style_template_id: string | null;
+  style_override: SubtitleStyleTemplateRecord | null;
+  line_breaks: number[];
+  source_word_indexes: number[];
+  locked: boolean;
+}
+
+export interface SubtitleWorkbenchTrackRecord {
+  id: string;
+  language: string;
+  label: string;
+  primary: boolean;
+  visible: boolean;
+  cues: SubtitleWorkbenchCueRecord[];
+}
+
+export interface SubtitleWorkbenchRecord {
+  version: number;
+  revision: number;
+  duration_ms: number;
+  render_mode: 'soft' | 'burn_in';
+  default_style: SubtitleStyleTemplateRecord;
+  templates: SubtitleStyleTemplateRecord[];
+  tracks: SubtitleWorkbenchTrackRecord[];
+  updated_at: string;
+  content_hash: string;
+}
+
+export interface ContinuityPlanRecord {
+  version: number;
+  revision: number;
+  project_id: string;
+  duration_ms: number;
+  transitions: Array<{
+    id: string;
+    from_page_id: string;
+    to_page_id: string;
+    kind: 'cut' | 'dissolve' | 'wipe' | 'slide' | 'match';
+    duration_ms: number;
+    audio_mode: 'cut' | 'j_cut' | 'l_cut';
+    audio_offset_ms: number;
+    easing: 'linear' | 'ease_in' | 'ease_out' | 'ease_in_out';
+    enabled: boolean;
+    chapter_boundary: boolean;
+  }>;
+  overlays: Array<{
+    id: string;
+    source_ref: string;
+    kind: 'image' | 'video' | 'logo' | 'sticker' | 'text';
+    start_ms: number;
+    duration_ms: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    opacity: number;
+    crop: 'contain' | 'cover' | 'fill';
+    mask: 'none' | 'circle' | 'rounded';
+    enter_ms: number;
+    exit_ms: number;
+    license_asset_id: string | null;
+    z_index: number;
+  }>;
+  chapters: Array<{
+    id: string;
+    title: string;
+    start_ms: number;
+    end_ms: number;
+    page_ids: string[];
+  }>;
+  content_hash: string;
+}
+
+export interface ExportPresetRecord {
+  id: string;
+  label: string;
+  platform: 'master' | 'youtube' | 'bilibili' | 'douyin' | 'instagram' | 'gif';
+  width: number;
+  height: number;
+  fps: 24 | 25 | 30 | 60;
+  video_bitrate: string;
+  audio_bitrate: string;
+  container: 'mp4' | 'gif';
+  video_codec: 'libx264' | 'libx265' | 'gif';
+  max_segment_seconds: number | null;
+}
+
+export interface ExportPlanRecord {
+  plan_id: string;
+  project_id: string;
+  revision: number;
+  created_at: string;
+  preset: ExportPresetRecord;
+  source_timeline_revision: number | null;
+  output_relative_path: string;
+  segment_paths: string[];
+  ffmpeg_video_filter: string;
+  execution_ready: boolean;
+  content_hash: string;
+}
+
+export interface BatchProductionRecord {
+  version: number;
+  revision: number;
+  batch_id: string;
+  project_id: string;
+  created_at: string;
+  status: 'queued' | 'running' | 'succeeded' | 'partial' | 'failed' | 'cancelled';
+  night_queue: boolean;
+  resource_limits: {
+    max_parallel: number;
+    cpu_cores: number;
+    memory_mb: number;
+    gpu_slots: number;
+    per_job_memory_mb: number;
+  };
+  items: Array<{
+    item_id: string;
+    preset_id: string;
+    page_id: string | null;
+    priority: number;
+    dependencies: string[];
+    resource_cpu: number;
+    resource_memory_mb: number;
+    resource_gpu: number;
+    status: 'queued' | 'dispatched' | 'running' | 'succeeded' | 'failed' | 'cancelled';
+    job_id: string | null;
+    attempts: number;
+    error: string | null;
+  }>;
+  content_hash: string;
 }
 
 export interface AudioImportRecord {
@@ -611,6 +907,59 @@ export const api = {
     }),
   buildSubtitles: (id: string) =>
     request<SubtitleTimelineRecord>(`/api/projects/${id}/subtitles/build`, { method: 'POST' }),
+  getSubtitleWorkbench: (id: string) =>
+    request<SubtitleWorkbenchRecord>(`/api/projects/${id}/subtitle-workbench`),
+  createSubtitleWorkbench: (id: string) =>
+    request<SubtitleWorkbenchRecord>(`/api/projects/${id}/subtitle-workbench`, { method: 'POST' }),
+  subtitleWorkbenchCommand: (id: string, command: Record<string, unknown>) =>
+    request<SubtitleWorkbenchRecord>(`/api/projects/${id}/subtitle-workbench/commands`, {
+      method: 'POST',
+      body: JSON.stringify(command),
+    }),
+  subtitleWorkbenchTranslate: (id: string, payload: Record<string, unknown>) =>
+    request<{ document: SubtitleWorkbenchRecord; translated_cue_count: number }>(
+      `/api/projects/${id}/subtitle-workbench/translate`,
+      { method: 'POST', body: JSON.stringify(payload) },
+    ),
+  getContinuityPlan: (id: string) =>
+    request<ContinuityPlanRecord>(`/api/projects/${id}/continuity`),
+  continuityCommand: (id: string, command: Record<string, unknown>) =>
+    request<ContinuityPlanRecord>(`/api/projects/${id}/continuity/commands`, {
+      method: 'POST',
+      body: JSON.stringify(command),
+    }),
+  exportPresets: (id: string) =>
+    request<ExportPresetRecord[]>(`/api/projects/${id}/exports/presets`),
+  exportPlans: (id: string) => request<ExportPlanRecord[]>(`/api/projects/${id}/exports/plans`),
+  createExportPlan: (id: string, payload: Record<string, unknown>) =>
+    request<ExportPlanRecord>(`/api/projects/${id}/exports/plans`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  listBatchProductions: (id: string) =>
+    request<BatchProductionRecord[]>(`/api/projects/${id}/batch-productions`),
+  createBatchProduction: (id: string, payload: Record<string, unknown>) =>
+    request<BatchProductionRecord>(`/api/projects/${id}/batch-productions`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  dispatchBatchProduction: (id: string, batchId: string, payload?: Record<string, unknown>) =>
+    request<{ batch: BatchProductionRecord; dispatched_item_ids: string[] }>(
+      `/api/projects/${id}/batch-productions/${batchId}/dispatch`,
+      { method: 'POST', body: JSON.stringify(payload ?? {}) },
+    ),
+  syncBatchProduction: (id: string, batchId: string) =>
+    request<BatchProductionRecord>(`/api/projects/${id}/batch-productions/${batchId}/sync`, {
+      method: 'POST',
+    }),
+  rerunBatchFailures: (id: string, batchId: string, itemIds: string[]) =>
+    request<BatchProductionRecord>(
+      `/api/projects/${id}/batch-productions/${batchId}/rerun-failed`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ item_ids: itemIds }),
+      },
+    ),
   audioGate: (id: string) => request<AudioGateResult>(`/api/projects/${id}/audio/gate`),
   videoPreflight: (id: string, settings?: { reduced_motion: boolean }) =>
     request<VideoPreflight>(`/api/projects/${id}/video/preflight`, {
@@ -624,6 +973,64 @@ export const api = {
     request<RenderJobSubmission>(`/api/projects/${id}/video/render-jobs`, { method: 'POST' }),
   getCurrentRenderJob: (id: string) =>
     request<{ job: RenderJob } | null>(`/api/projects/${id}/video/render-jobs/current`),
+  createQualityJob: (id: string, input: { video_path: string; expected_duration_ms: number }) =>
+    request<QualityJobRecord>(`/api/projects/${id}/quality/jobs`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  latestQualityJob: (id: string) => request<QualityJobRecord>(`/api/projects/${id}/quality/latest`),
+  retryQualityJob: (id: string, jobId: string) =>
+    request<QualityJobRecord>(`/api/projects/${id}/quality/jobs/${jobId}/retry`, {
+      method: 'POST',
+    }),
+  qualityIssueAction: (id: string, jobId: string, issueId: string, action: QualityIssueAction) =>
+    request<QualityJobRecord>(
+      `/api/projects/${id}/quality/jobs/${jobId}/issues/${issueId}/actions`,
+      { method: 'POST', body: JSON.stringify({ action }) },
+    ),
+  getTimeline: (id: string) => request<ProductionTimelineRecord>(`/api/projects/${id}/timeline`),
+  timelineCommand: (id: string, command: Record<string, unknown>) =>
+    request<ProductionTimelineRecord>(`/api/projects/${id}/timeline/commands`, {
+      method: 'POST',
+      body: JSON.stringify(command),
+    }),
+  timelineCommandBatch: (id: string, batch: Record<string, unknown>) =>
+    request<ProductionTimelineRecord>(`/api/projects/${id}/timeline/commands:batch`, {
+      method: 'POST',
+      body: JSON.stringify(batch),
+    }),
+  compileTimeline: (id: string) =>
+    request<RenderGraphRecord>(`/api/projects/${id}/timeline/compile`, { method: 'POST' }),
+  compileTimelineV2: (id: string) =>
+    request<RenderGraphV2Record>(`/api/projects/${id}/timeline/compile-v2`, { method: 'POST' }),
+  getRenderGraphV2: (id: string) =>
+    request<RenderGraphV2Record>(`/api/projects/${id}/render-graph-v2`),
+  listAssets: (id: string, kind?: string) =>
+    request<AssetRecord[]>(
+      `/api/projects/${id}/assets${kind ? `?kind=${encodeURIComponent(kind)}` : ''}`,
+    ),
+  getMaterialCollection: (id: string) =>
+    request<MaterialCollectionRecord>(`/api/projects/${id}/material-collections`),
+  createMaterialCollection: (id: string, collection: Record<string, unknown>) =>
+    request<MaterialCollectionRecord>(`/api/projects/${id}/material-collections`, {
+      method: 'POST',
+      body: JSON.stringify(collection),
+    }),
+  materialCommand: (id: string, command: Record<string, unknown>) =>
+    request<MaterialCollectionRecord>(`/api/projects/${id}/material-collections/commands`, {
+      method: 'POST',
+      body: JSON.stringify(command),
+    }),
+  materialSyncPreview: (id: string, timelineRevision?: number) =>
+    request<{
+      collection_revision: number;
+      timeline_revision: number | null;
+      added_page_ids: string[];
+      disabled_page_ids: string[];
+      warnings: string[];
+    }>(
+      `/api/projects/${id}/material-collections/sync-preview${timelineRevision ? `?timeline_revision=${timelineRevision}` : ''}`,
+    ),
   getRenderJob: (projectId: string, jobId: string) =>
     request<{ job: RenderJob }>(`/api/projects/${projectId}/video/render-jobs/${jobId}`),
   actOnRenderJob: (projectId: string, jobId: string, action: RenderJobAction) =>
@@ -631,8 +1038,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ action }),
     }),
-  effectWorkspace: (id: string) =>
-    request<EffectWorkspace>(`/api/projects/${id}/effects`),
+  effectWorkspace: (id: string) => request<EffectWorkspace>(`/api/projects/${id}/effects`),
   effectCatalog: (id: string) =>
     request<{ catalog_version: string; templates: Array<{ name: string; internal: boolean }> }>(
       `/api/projects/${id}/effects/catalog`,

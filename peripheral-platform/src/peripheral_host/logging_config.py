@@ -36,9 +36,7 @@ def _redact(value: object, *, parent_key: str | None) -> object:
             normalized = str(key).lower()
             if normalized in SENSITIVE_KEYS:
                 sanitized[key] = "***"
-            elif parent_key == "parameters" and normalized == "text" and isinstance(
-                child, str
-            ):
+            elif parent_key == "parameters" and normalized == "text" and isinstance(child, str):
                 sanitized[key] = {
                     "character_count": len(child),
                     "sha256_prefix": hashlib.sha256(child.encode("utf-8")).hexdigest()[:12],

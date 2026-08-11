@@ -4,6 +4,7 @@ from pathlib import Path
 
 from workbench.domain.issues import IssueLevel, IssueLocation, PreflightIssue
 from workbench.domain.models import ProjectManifest
+from workbench.domain.presenter import PresentationMode
 
 from .common import digest, issue
 
@@ -28,6 +29,7 @@ def fingerprint(project: ProjectManifest, root: Path) -> str:
                 for item in project.page_extractions
             ],
             "root": str(root),
+            "presentation_mode": project.presentation_mode,
         }
     )
 
@@ -36,9 +38,10 @@ def check_content(project: ProjectManifest, root: Path) -> tuple[str, list[Prefl
     check_fingerprint = fingerprint(project, root)
     issues: list[PreflightIssue] = []
     extractions = {item.order: item for item in project.page_extractions}
+    requires_page_narration = project.presentation_mode is PresentationMode.AI_NARRATION
     for page in project.pages:
         narration = page.narration
-        if narration is None:
+        if requires_page_narration and narration is None:
             issues.append(
                 issue(
                     project_id=project.id,
@@ -51,7 +54,11 @@ def check_content(project: ProjectManifest, root: Path) -> tuple[str, list[Prefl
                     location=IssueLocation(page_id=page.id, node="narration"),
                 )
             )
-        elif narration.confirmed_revision_id != narration.revision_id:
+        elif (
+            requires_page_narration
+            and narration is not None
+            and narration.confirmed_revision_id != narration.revision_id
+        ):
             issues.append(
                 issue(
                     project_id=project.id,
@@ -64,7 +71,7 @@ def check_content(project: ProjectManifest, root: Path) -> tuple[str, list[Prefl
                     location=IssueLocation(page_id=page.id, node="narration"),
                 )
             )
-        if narration is not None and narration.insufficiencies:
+        if requires_page_narration and narration is not None and narration.insufficiencies:
             issues.append(
                 issue(
                     project_id=project.id,

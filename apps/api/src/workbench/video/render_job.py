@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -17,6 +18,12 @@ from workbench.jobs.execution import (
     RenderPauseRequested,
 )
 from workbench.jobs.repository import JobRepository, JobSpec
+from workbench.rendering.export_pipeline import GraphExportBlocked, GraphExportError
+from workbench.rendering.feature_flags import RenderFeatureFlags
+from workbench.rendering.hashing import sha256_json
+from workbench.rendering.models import RenderGraphV2
+from workbench.rendering.preflight import GraphPreflight
+from workbench.rendering.snapshot_store import RenderGraphSnapshotStore
 
 from .errors import (
     FfmpegConcatFailed,
@@ -51,10 +58,14 @@ ERROR_CODE_BY_EXCEPTION = {
     MediaValidationFailed: "media_validation_failed",
     PackageValidationFailed: "package_validation_failed",
     RenderDiskFull: "render_disk_full",
+    GraphExportBlocked: "render_graph_preflight_blocked",
+    GraphExportError: "render_graph_export_failed",
 }
 
 
 class RenderJobWorkerProtocol(Protocol):
+    enabled: bool
+
     def wake(self) -> None: ...
 
 
@@ -66,6 +77,10 @@ class RenderJobService:
         exporter: VideoExportService,
         *,
         repository: JobRepository | None = None,
+        graph_provider: Callable[[UUID], RenderGraphV2] | None = None,
+        graph_exporter: Callable[[UUID, RenderGraphV2, PersistentRenderExecutionContext], Any]
+        | None = None,
+        feature_flags: RenderFeatureFlags | None = None,
     ) -> None:
         self.projects = projects
         self.preview = preview
@@ -73,6 +88,9 @@ class RenderJobService:
         self.renderer = exporter
         self.repository = repository or projects.jobs
         self.worker: RenderJobWorkerProtocol | None = None
+        self.graph_provider = graph_provider
+        self.graph_exporter = graph_exporter
+        self.feature_flags = feature_flags or RenderFeatureFlags.from_environment()
 
     def act(self, project_id: UUID, job_id: UUID, action: str) -> RenderJobSubmission:
         job = self.repository.get(job_id)
@@ -100,6 +118,12 @@ class RenderJobService:
         self, project_id: UUID, *, idempotency_key: str | None = None
     ) -> RenderJobSubmission:
         project = self.projects.get(project_id)
+        if (
+            self.feature_flags.export
+            and self.feature_flags.renderer_generation == "v2"
+            and self.graph_provider is not None
+        ):
+            return self._submit_v2(project, project_id, idempotency_key=idempotency_key)
         preflight = self.preview.preflight(project_id)
         if not preflight.allowed or preflight.props is None:
             raise VideoExportBlocked("video preflight is not complete")
@@ -122,6 +146,58 @@ class RenderJobService:
         if result.created:
             self._write_input_snapshot(project, result.record, preflight.props)
             self._audit(project_id, "video_render_job_created", {"job_id": str(result.record.id)})
+        return RenderJobSubmission(result.record, result.created)
+
+    def _submit_v2(
+        self,
+        project: Any,
+        project_id: UUID,
+        *,
+        idempotency_key: str | None,
+    ) -> RenderJobSubmission:
+        graph = self.graph_provider(project_id)  # type: ignore[misc]
+        root = (self.projects.workspace_root / project.project_dir).resolve()
+        report = GraphPreflight().check(
+            graph,
+            root,
+            strict_assets=self.feature_flags.strict_assets,
+        )
+        if not report.allowed:
+            raise VideoExportBlocked("RenderGraph V2 导出预检未通过")
+        snapshot = RenderGraphSnapshotStore(root).set_current(project_id, graph)
+        fingerprint = sha256_json(
+            {
+                "graph_hash": graph.graph_hash,
+                "renderer_generation": "v2",
+                "runtime": "rendergraph-v2",
+            }
+        )
+        spec = JobSpec(
+            project_id=project_id,
+            job_type=JobType.EXPORT_PACKAGE,
+            cache_key=f"export-package:v2:{fingerprint}",
+            input_fingerprint=fingerprint,
+            idempotency_key=idempotency_key,
+            payload={
+                "render_generation": "v2",
+                "graph_hash": graph.graph_hash,
+                "graph_snapshot_relative_path": snapshot.relative_to(root).as_posix(),
+            },
+        )
+        result = self.repository.enqueue_or_get(spec)
+        if (
+            not result.created
+            and result.record.status is JobStatus.SUCCEEDED
+            and not self._published_result_is_valid(project, result.record)
+        ):
+            result = self.repository.enqueue_or_get(spec, reuse_succeeded=False)
+        if result.created:
+            self._write_graph_input_snapshot(root, result.record, graph)
+            self._audit(
+                project_id,
+                "video_render_graph_job_created",
+                {"job_id": str(result.record.id), "graph_hash": graph.graph_hash},
+            )
         return RenderJobSubmission(result.record, result.created)
 
     def retry(self, job_id: UUID) -> RenderJobSubmission:
@@ -156,7 +232,14 @@ class RenderJobService:
         self._audit(record.project_id, "video_render_job_started", {"job_id": str(record.id)})
         self.repository.record_attempt(record.id)
         try:
-            result = self.exporter.export(record.project_id, context=context)
+            if record.payload.get("render_generation") == "v2":
+                if self.graph_exporter is None:
+                    raise GraphExportError("RenderGraph V2 exporter is not configured")
+                graph_hash = str(record.payload.get("graph_hash", ""))
+                graph = RenderGraphSnapshotStore(root).load(graph_hash)
+                result = self.graph_exporter(record.project_id, graph, context)
+            else:
+                result = self.exporter.export(record.project_id, context=context)
         except RenderPauseRequested:
             self._audit(record.project_id, "video_render_job_paused", {"job_id": str(record.id)})
             return
@@ -181,6 +264,10 @@ class RenderJobService:
     def _published_result_is_valid(self, project: Any, record: JobRecord) -> bool:
         result = record.result
         if not isinstance(result, dict):
+            return False
+        if record.payload.get("render_generation") == "v2" and result.get(
+            "graph_hash"
+        ) != record.payload.get("graph_hash"):
             return False
         root = (self.projects.workspace_root / project.project_dir).resolve()
         mp4 = self._safe_result_path(root, result.get("mp4_relative_path"))
@@ -240,6 +327,14 @@ class RenderJobService:
         )
         temporary = snapshot.with_name(".input.json.tmp")
         temporary.write_text(content + "\n", encoding="utf-8")
+        temporary.replace(snapshot)
+
+    @staticmethod
+    def _write_graph_input_snapshot(root: Path, record: JobRecord, graph: RenderGraphV2) -> None:
+        snapshot = root / "09_日志" / "render-jobs" / str(record.id) / "render-graph.json"
+        snapshot.parent.mkdir(parents=True, exist_ok=True)
+        temporary = snapshot.with_name(".render-graph.json.tmp")
+        temporary.write_text(graph.model_dump_json(indent=2) + "\n", encoding="utf-8")
         temporary.replace(snapshot)
 
     def _audit(self, project_id: UUID, action: str, details: dict[str, object]) -> None:

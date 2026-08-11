@@ -29,41 +29,41 @@
 
 ### 后端新增文件
 
-| 文件 | 单一职责 |
-| --- | --- |
-| `apps/api/src/workbench/effects/authoring.py` | 作者态、模板引用和 revision 快照 Pydantic 契约 |
-| `apps/api/src/workbench/effects/compiler.py` | 声明式作者态到 EffectPlan V2 的确定性编译 |
-| `apps/api/src/workbench/effects/repository.py` | 草稿索引、不可变快照、revision 与恢复区原子持久化 |
-| `apps/api/src/workbench/effects/service.py` | 草稿、编译、发布、回滚和批量操作用例 |
-| `apps/api/src/workbench/templates/models.py` | 模板产品、版本、参数 schema、状态与校验报告 |
-| `apps/api/src/workbench/templates/package_io.py` | `.pvtmpl` 安全导入、导出、哈希与隔离解压 |
-| `apps/api/src/workbench/templates/repository.py` | 本地模板包与可重建索引仓库 |
-| `apps/api/src/workbench/templates/validation.py` | schema、注册表、双画幅、性能和安全门禁编排 |
-| `apps/api/src/workbench/templates/service.py` | 模板创建、复制、校验、发布、弃用、归档和回滚 |
-| `apps/api/src/workbench/api/effects.py` | 项目特效作者 API |
-| `apps/api/src/workbench/api/templates.py` | 模板库 API |
-| `schemas/effect-draft-v1.schema.json` | 作者态对外 JSON Schema |
-| `schemas/template-package-v1.schema.json` | 模板 manifest 对外 JSON Schema |
+| 文件                                             | 单一职责                                          |
+| ------------------------------------------------ | ------------------------------------------------- |
+| `apps/api/src/workbench/effects/authoring.py`    | 作者态、模板引用和 revision 快照 Pydantic 契约    |
+| `apps/api/src/workbench/effects/compiler.py`     | 声明式作者态到 EffectPlan V2 的确定性编译         |
+| `apps/api/src/workbench/effects/repository.py`   | 草稿索引、不可变快照、revision 与恢复区原子持久化 |
+| `apps/api/src/workbench/effects/service.py`      | 草稿、编译、发布、回滚和批量操作用例              |
+| `apps/api/src/workbench/templates/models.py`     | 模板产品、版本、参数 schema、状态与校验报告       |
+| `apps/api/src/workbench/templates/package_io.py` | `.pvtmpl` 安全导入、导出、哈希与隔离解压          |
+| `apps/api/src/workbench/templates/repository.py` | 本地模板包与可重建索引仓库                        |
+| `apps/api/src/workbench/templates/validation.py` | schema、注册表、双画幅、性能和安全门禁编排        |
+| `apps/api/src/workbench/templates/service.py`    | 模板创建、复制、校验、发布、弃用、归档和回滚      |
+| `apps/api/src/workbench/api/effects.py`          | 项目特效作者 API                                  |
+| `apps/api/src/workbench/api/templates.py`        | 模板库 API                                        |
+| `schemas/effect-draft-v1.schema.json`            | 作者态对外 JSON Schema                            |
+| `schemas/template-package-v1.schema.json`        | 模板 manifest 对外 JSON Schema                    |
 
 ### 前端新增文件
 
-| 文件 | 单一职责 |
-| --- | --- |
-| `apps/web/src/features/effect-editor/model.ts` | 前端作者态、摘要、编译诊断和命令类型 |
-| `apps/web/src/features/effect-editor/sessionStore.ts` | Zustand 会话、命令栈、撤销/重做和 dirty 状态 |
-| `apps/web/src/features/effect-editor/recoveryStore.ts` | IndexedDB 断线恢复适配器 |
-| `apps/web/src/features/effect-editor/EffectEditorWorkspace.tsx` | 编辑器页面编排 |
-| `apps/web/src/features/effect-editor/PageRail.tsx` | 页面状态、筛选和多选 |
-| `apps/web/src/features/effect-editor/EffectCanvas.tsx` | Remotion Player 与错误边界 |
-| `apps/web/src/features/effect-editor/EffectTimeline.tsx` | 游标、缩放、吸附和片段操作 |
-| `apps/web/src/features/effect-editor/EffectInspector.tsx` | schema 驱动参数表单与字段诊断 |
-| `apps/web/src/features/effect-editor/BatchEffectDialog.tsx` | 批量影响摘要和原子提交 |
-| `apps/web/src/features/effect-editor/RevisionPanel.tsx` | revision 历史、差异和回滚 |
-| `apps/web/src/features/template-library/TemplateLibrary.tsx` | 模板筛选和卡片列表 |
-| `apps/web/src/features/template-library/TemplateDetail.tsx` | 模板详情页签与版本操作 |
-| `apps/web/src/features/template-library/TemplateParameterEditor.tsx` | schema、默认值、预设和 UI schema 编辑 |
-| `apps/web/src/features/template-library/TemplateValidationPanel.tsx` | 校验、双画幅和性能报告 |
-| `apps/web/src/features/template-library/TemplatePackageActions.tsx` | 模板包导入导出 |
+| 文件                                                                 | 单一职责                                     |
+| -------------------------------------------------------------------- | -------------------------------------------- |
+| `apps/web/src/features/effect-editor/model.ts`                       | 前端作者态、摘要、编译诊断和命令类型         |
+| `apps/web/src/features/effect-editor/sessionStore.ts`                | Zustand 会话、命令栈、撤销/重做和 dirty 状态 |
+| `apps/web/src/features/effect-editor/recoveryStore.ts`               | IndexedDB 断线恢复适配器                     |
+| `apps/web/src/features/effect-editor/EffectEditorWorkspace.tsx`      | 编辑器页面编排                               |
+| `apps/web/src/features/effect-editor/PageRail.tsx`                   | 页面状态、筛选和多选                         |
+| `apps/web/src/features/effect-editor/EffectCanvas.tsx`               | Remotion Player 与错误边界                   |
+| `apps/web/src/features/effect-editor/EffectTimeline.tsx`             | 游标、缩放、吸附和片段操作                   |
+| `apps/web/src/features/effect-editor/EffectInspector.tsx`            | schema 驱动参数表单与字段诊断                |
+| `apps/web/src/features/effect-editor/BatchEffectDialog.tsx`          | 批量影响摘要和原子提交                       |
+| `apps/web/src/features/effect-editor/RevisionPanel.tsx`              | revision 历史、差异和回滚                    |
+| `apps/web/src/features/template-library/TemplateLibrary.tsx`         | 模板筛选和卡片列表                           |
+| `apps/web/src/features/template-library/TemplateDetail.tsx`          | 模板详情页签与版本操作                       |
+| `apps/web/src/features/template-library/TemplateParameterEditor.tsx` | schema、默认值、预设和 UI schema 编辑        |
+| `apps/web/src/features/template-library/TemplateValidationPanel.tsx` | 校验、双画幅和性能报告                       |
+| `apps/web/src/features/template-library/TemplatePackageActions.tsx`  | 模板包导入导出                               |
 
 ### 主要修改文件
 
@@ -391,7 +391,9 @@ Expected: FAIL，缺少 `compileDraft`。
 ```python
 class EffectPlanCompiler:
     def compile(self, request: CompileRequest) -> EffectCompilationResult:
-        values = validate_parameter_values(request.template.parameter_schema, request.draft.parameter_values)
+        values = validate_parameter_values(
+            request.template.parameter_schema, request.draft.parameter_values
+        )
         bound = apply_field_bindings(request.template.field_bindings, values)
         plan = EffectPlanV2.model_validate(
             {
@@ -481,18 +483,26 @@ git commit -m "feat: compile effect drafts into deterministic v2 plans"
 - [ ] **Step 1: 写乐观并发与批量原子性测试**
 
 ```python
-def test_save_draft_rejects_stale_sequence(repository: EffectAuthoringRepository, draft: EffectDraftDocument) -> None:
+def test_save_draft_rejects_stale_sequence(
+    repository: EffectAuthoringRepository, draft: EffectDraftDocument
+) -> None:
     saved = repository.save_draft(draft, expected_draft_seq=0)
     with pytest.raises(EffectDraftConflict):
         repository.save_draft(draft, expected_draft_seq=0)
     assert repository.load_draft(draft.page_id).draft_seq == saved.draft_seq
 
 
-def test_batch_failure_keeps_previous_index(repository: EffectAuthoringRepository, two_drafts: list[EffectDraftDocument], monkeypatch: pytest.MonkeyPatch) -> None:
+def test_batch_failure_keeps_previous_index(
+    repository: EffectAuthoringRepository,
+    two_drafts: list[EffectDraftDocument],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     before = repository.read_index()
     monkeypatch.setattr(repository, "_replace_index", raising_write_error)
     with pytest.raises(OSError):
-        repository.save_batch(two_drafts, expected_sequences={draft.page_id: 0 for draft in two_drafts})
+        repository.save_batch(
+            two_drafts, expected_sequences={draft.page_id: 0 for draft in two_drafts}
+        )
     assert repository.read_index() == before
 ```
 
@@ -526,7 +536,10 @@ class EffectAuthoringRepository:
     ) -> list[EffectDraftDocument]:
         current = self.read_index()
         self._assert_sequences(current, expected_sequences)
-        staged = [self._write_snapshot(draft.model_copy(update={"draft_seq": draft.draft_seq + 1})) for draft in drafts]
+        staged = [
+            self._write_snapshot(draft.model_copy(update={"draft_seq": draft.draft_seq + 1}))
+            for draft in drafts
+        ]
         next_index = current.with_snapshots(staged)
         self._replace_index(next_index)
         return [self._read_snapshot(item.relative_path) for item in staged]
@@ -540,7 +553,9 @@ snapshot 文件名使用 `<draft-seq>-<sha256>.json`；`index.json` 保存 page 
 
 ```python
 def revision_path(page_id: UUID, record: EffectPlanRecord) -> PurePosixPath:
-    return PurePosixPath("effects", "revisions", str(page_id), f"{record.revision}-{record.plan_hash}.json")
+    return PurePosixPath(
+        "effects", "revisions", str(page_id), f"{record.revision}-{record.plan_hash}.json"
+    )
 ```
 
 - [ ] **Step 6: 运行仓库、恢复和安全路径测试**
@@ -578,7 +593,9 @@ git commit -m "feat: persist effect drafts and immutable revisions atomically"
 - [ ] **Step 1: 写发布成功与失败不覆盖测试**
 
 ```python
-def test_publish_increments_revision_and_updates_manifest(service: EffectAuthoringService, page_id: UUID) -> None:
+def test_publish_increments_revision_and_updates_manifest(
+    service: EffectAuthoringService, page_id: UUID
+) -> None:
     published = service.publish(page_id, expected_base_revision=0, expected_draft_seq=1)
     assert published.record.revision == 1
     project = service.project_service.get(published.project_id)
@@ -587,7 +604,9 @@ def test_publish_increments_revision_and_updates_manifest(service: EffectAuthori
     assert page.effect_plan.plan_hash == published.record.plan_hash
 
 
-def test_compile_failure_keeps_previous_published_record(service: EffectAuthoringService, page_id: UUID) -> None:
+def test_compile_failure_keeps_previous_published_record(
+    service: EffectAuthoringService, page_id: UUID
+) -> None:
     before = service.current_record(page_id)
     service.save_invalid_parameter(page_id, "items", [])
     with pytest.raises(EffectPublishBlocked):
@@ -617,7 +636,9 @@ Expected: FAIL，缺少服务和新失效函数。
 - [ ] **Step 4: 实现发布用例与审计事件**
 
 ```python
-def publish(self, page_id: UUID, *, expected_base_revision: int, expected_draft_seq: int) -> PublishedEffect:
+def publish(
+    self, page_id: UUID, *, expected_base_revision: int, expected_draft_seq: int
+) -> PublishedEffect:
     project, page = self._project_and_page(page_id)
     draft = self.repository.load_draft(page_id)
     self._assert_publish_tokens(page, draft, expected_base_revision, expected_draft_seq)
@@ -682,7 +703,9 @@ git commit -m "feat: publish effect revisions with precise cache invalidation"
 
 ```python
 def test_template_version_requires_validation_before_publish(service: TemplateService) -> None:
-    draft = service.create("progressive-reveal-blue", display_name="科技蓝逐项揭示", renderer_key="ProgressiveReveal")
+    draft = service.create(
+        "progressive-reveal-blue", display_name="科技蓝逐项揭示", renderer_key="ProgressiveReveal"
+    )
     with pytest.raises(TemplateStateConflict):
         service.publish(draft.template_id, draft.version)
     validated = service.validate(draft.template_id, draft.version)
@@ -696,13 +719,17 @@ def test_template_version_requires_validation_before_publish(service: TemplateSe
 - [ ] **Step 2: 写双画幅、reduced-motion 和性能门禁测试**
 
 ```python
-def test_validation_blocks_missing_portrait_snapshot(validator: TemplateValidator, manifest: TemplateManifest) -> None:
+def test_validation_blocks_missing_portrait_snapshot(
+    validator: TemplateValidator, manifest: TemplateManifest
+) -> None:
     report = validator.validate(manifest, FakeRendererProbe(missing={"9:16"}))
     assert report.allowed is False
     assert "portrait_snapshot_missing" in report.codes
 
 
-def test_validation_blocks_renderer_over_budget(validator: TemplateValidator, manifest: TemplateManifest) -> None:
+def test_validation_blocks_renderer_over_budget(
+    validator: TemplateValidator, manifest: TemplateManifest
+) -> None:
     report = validator.validate(manifest, FakeRendererProbe(elapsed_ratio=2.6))
     assert report.allowed is False
     assert "render_budget_exceeded" in report.codes
@@ -774,11 +801,17 @@ git commit -m "feat: add validated template version lifecycle"
 - [ ] **Step 1: 写草稿并发与发布路由测试**
 
 ```python
-def test_stale_draft_put_returns_409(client: TestClient, project_and_page: tuple[str, str], valid_draft: dict[str, object]) -> None:
+def test_stale_draft_put_returns_409(
+    client: TestClient, project_and_page: tuple[str, str], valid_draft: dict[str, object]
+) -> None:
     project_id, page_id = project_and_page
-    first = client.put(f"/api/projects/{project_id}/effects/pages/{page_id}/draft", json=valid_draft)
+    first = client.put(
+        f"/api/projects/{project_id}/effects/pages/{page_id}/draft", json=valid_draft
+    )
     assert first.status_code == 200
-    stale = client.put(f"/api/projects/{project_id}/effects/pages/{page_id}/draft", json=valid_draft)
+    stale = client.put(
+        f"/api/projects/{project_id}/effects/pages/{page_id}/draft", json=valid_draft
+    )
     assert stale.status_code == 409
     assert stale.json()["error"]["code"] == "effect_draft_conflict"
 ```
@@ -786,9 +819,13 @@ def test_stale_draft_put_returns_409(client: TestClient, project_and_page: tuple
 - [ ] **Step 2: 写模板导入与版本不可变路由测试**
 
 ```python
-def test_published_template_put_is_rejected(client: TestClient, published_template: tuple[str, str]) -> None:
+def test_published_template_put_is_rejected(
+    client: TestClient, published_template: tuple[str, str]
+) -> None:
     template_id, version = published_template
-    response = client.put(f"/api/templates/{template_id}/versions/{version}", json={"display_name": "changed"})
+    response = client.put(
+        f"/api/templates/{template_id}/versions/{version}", json={"display_name": "changed"}
+    )
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "template_version_immutable"
 ```
@@ -806,9 +843,13 @@ def create_effects_router(service: EffectAuthoringService) -> APIRouter:
     router = APIRouter(prefix="/api/projects/{project_id}/effects")
 
     @router.put("/pages/{page_id}/draft", response_model=Envelope[EffectDraftDocument])
-    def save_draft(project_id: UUID, page_id: UUID, request: SaveDraftRequest) -> Envelope[EffectDraftDocument]:
+    def save_draft(
+        project_id: UUID, page_id: UUID, request: SaveDraftRequest
+    ) -> Envelope[EffectDraftDocument]:
         try:
-            return envelope(service.save_draft(project_id, page_id, request.draft, request.expected_draft_seq))
+            return envelope(
+                service.save_draft(project_id, page_id, request.draft, request.expected_draft_seq)
+            )
         except EffectDraftConflict as error:
             raise HTTPException(status_code=409, detail=error.problem()) from error
 
@@ -862,7 +903,21 @@ git commit -m "feat: expose effect authoring and template APIs"
 it('publishes immutable capabilities for every catalog renderer', () => {
   const capabilities = listRendererCapabilities();
   expect(capabilities.map((item) => item.key).sort()).toEqual(
-    ['CardStack', 'ChapterCurtain', 'ChartNarration', 'CompareMode', 'FocusSpotlight', 'GaugeAndRatio', 'MapHighlight', 'PathBuilder', 'ProgressiveReveal', 'RiskAlert', 'SafeSlide', 'StatCounter', 'TagMatrix'].sort(),
+    [
+      'CardStack',
+      'ChapterCurtain',
+      'ChartNarration',
+      'CompareMode',
+      'FocusSpotlight',
+      'GaugeAndRatio',
+      'MapHighlight',
+      'PathBuilder',
+      'ProgressiveReveal',
+      'RiskAlert',
+      'SafeSlide',
+      'StatCounter',
+      'TagMatrix',
+    ].sort(),
   );
   expect(capabilities.every((item) => item.supportedAspectRatios.includes('16:9'))).toBe(true);
   expect(Object.isFrozen(capabilities)).toBe(true);
@@ -901,7 +956,11 @@ export type RendererCapability = Readonly<{
 }>;
 
 export function listRendererCapabilities(): readonly RendererCapability[] {
-  return Object.freeze([...descriptors.values()].map(({ component: _component, name: key, ...rest }) => Object.freeze({ key, ...rest })));
+  return Object.freeze(
+    [...descriptors.values()].map(({ component: _component, name: key, ...rest }) =>
+      Object.freeze({ key, ...rest }),
+    ),
+  );
 }
 ```
 
@@ -969,10 +1028,12 @@ git commit -m "feat: expose renderer capabilities and isolated draft preview"
 
 ```typescript
 it('sends concurrency tokens when saving an effect draft', async () => {
-  server.use(http.put('/api/projects/p1/effects/pages/page-1/draft', async ({ request }) => {
-    expect(await request.json()).toMatchObject({ expected_draft_seq: 3 });
-    return HttpResponse.json(envelope(savedDraft));
-  }));
+  server.use(
+    http.put('/api/projects/p1/effects/pages/page-1/draft', async ({ request }) => {
+      expect(await request.json()).toMatchObject({ expected_draft_seq: 3 });
+      return HttpResponse.json(envelope(savedDraft));
+    }),
+  );
   await api.saveEffectDraft('p1', 'page-1', savedDraft, 3);
 });
 ```
@@ -1067,7 +1128,10 @@ it('groups a drag gesture into one undoable command', () => {
   store.getState().execute(moveClip('clip-1', 1300, 2300));
   store.getState().endGesture();
   store.getState().undo();
-  expect(selectClip(store.getState().draft, 'clip-1')).toMatchObject({ start_ms: 1000, end_ms: 2000 });
+  expect(selectClip(store.getState().draft, 'clip-1')).toMatchObject({
+    start_ms: 1000,
+    end_ms: 2000,
+  });
 });
 ```
 
@@ -1080,7 +1144,9 @@ it('writes IndexedDB recovery after the API becomes unavailable', async () => {
   renderHook(() => useEffectAutosave(session));
   act(() => session.getState().execute(setParameter('strength', 0.8)));
   await act(async () => vi.advanceTimersByTimeAsync(400));
-  expect(await recoveryStore.get(initialDraft.project_id, initialDraft.page_id)).toMatchObject({ draft_seq: 3 });
+  expect(await recoveryStore.get(initialDraft.project_id, initialDraft.page_id)).toMatchObject({
+    draft_seq: 3,
+  });
   expect(session.getState().persistence).toBe('recovery-only');
 });
 ```
@@ -1101,7 +1167,13 @@ export type EffectCommand =
   | { type: 'remove-clip'; trackId: string; clip: TimelineClip }
   | { type: 'set-template'; before: TemplateRef; after: TemplateRef };
 
-export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
 
 export function applyCommand(draft: EffectDraft, command: EffectCommand): EffectDraft {
   return structuredClone(applyTypedCommand(draft, command));
@@ -1196,9 +1268,18 @@ Expected: FAIL，缺少具体编辑器组件。
 <main className="effect-editor-shell">
   <EffectEditorToolbar session={session} onPublish={publish} />
   <PageRail pages={summary.pages} selectedIds={selectedPageIds} onSelect={selectPage} />
-  <EffectCanvas compileResult={compileResult} aspectRatio={aspectRatio} reducedMotion={reducedMotion} />
+  <EffectCanvas
+    compileResult={compileResult}
+    aspectRatio={aspectRatio}
+    reducedMotion={reducedMotion}
+  />
   <EffectTimeline draft={draft} cues={pageCues} dispatch={session.getState().execute} />
-  <EffectInspector template={template} draft={draft} diagnostics={diagnostics} dispatch={session.getState().execute} />
+  <EffectInspector
+    template={template}
+    draft={draft}
+    diagnostics={diagnostics}
+    dispatch={session.getState().execute}
+  />
 </main>
 ```
 
@@ -1272,14 +1353,18 @@ it('restores a revision as a new dirty draft', async () => {
 - [ ] **Step 2: 写后端 revision/hash 对齐测试**
 
 ```python
-def test_preview_preflight_and_render_use_the_same_published_revision(client: TestClient, published_page: tuple[str, str, int, str]) -> None:
+def test_preview_preflight_and_render_use_the_same_published_revision(
+    client: TestClient, published_page: tuple[str, str, int, str]
+) -> None:
     project_id, page_id, revision, plan_hash = published_page
     preview = client.get(f"/api/projects/{project_id}/video/preview").json()["data"]
     preview_page = next(item for item in preview["props"]["pages"] if item["page_id"] == page_id)
     assert preview_page["effect_revision"] == revision
     assert preview_page["effect_plan_hash"] == plan_hash
     preflight = client.post(f"/api/projects/{project_id}/video/preflight").json()["data"]
-    preflight_page = next(item for item in preflight["props"]["pages"] if item["page_id"] == page_id)
+    preflight_page = next(
+        item for item in preflight["props"]["pages"] if item["page_id"] == page_id
+    )
     assert preflight_page["effect_revision"] == preview_page["effect_revision"]
     assert preflight_page["effect_plan_hash"] == preview_page["effect_plan_hash"]
 ```
@@ -1299,7 +1384,11 @@ Expected: FAIL，预览数据缺少 effect plan meta。
 批量对话框先调用 preview endpoint，逐页显示变更和错误；只在 `errors.length === 0` 时允许 commit，并将 `batch_token` 原样提交。发布按钮必须同时要求：本地 compile 成功、autosave 已确认、无 conflict、模板版本可用。
 
 ```typescript
-const publishAllowed = compile.status === 'valid' && persistence === 'saved' && conflict === null && template.status !== 'missing';
+const publishAllowed =
+  compile.status === 'valid' &&
+  persistence === 'saved' &&
+  conflict === null &&
+  template.status !== 'missing';
 ```
 
 - [ ] **Step 5: 实现 revision 面板与工作流 meta**
@@ -1457,7 +1546,9 @@ def test_effect_diagnostic_excludes_content_and_absolute_paths(tmp_path: Path) -
 - [ ] **Step 2: 写磁盘满、API 中断和 Remotion 错误恢复测试**
 
 ```python
-def test_disk_full_during_publish_keeps_current_record(service: EffectAuthoringService, monkeypatch: pytest.MonkeyPatch, page_id: UUID) -> None:
+def test_disk_full_during_publish_keeps_current_record(
+    service: EffectAuthoringService, monkeypatch: pytest.MonkeyPatch, page_id: UUID
+) -> None:
     before = service.current_record(page_id)
     monkeypatch.setattr(service.repository, "write_revision", raise_enospc)
     with pytest.raises(OSError):
@@ -1468,7 +1559,9 @@ def test_disk_full_during_publish_keeps_current_record(service: EffectAuthoringS
 - [ ] **Step 3: 写性能预算测试**
 
 ```python
-def test_template_index_filters_one_thousand_versions_under_budget(template_repository: TemplateRepository) -> None:
+def test_template_index_filters_one_thousand_versions_under_budget(
+    template_repository: TemplateRepository,
+) -> None:
     seed_template_versions(template_repository, count=1000)
     started = time.perf_counter()
     result = template_repository.list(query="reveal", status="published")
@@ -1581,7 +1674,15 @@ test('imports and lists an exact template package version', async ({ page }) => 
 ```python
 def test_acceptance_plan_covers_all_design_gates() -> None:
     text = Path("tests/acceptance/effects-template-workbench-plan.md").read_text(encoding="utf-8")
-    required = {"双画幅", "reduced-motion", "恶意模板包", "多窗口冲突", "写盘中断", "revision/hash", "批量原子性"}
+    required = {
+        "双画幅",
+        "reduced-motion",
+        "恶意模板包",
+        "多窗口冲突",
+        "写盘中断",
+        "revision/hash",
+        "批量原子性",
+    }
     assert required <= {item for item in required if item in text}
 ```
 

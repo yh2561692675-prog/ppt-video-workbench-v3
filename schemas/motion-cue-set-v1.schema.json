@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/motion-cue-set-v1.schema.json",
+  "title": "MotionCueSetV1",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "cue_id",
+      "shape_ids",
+      "trigger",
+      "sequence",
+      "start_ms",
+      "duration_ms",
+      "easing",
+      "repeat",
+      "support"
+    ],
+    "properties": {
+      "cue_id": { "type": "string", "format": "uuid" },
+      "shape_ids": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+      "trigger": { "enum": ["with_previous", "after_previous", "on_click"] },
+      "sequence": { "type": "integer", "minimum": 0 },
+      "start_ms": { "type": "integer", "minimum": 0 },
+      "duration_ms": { "type": "integer", "exclusiveMinimum": 0 },
+      "entrance": { "type": ["string", "null"] },
+      "emphasis": { "type": ["string", "null"] },
+      "exit": { "type": ["string", "null"] },
+      "easing": { "type": "string" },
+      "direction": { "type": ["string", "null"] },
+      "repeat": { "type": "integer", "minimum": 1 },
+      "support": { "enum": ["supported", "degraded", "native_capture_required", "unsupported"] },
+      "source_effect": { "type": ["string", "null"] }
+    }
+  }
+}

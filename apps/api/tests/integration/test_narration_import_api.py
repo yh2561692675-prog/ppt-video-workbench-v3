@@ -33,8 +33,7 @@ def test_narration_import_previews_numbered_sections_without_saving(tmp_path: Pa
                 "file": (
                     "旁白稿.txt",
                     (
-                        "第1页 专业概览\\n这是第一页旁白。\\n"
-                        "第2页 课程体系\\n这是第二页旁白。"
+                        "第1页 专业概览\\n这是第一页旁白。\\n第2页 课程体系\\n这是第二页旁白。"
                     ).encode(),
                     "text/plain",
                 )

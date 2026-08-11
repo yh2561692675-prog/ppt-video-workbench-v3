@@ -1,0 +1,288 @@
+{
+  "schema_version": "education-v2",
+  "sample_count": 30,
+  "distribution": {
+    "cover": 3,
+    "agenda": 3,
+    "dense_text": 3,
+    "image_text": 3,
+    "comparison": 3,
+    "process": 3,
+    "timeline": 3,
+    "data_chart": 3,
+    "conclusion": 3,
+    "case_study": 3
+  },
+  "samples": [
+    {
+      "page_id": "education-v2-001",
+      "page_type": "cover",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_001.pptx",
+      "source_sha256": "e977049ed2ee51151edebabadc219a1b8f20d811a9bb437250008dbe4ea9b087",
+      "page_number": 1,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-002",
+      "page_type": "cover",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_002.pptx",
+      "source_sha256": "60158dc415c5af027fc5f78b059a79c6a7b7352c7091f3c901797f91e82be105",
+      "page_number": 2,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-003",
+      "page_type": "cover",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_003.pptx",
+      "source_sha256": "c8661dfacfb149f794ec98f49b56e064d8f0692d3ae7caa3ba1a563b73735254",
+      "page_number": 3,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-004",
+      "page_type": "agenda",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_004.pptx",
+      "source_sha256": "d85c042eef6e186e9af0c70e87c7783f5cfebf8f7cd6df685e27b9ee1c8e0b45",
+      "page_number": 4,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-005",
+      "page_type": "agenda",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_005.pptx",
+      "source_sha256": "150b8524a7a7e763036a7548dd2d25bc008c404ca8d3f9158c91b6804713a203",
+      "page_number": 5,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-006",
+      "page_type": "agenda",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_006.pptx",
+      "source_sha256": "937fa98e7ec60415fc6a7a4024523795e8d22af590d2fb98b2d54706efbaf6f6",
+      "page_number": 6,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-007",
+      "page_type": "dense_text",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_007.pptx",
+      "source_sha256": "d5c7256dc45e5688b7f8596697a89985bccc2d7dab415b3f1ec6724a9fc9904f",
+      "page_number": 7,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-008",
+      "page_type": "dense_text",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_008.pptx",
+      "source_sha256": "724e16d8a0f05a2db300c85de37b2ebdaccfe2cd85d20592ad317a6f0441808a",
+      "page_number": 8,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-009",
+      "page_type": "dense_text",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_009.pptx",
+      "source_sha256": "5b286baa9db4c910e22373f5a357457d43c6a73496dd1bfcf7a7ccb6e340fe89",
+      "page_number": 9,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-010",
+      "page_type": "image_text",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_010.pptx",
+      "source_sha256": "34d92283866c6dd985444874402005b39005d75fa98705e95acc115210f313d9",
+      "page_number": 10,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-011",
+      "page_type": "image_text",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_011.pptx",
+      "source_sha256": "c93bdc8f5b24d6e5ce7068e48fa018f93050f3967cea14b5e832c615ad1bc47b",
+      "page_number": 11,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-012",
+      "page_type": "image_text",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_012.pptx",
+      "source_sha256": "f95659b90c07f7664f6c19da68884c199727429abd6b1740c46739cd05e5cc26",
+      "page_number": 12,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-013",
+      "page_type": "comparison",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_013.pptx",
+      "source_sha256": "02cdd41d5309d00406710b64b826267c0bdbb0b30fd629f1a41e1511cfc71b33",
+      "page_number": 13,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-014",
+      "page_type": "comparison",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_014.pptx",
+      "source_sha256": "8cb7cfb8670feb65ac6caabcb901fd7a8d3c93e448c818b32183123eb80e38da",
+      "page_number": 14,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-015",
+      "page_type": "comparison",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_015.pptx",
+      "source_sha256": "6b7851ff62e4993ef18a1a61fd67f8ad42485c12880d63cdf3ced6409281c737",
+      "page_number": 15,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-016",
+      "page_type": "process",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_016.pptx",
+      "source_sha256": "bd1ab51f221c18d7a6e45e6a5f5552d3ffb7b220c1d4d1679512912b3481a3ff",
+      "page_number": 16,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-017",
+      "page_type": "process",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_017.pptx",
+      "source_sha256": "e3165405be30a24368b41021825315b65660b6ecc74c5d8d633b3aad33540d53",
+      "page_number": 17,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-018",
+      "page_type": "process",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_018.pptx",
+      "source_sha256": "fa8aef5a817c92b5b6e0844c5f69fd336aa11529fca660581f8305da1bdae97d",
+      "page_number": 18,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-019",
+      "page_type": "timeline",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_019.pptx",
+      "source_sha256": "7f6c41cfda02e33b6e4c2b96c19a19cf8a225a3de2b090ca4f6424df75b3bec9",
+      "page_number": 19,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-020",
+      "page_type": "timeline",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_020.pptx",
+      "source_sha256": "59c76d2072b952e150a0a05dba48737ba8b59d96cb00a26a3a7dba352ee2e4f9",
+      "page_number": 20,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-021",
+      "page_type": "timeline",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_021.pptx",
+      "source_sha256": "ae39da03614963a49aaaab982022df6a8a6cd98bbbc2ba4d0390b9d885268855",
+      "page_number": 21,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-022",
+      "page_type": "data_chart",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_022.pptx",
+      "source_sha256": "0976161f58acb40f3b5fc0a64849921a1a9dae28482f04fc3768f57a88aba559",
+      "page_number": 22,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-023",
+      "page_type": "data_chart",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_023.pptx",
+      "source_sha256": "5ecdcdeb434b1e248d587f8d438a855c741182646c99d904f7421b43a2d48c29",
+      "page_number": 23,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-024",
+      "page_type": "data_chart",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_024.pptx",
+      "source_sha256": "057dc1092e2d5ac49aaad063f41a6e78f09da55b4be4904b4527b21a864e88a3",
+      "page_number": 24,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-025",
+      "page_type": "conclusion",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_025.pptx",
+      "source_sha256": "2d06ef729f2b644b27f1be0007636d761ca5c7e9c5288c314be3c3730d390b18",
+      "page_number": 25,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-026",
+      "page_type": "conclusion",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_026.pptx",
+      "source_sha256": "1adbba1b875b5e804ecb718aeb7a1a090d7f8234122e5cfabe2b8d2cc13a74ce",
+      "page_number": 26,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-027",
+      "page_type": "conclusion",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_027.pptx",
+      "source_sha256": "10e37975fc808a0f7e2a25e704b673e42d4a67d78db42f10e52a889733483263",
+      "page_number": 27,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-028",
+      "page_type": "case_study",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_028.pptx",
+      "source_sha256": "7afa855ebb589d882b3d020be89b639dd23510b18f5ac12f3445f7310f5cf40b",
+      "page_number": 28,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-029",
+      "page_type": "case_study",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_029.pptx",
+      "source_sha256": "094e46c464fac27a362490068461db29b836cedc568837623170ae7b9f678dc4",
+      "page_number": 29,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    },
+    {
+      "page_id": "education-v2-030",
+      "page_type": "case_study",
+      "source_ref": "fixtures/effects/education-v2/sources/sample_030.pptx",
+      "source_sha256": "4921bd40ff70a8c29d2ee12adb4581678d76678211be027bdf2eba5774a11185",
+      "page_number": 30,
+      "authorized_for_regression": true,
+      "risk_level": "L1"
+    }
+  ]
+}

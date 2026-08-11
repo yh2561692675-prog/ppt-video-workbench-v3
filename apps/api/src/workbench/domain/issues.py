@@ -26,6 +26,17 @@ class IssueLocation(IssueContractModel):
     relative_path: str | None = None
 
 
+class IssueTimeRange(IssueContractModel):
+    start_ms: int = Field(ge=0)
+    end_ms: int = Field(gt=0)
+
+    @model_validator(mode="after")
+    def validate_range(self) -> IssueTimeRange:
+        if self.end_ms <= self.start_ms:
+            raise ValueError("issue time range end must be after start")
+        return self
+
+
 class IssueConfirmation(IssueContractModel):
     id: UUID = Field(default_factory=uuid4)
     issue_id: UUID
@@ -42,6 +53,8 @@ class PreflightIssue(IssueContractModel):
     level: IssueLevel
     message: str
     action: str
+    reason: str | None = None
+    time_range: IssueTimeRange | None = None
     location: IssueLocation = Field(default_factory=IssueLocation)
     fingerprint: str = Field(min_length=64, max_length=64)
     blocking: bool = True
@@ -75,6 +88,7 @@ PreflightScope = Literal[
     "content",
     "audio",
     "video",
+    "presenter",
     "runtime",
     "resources",
 ]

@@ -11,10 +11,7 @@ class WorkspaceMigrationError(RuntimeError):
 
 
 def migrate_v1_to_v2(connection: Connection) -> None:
-    columns = {
-        str(row[1])
-        for row in connection.exec_driver_sql("PRAGMA table_info('jobs')").all()
-    }
+    columns = {str(row[1]) for row in connection.exec_driver_sql("PRAGMA table_info('jobs')").all()}
     additions = {
         "input_fingerprint": "VARCHAR(128)",
         "idempotency_key": "VARCHAR(256)",
@@ -33,12 +30,8 @@ def migrate_v1_to_v2(connection: Connection) -> None:
         if name not in columns:
             connection.exec_driver_sql(f'ALTER TABLE jobs ADD COLUMN "{name}" {declaration}')
 
-    connection.exec_driver_sql(
-        "UPDATE jobs SET status = 'queued' WHERE status = 'not_started'"
-    )
-    connection.exec_driver_sql(
-        "UPDATE jobs SET status = 'succeeded' WHERE status = 'completed'"
-    )
+    connection.exec_driver_sql("UPDATE jobs SET status = 'queued' WHERE status = 'not_started'")
+    connection.exec_driver_sql("UPDATE jobs SET status = 'succeeded' WHERE status = 'completed'")
     connection.exec_driver_sql("UPDATE jobs SET revision = 1 WHERE revision IS NULL")
     connection.exec_driver_sql("UPDATE jobs SET stage = 'queued' WHERE stage IS NULL")
     connection.exec_driver_sql("UPDATE jobs SET message = '' WHERE message IS NULL")

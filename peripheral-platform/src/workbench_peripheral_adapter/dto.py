@@ -88,4 +88,3 @@ class ActionRequestDto(FrozenDto):
     requested_by: str
     requested_at: AwareDatetime
     reason: str | None = None
-

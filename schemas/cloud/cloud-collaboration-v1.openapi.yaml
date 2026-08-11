@@ -1,0 +1,1362 @@
+openapi: 3.1.0
+info:
+  title: PPT Video Workbench Cloud Collaboration API
+  version: 0.1.0-draft
+  summary: Local-first collaboration control-plane contract
+  description: >-
+    Contract draft for identity context, workspaces, immutable project revisions,
+    append-only sync operations, content-addressed objects, comments, reviews,
+    leases, and remote jobs. All examples are synthetic. This contract does not
+    enable upload or start a cloud service by itself.
+  license:
+    name: Proprietary
+servers:
+  - url: https://api.example.invalid/v1
+    description: Documentation-only placeholder
+security:
+  - oauth2: [workbench]
+tags:
+  - name: Identity
+  - name: Workspaces
+  - name: Projects
+  - name: Sync
+  - name: Objects
+  - name: Collaboration
+  - name: Jobs
+paths:
+  /me:
+    get:
+      tags: [Identity]
+      operationId: getCurrentUser
+      summary: Return the current user and effective workspace memberships
+      responses:
+        '200':
+          description: Current identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /workspaces:
+    get:
+      tags: [Workspaces]
+      operationId: listWorkspaces
+      summary: List workspaces visible to the current user
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Workspace page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspacePage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Workspaces]
+      operationId: createWorkspace
+      summary: Create a workspace owned by the current user
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceRequest'
+      responses:
+        '201':
+          description: Workspace created
+          headers:
+            Operation-Id:
+              $ref: '#/components/headers/OperationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /workspaces/{workspaceId}/members:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+    get:
+      tags: [Workspaces]
+      operationId: listWorkspaceMembers
+      summary: List workspace members
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Member page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Workspaces]
+      operationId: addWorkspaceMember
+      summary: Add or replace a member role
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertMemberRequest'
+      responses:
+        '200':
+          description: Effective membership
+          headers:
+            Operation-Id:
+              $ref: '#/components/headers/OperationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membership'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /workspaces/{workspaceId}/projects:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+    get:
+      tags: [Projects]
+      operationId: listProjects
+      summary: List projects authorized for the current user
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Project page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Projects]
+      operationId: createProject
+      summary: Create an empty project or register a genesis revision
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Project created
+          headers:
+            Operation-Id:
+              $ref: '#/components/headers/OperationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /workspaces/{workspaceId}/projects/{projectId}:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Projects]
+      operationId: getProject
+      summary: Get a project and its current head
+      responses:
+        '200':
+          description: Project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /workspaces/{workspaceId}/projects/{projectId}/revisions:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Projects]
+      operationId: listProjectRevisions
+      summary: List immutable revisions newest first
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Revision page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevisionPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /workspaces/{workspaceId}/projects/{projectId}/revisions/{revisionId}:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/RevisionId'
+    get:
+      tags: [Projects]
+      operationId: getProjectRevision
+      summary: Get one immutable revision
+      responses:
+        '200':
+          description: Revision
+          headers:
+            ETag:
+              description: Revision content hash
+              schema:
+                $ref: '#/components/schemas/Sha256'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectRevision'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /workspaces/{workspaceId}/projects/{projectId}/operations:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Sync]
+      operationId: listSyncOperations
+      summary: Read operations after an opaque cursor
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Operation page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Sync]
+      operationId: appendSyncOperation
+      summary: Append an idempotent operation and advance project head
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncOperation'
+      responses:
+        '201':
+          description: Operation accepted and revision created
+          headers:
+            Operation-Id:
+              $ref: '#/components/headers/OperationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /workspaces/{workspaceId}/projects/{projectId}/objects/uploads:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+    post:
+      tags: [Objects]
+      operationId: initiateObjectUpload
+      summary: Validate an object declaration and create a short-lived upload session
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitiateUploadRequest'
+      responses:
+        '201':
+          description: Upload session
+          headers:
+            Operation-Id:
+              $ref: '#/components/headers/OperationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadSession'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /workspaces/{workspaceId}/projects/{projectId}/objects/uploads/{uploadId}/complete:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+      - name: uploadId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Uuid'
+    post:
+      tags: [Objects]
+      operationId: completeObjectUpload
+      summary: Verify uploaded bytes and create a project-scoped object reference
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteUploadRequest'
+      responses:
+        '201':
+          description: Verified object reference
+          headers:
+            Operation-Id:
+              $ref: '#/components/headers/OperationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectRef'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /workspaces/{workspaceId}/projects/{projectId}/objects/{objectId}/download:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+      - name: objectId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Sha256'
+    post:
+      tags: [Objects]
+      operationId: authorizeObjectDownload
+      summary: Create a short-lived download authorization
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Download authorization
+          headers:
+            Operation-Id:
+              $ref: '#/components/headers/OperationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadAuthorization'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /workspaces/{workspaceId}/projects/{projectId}/comments:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Collaboration]
+      operationId: listComments
+      summary: List comments visible on the project
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Comment page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Collaboration]
+      operationId: createComment
+      summary: Create a plain-text comment anchored to a revision
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommentRequest'
+      responses:
+        '201':
+          description: Comment created
+          headers:
+            Operation-Id:
+              $ref: '#/components/headers/OperationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /workspaces/{workspaceId}/projects/{projectId}/reviews:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+    post:
+      tags: [Collaboration]
+      operationId: submitReview
+      summary: Record an approval or requested changes for one revision
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitReviewRequest'
+      responses:
+        '201':
+          description: Review recorded
+          headers:
+            Operation-Id:
+              $ref: '#/components/headers/OperationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /workspaces/{workspaceId}/projects/{projectId}/lease:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+    put:
+      tags: [Collaboration]
+      operationId: acquireOrRenewProjectLease
+      summary: Acquire or renew a bounded advisory editing lease
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaseRequest'
+      responses:
+        '200':
+          description: Active lease
+          headers:
+            Operation-Id:
+              $ref: '#/components/headers/OperationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lease'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /workspaces/{workspaceId}/projects/{projectId}/jobs:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Jobs]
+      operationId: listRemoteJobs
+      summary: List remote jobs for the project
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Job page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Jobs]
+      operationId: createRemoteJob
+      summary: Create a remote job against an immutable revision
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateJobRequest'
+      responses:
+        '202':
+          description: Job queued
+          headers:
+            Operation-Id:
+              $ref: '#/components/headers/OperationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoteJob'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+      - $ref: '#/components/parameters/ProjectId'
+      - name: jobId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Uuid'
+    get:
+      tags: [Jobs]
+      operationId: getRemoteJob
+      summary: Get remote job state and normalized output references
+      responses:
+        '200':
+          description: Remote job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoteJob'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Jobs]
+      operationId: cancelRemoteJob
+      summary: Request cancellation of a queued or running job
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: Cancellation requested
+          headers:
+            Operation-Id:
+              $ref: '#/components/headers/OperationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoteJob'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: Authorization Code with PKCE; desktop clients must use the system browser.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://identity.example.invalid/oauth2/authorize
+          tokenUrl: https://identity.example.invalid/oauth2/token
+          scopes:
+            workbench: Access resources granted by workspace membership
+  headers:
+    OperationId:
+      description: Stable identifier for the end-to-end user intent
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+  parameters:
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    RevisionId:
+      name: revisionId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: UUID scoped to tenant and operation kind; reused only for the same semantic side effect.
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque, scope-bound pagination cursor
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 2048
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+  responses:
+    Unauthorized:
+      description: Authentication is missing, expired, or invalid
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: Resource does not exist or is not visible to the current principal
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Conflict:
+      description: Idempotency conflict, stale base revision, active lease, or invalid state transition
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ValidationFailed:
+      description: Request failed schema or semantic validation
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    PayloadTooLarge:
+      description: Declared or received content exceeds policy
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    RateLimited:
+      description: Tenant, principal, or operation quota exceeded
+      headers:
+        Retry-After:
+          description: Delay in seconds before retrying
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    Uuid:
+      type: string
+      format: uuid
+      pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    Timestamp:
+      type: string
+      format: date-time
+      pattern: 'Z$'
+    Sha256:
+      type: string
+      pattern: '^sha256:[0-9a-f]{64}$'
+    Role:
+      type: string
+      enum: [owner, admin, editor, reviewer, viewer]
+    Problem:
+      type: object
+      additionalProperties: false
+      required: [type, title, status, code, operation_id]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+          maxLength: 200
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        code:
+          type: string
+          pattern: '^[a-z][a-z0-9_.-]{0,99}$'
+        operation_id:
+          $ref: '#/components/schemas/Uuid'
+        retryable:
+          type: boolean
+        user_action:
+          type: string
+          maxLength: 500
+    CurrentUser:
+      type: object
+      additionalProperties: false
+      required: [user_id, display_name, memberships]
+      properties:
+        user_id:
+          $ref: '#/components/schemas/Uuid'
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        memberships:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/Membership'
+        devices:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/Device'
+    Organization:
+      type: object
+      additionalProperties: false
+      required: [organization_id, name, created_at, created_by]
+      properties:
+        organization_id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        created_by:
+          $ref: '#/components/schemas/Uuid'
+    Device:
+      type: object
+      additionalProperties: false
+      required: [device_id, user_id, name, platform, status, registered_at, last_seen_at]
+      properties:
+        device_id:
+          $ref: '#/components/schemas/Uuid'
+        user_id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        platform:
+          type: string
+          enum: [windows, macos, linux]
+        status:
+          type: string
+          enum: [active, revoked]
+        registered_at:
+          $ref: '#/components/schemas/Timestamp'
+        last_seen_at:
+          $ref: '#/components/schemas/Timestamp'
+    ServiceAccount:
+      type: object
+      additionalProperties: false
+      required: [service_account_id, workspace_id, name, status, created_at, created_by]
+      properties:
+        service_account_id:
+          $ref: '#/components/schemas/Uuid'
+        workspace_id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        status:
+          type: string
+          enum: [active, disabled]
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        created_by:
+          $ref: '#/components/schemas/Uuid'
+    Executor:
+      type: object
+      additionalProperties: false
+      required:
+        [executor_id, workspace_id, name, status, capabilities, runtime_fingerprint, last_seen_at]
+      properties:
+        executor_id:
+          $ref: '#/components/schemas/Uuid'
+        workspace_id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        status:
+          type: string
+          enum: [online, draining, offline, revoked]
+        capabilities:
+          type: array
+          maxItems: 100
+          uniqueItems: true
+          items:
+            type: string
+            pattern: '^[a-z][a-z0-9_.-]{0,99}$'
+        runtime_fingerprint:
+          $ref: '#/components/schemas/Sha256'
+        last_seen_at:
+          $ref: '#/components/schemas/Timestamp'
+    Membership:
+      type: object
+      additionalProperties: false
+      required: [workspace_id, user_id, role, membership_version, created_at]
+      properties:
+        workspace_id:
+          $ref: '#/components/schemas/Uuid'
+        user_id:
+          $ref: '#/components/schemas/Uuid'
+        role:
+          $ref: '#/components/schemas/Role'
+        membership_version:
+          type: integer
+          minimum: 1
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+    Workspace:
+      type: object
+      additionalProperties: false
+      required: [workspace_id, name, created_at, created_by]
+      properties:
+        workspace_id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        created_by:
+          $ref: '#/components/schemas/Uuid'
+    CreateWorkspaceRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+    UpsertMemberRequest:
+      type: object
+      additionalProperties: false
+      required: [user_id, role]
+      properties:
+        user_id:
+          $ref: '#/components/schemas/Uuid'
+        role:
+          $ref: '#/components/schemas/Role'
+    Project:
+      type: object
+      additionalProperties: false
+      required: [project_id, workspace_id, name, head_revision_id, created_at, updated_at]
+      properties:
+        project_id:
+          $ref: '#/components/schemas/Uuid'
+        workspace_id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 300
+        head_revision_id:
+          oneOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        updated_at:
+          $ref: '#/components/schemas/Timestamp'
+    CreateProjectRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 300
+        genesis_revision:
+          $ref: '#/components/schemas/ProjectRevision'
+    ObjectRef:
+      $ref: './cloud-object-ref-v1.schema.json'
+    ProjectRevision:
+      $ref: './cloud-project-revision-v1.schema.json'
+    SyncOperation:
+      $ref: './cloud-sync-operation-v1.schema.json'
+    OperationResult:
+      type: object
+      additionalProperties: false
+      required: [operation_id, accepted_attempt_id, revision, cursor, conflict]
+      properties:
+        operation_id:
+          $ref: '#/components/schemas/Uuid'
+        accepted_attempt_id:
+          $ref: '#/components/schemas/Uuid'
+        revision:
+          $ref: '#/components/schemas/ProjectRevision'
+        cursor:
+          type: string
+          minLength: 1
+          maxLength: 2048
+        conflict:
+          oneOf:
+            - $ref: '#/components/schemas/SyncConflict'
+            - type: 'null'
+    SyncConflict:
+      type: object
+      additionalProperties: false
+      required: [conflict_id, base_revision_id, head_revision_id, kind, paths]
+      properties:
+        conflict_id:
+          $ref: '#/components/schemas/Uuid'
+        base_revision_id:
+          $ref: '#/components/schemas/Uuid'
+        head_revision_id:
+          $ref: '#/components/schemas/Uuid'
+        kind:
+          type: string
+          enum: [same_field, delete_modify, page_order, incompatible_schema]
+        paths:
+          type: array
+          maxItems: 1000
+          items:
+            type: string
+            maxLength: 1024
+    InitiateUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [object]
+      properties:
+        object:
+          $ref: '#/components/schemas/ObjectRef'
+    UploadPart:
+      type: object
+      additionalProperties: false
+      required: [part_number, method, url, expires_at]
+      properties:
+        part_number:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        method:
+          type: string
+          const: PUT
+        url:
+          type: string
+          format: uri
+          pattern: '^https://'
+        expires_at:
+          $ref: '#/components/schemas/Timestamp'
+    UploadSession:
+      type: object
+      additionalProperties: false
+      required: [upload_id, object_id, parts, expires_at]
+      properties:
+        upload_id:
+          $ref: '#/components/schemas/Uuid'
+        object_id:
+          $ref: '#/components/schemas/Sha256'
+        parts:
+          type: array
+          minItems: 1
+          maxItems: 10000
+          items:
+            $ref: '#/components/schemas/UploadPart'
+        expires_at:
+          $ref: '#/components/schemas/Timestamp'
+    CompletedPart:
+      type: object
+      additionalProperties: false
+      required: [part_number, etag]
+      properties:
+        part_number:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        etag:
+          type: string
+          minLength: 1
+          maxLength: 255
+    CompleteUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [parts]
+      properties:
+        parts:
+          type: array
+          minItems: 1
+          maxItems: 10000
+          items:
+            $ref: '#/components/schemas/CompletedPart'
+    DownloadAuthorization:
+      type: object
+      additionalProperties: false
+      required: [method, url, object_id, size_bytes, expires_at]
+      properties:
+        method:
+          type: string
+          const: GET
+        url:
+          type: string
+          format: uri
+          pattern: '^https://'
+        object_id:
+          $ref: '#/components/schemas/Sha256'
+        size_bytes:
+          type: integer
+          minimum: 0
+          maximum: 1099511627776
+        expires_at:
+          $ref: '#/components/schemas/Timestamp'
+    CommentAnchor:
+      type: object
+      additionalProperties: false
+      required: [revision_id]
+      properties:
+        revision_id:
+          $ref: '#/components/schemas/Uuid'
+        logical_path:
+          type: string
+          minLength: 1
+          maxLength: 1024
+        time_ms:
+          type: integer
+          minimum: 0
+    Comment:
+      type: object
+      additionalProperties: false
+      required: [comment_id, project_id, author_id, body, anchor, created_at, resolved]
+      properties:
+        comment_id:
+          $ref: '#/components/schemas/Uuid'
+        project_id:
+          $ref: '#/components/schemas/Uuid'
+        author_id:
+          $ref: '#/components/schemas/Uuid'
+        body:
+          type: string
+          minLength: 1
+          maxLength: 10000
+          description: Plain text; clients must not interpret it as HTML.
+        anchor:
+          $ref: '#/components/schemas/CommentAnchor'
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        resolved:
+          type: boolean
+    CreateCommentRequest:
+      type: object
+      additionalProperties: false
+      required: [body, anchor]
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 10000
+        anchor:
+          $ref: '#/components/schemas/CommentAnchor'
+    Review:
+      type: object
+      additionalProperties: false
+      required: [review_id, project_id, revision_id, reviewer_id, decision, created_at]
+      properties:
+        review_id:
+          $ref: '#/components/schemas/Uuid'
+        project_id:
+          $ref: '#/components/schemas/Uuid'
+        revision_id:
+          $ref: '#/components/schemas/Uuid'
+        reviewer_id:
+          $ref: '#/components/schemas/Uuid'
+        decision:
+          type: string
+          enum: [approved, changes_requested]
+        note:
+          type: string
+          maxLength: 10000
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+    SubmitReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [revision_id, decision]
+      properties:
+        revision_id:
+          $ref: '#/components/schemas/Uuid'
+        decision:
+          type: string
+          enum: [approved, changes_requested]
+        note:
+          type: string
+          maxLength: 10000
+    LeaseRequest:
+      type: object
+      additionalProperties: false
+      required: [client_id, requested_ttl_seconds]
+      properties:
+        client_id:
+          $ref: '#/components/schemas/Uuid'
+        lease_id:
+          $ref: '#/components/schemas/Uuid'
+        requested_ttl_seconds:
+          type: integer
+          minimum: 30
+          maximum: 900
+    Lease:
+      type: object
+      additionalProperties: false
+      required: [lease_id, project_id, holder_user_id, client_id, acquired_at, expires_at]
+      properties:
+        lease_id:
+          $ref: '#/components/schemas/Uuid'
+        project_id:
+          $ref: '#/components/schemas/Uuid'
+        holder_user_id:
+          $ref: '#/components/schemas/Uuid'
+        client_id:
+          $ref: '#/components/schemas/Uuid'
+        acquired_at:
+          $ref: '#/components/schemas/Timestamp'
+        expires_at:
+          $ref: '#/components/schemas/Timestamp'
+    JobKind:
+      type: string
+      enum: [render_preview, render_final, transcribe, synthesize_speech, analyze_media]
+    CreateJobRequest:
+      type: object
+      additionalProperties: false
+      required: [revision_id, kind, input_objects, priority]
+      properties:
+        revision_id:
+          $ref: '#/components/schemas/Uuid'
+        kind:
+          $ref: '#/components/schemas/JobKind'
+        input_objects:
+          type: array
+          maxItems: 10000
+          items:
+            $ref: '#/components/schemas/ObjectRef'
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 100
+    RemoteJob:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          job_id,
+          operation_id,
+          project_id,
+          revision_id,
+          kind,
+          status,
+          attempt_count,
+          created_at,
+          updated_at,
+          outputs,
+        ]
+      properties:
+        job_id:
+          $ref: '#/components/schemas/Uuid'
+        operation_id:
+          $ref: '#/components/schemas/Uuid'
+        project_id:
+          $ref: '#/components/schemas/Uuid'
+        revision_id:
+          $ref: '#/components/schemas/Uuid'
+        kind:
+          $ref: '#/components/schemas/JobKind'
+        status:
+          type: string
+          enum: [queued, claimed, running, succeeded, failed, cancellation_requested, cancelled]
+        attempt_count:
+          type: integer
+          minimum: 0
+          maximum: 100
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        updated_at:
+          $ref: '#/components/schemas/Timestamp'
+        outputs:
+          type: array
+          maxItems: 10000
+          items:
+            $ref: '#/components/schemas/ObjectRef'
+        error:
+          oneOf:
+            - $ref: '#/components/schemas/Problem'
+            - type: 'null'
+    PageMeta:
+      type: object
+      required: [next_cursor]
+      properties:
+        next_cursor:
+          oneOf:
+            - type: string
+              minLength: 1
+              maxLength: 2048
+            - type: 'null'
+    WorkspacePage:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Workspace'
+    MemberPage:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Membership'
+    ProjectPage:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Project'
+    RevisionPage:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProjectRevision'
+    OperationPage:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/SyncOperation'
+    CommentPage:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Comment'
+    JobPage:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/RemoteJob'

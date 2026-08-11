@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "window_id": "019feb46-8950-7213-b4ca-422988a6b032-phase2-ownership",
+  "task_name": "Shared Foundation ownership audit",
+  "mode": "idle",
+  "repository": {
+    "path": "source-root",
+    "branch": "recovery/root-snapshot-20260810",
+    "head": "956929e7b75f80df8d17891420ccc812574a682e",
+    "status_manifest_sha256": "fe9acc5f86a3a51a4918cc5be65963ab124b0908b2b6c5436e960bf9e558a82d"
+  },
+  "owned_paths": [
+    "apps/api/src/workbench/foundation",
+    "schemas/foundation",
+    "scripts/foundation",
+    "tests/contract/test_foundation_freeze_contracts.py",
+    "tests/unit/foundation",
+    "docs/acceptance/foundation/ownership-map-20260811.json"
+  ],
+  "shared_paths_touched": [],
+  "completed": [
+    "Phase 0 contracts and tools",
+    "Ownership Map builder and tests",
+    "Current root ownership audit generated",
+    "Status stable across two read-state scans",
+    "Unmerged count verified as zero"
+  ],
+  "remaining": [
+    "Collect StopPoints from every active writer",
+    "Classify 7423 unknown paths with owner decisions",
+    "Resolve apps/tests/docs/schemas/remotion source conflicts",
+    "Create checkpoint and immutable snapshot",
+    "Do not start next project until FOUNDATION_READY"
+  ],
+  "evidence_refs": [
+    "docs/acceptance/foundation/ownership-map-20260811.json",
+    "docs/superpowers/specs/2026-08-11-shared-foundation-freeze-design.md",
+    "docs/superpowers/plans/2026-08-11-shared-foundation-freeze.md"
+  ],
+  "will_write_again": false,
+  "safe_resume": "Read this stop point and ownership map. Obtain active-window stop points, classify generated artifacts, resolve source ownership, then rerun G2 before checkpoint."
+}

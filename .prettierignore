@@ -6,6 +6,7 @@ test-results
 projects
 PROJECTS.md
 **/.pytest_cache/**
+**/.pytest_cache
 .pytest_cache
 **/.mypy_cache/**
 **/.ruff_cache/**

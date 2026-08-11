@@ -1,0 +1,324 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/render-graph-v2.schema.json",
+  "title": "RenderGraphV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "graph_id",
+    "project_id",
+    "timeline_revision",
+    "timeline_hash",
+    "compiler_version",
+    "duration_us",
+    "canvas",
+    "nodes",
+    "transitions",
+    "assets",
+    "source_revisions",
+    "affected_ranges"
+  ],
+  "properties": {
+    "schema_version": { "const": "2.0" },
+    "graph_id": { "$ref": "#/$defs/uuid" },
+    "project_id": { "$ref": "#/$defs/uuid" },
+    "timeline_revision": { "type": "integer", "minimum": 1 },
+    "timeline_hash": { "$ref": "#/$defs/hash" },
+    "compiler_version": { "type": "string", "minLength": 1 },
+    "duration_us": { "type": "integer", "minimum": 0 },
+    "canvas": { "$ref": "#/$defs/canvas" },
+    "nodes": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+    "transitions": { "type": "array", "items": { "$ref": "#/$defs/transition" } },
+    "assets": { "type": "array", "items": { "$ref": "#/$defs/asset" } },
+    "audio": { "$ref": "#/$defs/audio" },
+    "audio_mix": { "$ref": "#/$defs/audio" },
+    "subtitles": { "$ref": "#/$defs/subtitles" },
+    "subtitle_plan": { "$ref": "#/$defs/subtitles" },
+    "source_revisions": { "type": "object", "additionalProperties": { "type": "string" } },
+    "affected_ranges": { "type": "array", "items": { "$ref": "#/$defs/affected_range" } },
+    "graph_hash": { "$ref": "#/$defs/hash" },
+    "content_hash": { "$ref": "#/$defs/hash" },
+    "created_at": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "anyOf": [{ "required": ["graph_hash"] }, { "required": ["content_hash"] }],
+  "$defs": {
+    "uuid": { "type": "string", "format": "uuid" },
+    "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "canvas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "width",
+        "height",
+        "fps",
+        "fps_num",
+        "fps_den",
+        "duration_us",
+        "background",
+        "pixel_format",
+        "aspect_ratio"
+      ],
+      "properties": {
+        "width": { "type": "integer", "exclusiveMinimum": 0 },
+        "height": { "type": "integer", "exclusiveMinimum": 0 },
+        "fps": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+        "fps_num": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+        "fps_den": { "type": "integer", "exclusiveMinimum": 0 },
+        "duration_us": { "type": "integer", "minimum": 0 },
+        "background": { "type": "string", "minLength": 1 },
+        "pixel_format": { "type": "string" },
+        "aspect_ratio": { "type": "string", "minLength": 1 }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "source_ref", "exists", "alpha_mode", "license_status"],
+      "properties": {
+        "asset_id": { "type": ["string", "null"], "format": "uuid" },
+        "revision": { "type": ["integer", "null"], "minimum": 1 },
+        "project_id": { "type": ["string", "null"], "format": "uuid" },
+        "kind": { "type": "string", "minLength": 1 },
+        "source_ref": { "type": "string", "minLength": 1 },
+        "object_relative_path": { "type": ["string", "null"], "minLength": 1 },
+        "proxy_relative_path": { "type": ["string", "null"], "minLength": 1 },
+        "resolved_path": { "type": ["string", "null"] },
+        "mime_type": { "type": ["string", "null"], "minLength": 1 },
+        "content_hash": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "exists": { "type": "boolean" },
+        "size_bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "duration_us": { "type": ["integer", "null"], "minimum": 0 },
+        "width": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+        "height": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+        "fps_num": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+        "fps_den": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+        "media_probe": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "width": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+            "height": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+            "duration_us": { "type": ["integer", "null"], "minimum": 0 },
+            "fps_num": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+            "fps_den": { "type": ["integer", "null"], "exclusiveMinimum": 0 }
+          }
+        },
+        "media_probe_status": {
+          "enum": ["not_requested", "verified", "failed", "unavailable"]
+        },
+        "media_probe_error": { "type": ["string", "null"], "minLength": 1 },
+        "legacy_snapshot": { "type": "boolean" },
+        "alpha_mode": { "enum": ["none", "straight", "premultiplied"] },
+        "license_status": { "type": "string" },
+        "license_expires_at": { "type": ["string", "null"], "format": "date-time" },
+        "license_snapshot": { "type": ["object", "null"] }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "start_us",
+        "end_us",
+        "source_in_us",
+        "source_ref",
+        "z_index",
+        "blend_mode",
+        "opacity",
+        "payload",
+        "depends_on"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "clip_id": { "type": ["string", "null"], "format": "uuid" },
+        "track_id": { "type": ["string", "null"], "format": "uuid" },
+        "kind": { "type": "string", "minLength": 1 },
+        "start_us": { "type": "integer", "minimum": 0 },
+        "end_us": { "type": "integer", "exclusiveMinimum": 0 },
+        "start_frame": { "type": ["integer", "null"], "minimum": 0 },
+        "end_frame_exclusive": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+        "track_order": { "type": ["integer", "null"], "minimum": 0 },
+        "source_in_us": { "type": "integer", "minimum": 0 },
+        "source_ref": { "type": "string", "minLength": 1 },
+        "asset_id": { "type": ["string", "null"], "format": "uuid" },
+        "asset_revision": { "type": ["integer", "null"], "minimum": 1 },
+        "z_index": { "type": "integer" },
+        "blend_mode": { "type": "string" },
+        "opacity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "cache_key": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "payload": { "type": "object" },
+        "depends_on": { "type": "array", "items": { "$ref": "#/$defs/uuid" } }
+      }
+    },
+    "transition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "from_node_id",
+        "to_node_id",
+        "kind",
+        "start_us",
+        "end_us",
+        "easing",
+        "audio_mode",
+        "audio_offset_us",
+        "chapter_boundary",
+        "parameters"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "from_node_id": { "$ref": "#/$defs/uuid" },
+        "to_node_id": { "$ref": "#/$defs/uuid" },
+        "kind": { "enum": ["cut", "dissolve", "wipe", "slide", "match"] },
+        "start_us": { "type": "integer", "minimum": 0 },
+        "end_us": { "type": "integer", "minimum": 0 },
+        "duration_us": { "type": ["integer", "null"], "minimum": 0 },
+        "easing": { "enum": ["linear", "ease_in", "ease_out", "ease_in_out"] },
+        "audio_mode": { "enum": ["cut", "j_cut", "l_cut"] },
+        "audio_offset_us": { "type": "integer" },
+        "chapter_boundary": { "type": "boolean" },
+        "parameters": { "type": "object" }
+      }
+    },
+    "audio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["clips", "ducking", "loudness_target_lufs", "true_peak_db"],
+      "properties": {
+        "clips": { "type": "array", "items": { "$ref": "#/$defs/audio_clip" } },
+        "ducking": { "type": "array", "items": { "$ref": "#/$defs/ducking" } },
+        "loudness_target_lufs": { "type": "number" },
+        "true_peak_db": { "type": "number" },
+        "buses": { "type": "array" },
+        "automation": { "type": "array" },
+        "master": { "type": "object" }
+      }
+    },
+    "audio_clip": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "source_ref",
+        "timeline_start_us",
+        "timeline_end_us",
+        "source_in_us",
+        "source_duration_us",
+        "bus",
+        "gain_db",
+        "fade_in_us",
+        "fade_out_us",
+        "pan"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "kind": { "type": "string" },
+        "source_ref": { "type": "string", "minLength": 1 },
+        "asset_id": { "type": ["string", "null"], "format": "uuid" },
+        "asset_revision": { "type": ["integer", "null"], "minimum": 1 },
+        "timeline_start_us": { "type": "integer", "minimum": 0 },
+        "timeline_end_us": { "type": "integer", "exclusiveMinimum": 0 },
+        "source_in_us": { "type": "integer", "minimum": 0 },
+        "source_duration_us": { "type": ["integer", "null"], "minimum": 0 },
+        "bus": { "enum": ["narration", "presenter", "music", "sfx", "master"] },
+        "gain_db": { "type": "number" },
+        "fade_in_us": { "type": "integer", "minimum": 0 },
+        "fade_out_us": { "type": "integer", "minimum": 0 },
+        "pan": { "type": "number", "minimum": -1, "maximum": 1 }
+      }
+    },
+    "ducking": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_bus", "target_bus", "amount_db", "attack_us", "release_us"],
+      "properties": {
+        "source_bus": { "type": "string" },
+        "target_bus": { "type": "string" },
+        "amount_db": { "type": "number", "minimum": 0, "maximum": 60 },
+        "attack_us": { "type": "integer", "minimum": 0 },
+        "release_us": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "subtitles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "render_mode",
+        "cues",
+        "default_style",
+        "languages",
+        "document_revision",
+        "document_hash",
+        "tracks"
+      ],
+      "properties": {
+        "render_mode": { "enum": ["burn_in", "soft", "both", "none"] },
+        "cues": { "type": "array", "items": { "$ref": "#/$defs/cue" } },
+        "default_style": { "type": "object" },
+        "languages": { "type": "array", "items": { "type": "string" } },
+        "document_revision": { "type": "integer", "minimum": 1 },
+        "document_hash": { "$ref": "#/$defs/hash" },
+        "tracks": { "type": "array" }
+      }
+    },
+    "cue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "language",
+        "label",
+        "start_us",
+        "end_us",
+        "text",
+        "translation",
+        "words",
+        "line_breaks",
+        "style",
+        "track_id",
+        "primary",
+        "visible"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "language": { "type": "string", "minLength": 2 },
+        "label": { "type": "string", "minLength": 1 },
+        "start_us": { "type": "integer", "minimum": 0 },
+        "end_us": { "type": "integer", "exclusiveMinimum": 0 },
+        "text": { "type": "string", "minLength": 1 },
+        "translation": { "type": ["string", "null"] },
+        "words": { "type": "array", "items": { "$ref": "#/$defs/word" } },
+        "line_breaks": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+        "style": { "type": "object" },
+        "track_id": { "type": ["string", "null"], "format": "uuid" },
+        "primary": { "type": "boolean" },
+        "visible": { "type": "boolean" }
+      }
+    },
+    "word": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "start_us", "end_us"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "start_us": { "type": "integer", "minimum": 0 },
+        "end_us": { "type": "integer", "exclusiveMinimum": 0 }
+      }
+    },
+    "affected_range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_us", "end_us", "reasons"],
+      "properties": {
+        "start_us": { "type": "integer", "minimum": 0 },
+        "end_us": { "type": "integer", "exclusiveMinimum": 0 },
+        "reasons": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}

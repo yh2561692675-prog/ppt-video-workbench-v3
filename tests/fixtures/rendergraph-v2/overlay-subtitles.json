@@ -1,0 +1,19 @@
+{
+  "fixture_id": "overlay-subtitles",
+  "description": "Overlay graphics with burn-in subtitle cues",
+  "network_required": false,
+  "canvas": { "width": 1920, "height": 1080, "fps_num": 25, "fps_den": 1, "duration_us": 8000000 },
+  "legacy_entrypoints": [
+    "workbench.subtitles.workbench_service",
+    "Remotion subtitle layer",
+    "FFmpeg ebur128/quality probes"
+  ],
+  "legacy_output": {
+    "keyframes": [],
+    "audio_waveform": [],
+    "duration_us": 8000000,
+    "codec": "not-rendered-in-baseline",
+    "sha256": null
+  },
+  "notes": "Subtitle and overlay timing is kept as fixture metadata for contract tests."
+}

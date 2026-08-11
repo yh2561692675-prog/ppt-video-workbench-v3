@@ -27,4 +27,3 @@ __all__ = [
     "SubmitJobResultDto",
     "create_peripheral_client",
 ]
-

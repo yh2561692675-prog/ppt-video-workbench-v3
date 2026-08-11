@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "window_id": "019feb46-8950-7213-b4ca-422988a6b032-phase2-classified",
+  "task_name": "Shared Foundation ownership artifact classification",
+  "mode": "idle",
+  "repository": {
+    "path": "source-root",
+    "branch": "recovery/root-snapshot-20260810",
+    "head": "956929e7b75f80df8d17891420ccc812574a682e",
+    "status_manifest_sha256": "dc8ead129cb30b38a9eafbd4221da374d120b0850e192f9d1f1839371ccd78fd"
+  },
+  "owned_paths": [
+    "apps/api/src/workbench/foundation",
+    "schemas/foundation",
+    "scripts/foundation",
+    "tests/contract/test_foundation_freeze_contracts.py",
+    "tests/unit/foundation",
+    "docs/acceptance/foundation/ownership-map-20260811.json"
+  ],
+  "shared_paths_touched": [],
+  "completed": [
+    "Generated/cache/backup/release paths classified without owner requirement",
+    "Chronological StopPoints from one window deduplicated",
+    "Ownership Map regenerated with 0 semantic conflicts",
+    "15 targeted tests passed",
+    "Ruff check and format check passed"
+  ],
+  "remaining": [
+    "Collect StopPoints from every active writer",
+    "Resolve 506 formal unknown paths",
+    "Validate main recovery task 496-file audit reference",
+    "Create checkpoint and immutable snapshot in G3",
+    "Do not begin next project from this stop point"
+  ],
+  "evidence_refs": [
+    "docs/acceptance/foundation/ownership-map-20260811.json",
+    "tests/unit/foundation/test_ownership_map.py",
+    "docs/superpowers/specs/2026-08-11-shared-foundation-freeze-design.md",
+    "docs/superpowers/plans/2026-08-11-shared-foundation-freeze.md"
+  ],
+  "will_write_again": false,
+  "safe_resume": "Read this stop point and the updated Ownership Map. Use the main recovery task audit to resolve the 506 formal unknown paths, then rerun G2; only after G2 passes may G3 checkpoint begin."
+}

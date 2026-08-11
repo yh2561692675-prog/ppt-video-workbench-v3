@@ -1,0 +1,426 @@
+{
+  "schema_version": "ground-truth-v1",
+  "sample_count": 30,
+  "pages": [
+    {
+      "page_id": "education-v2-001",
+      "page_type": "cover",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-002",
+      "page_type": "cover",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-003",
+      "page_type": "cover",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-004",
+      "page_type": "agenda",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-005",
+      "page_type": "agenda",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-006",
+      "page_type": "agenda",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-007",
+      "page_type": "dense_text",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-008",
+      "page_type": "dense_text",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-009",
+      "page_type": "dense_text",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-010",
+      "page_type": "image_text",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-011",
+      "page_type": "image_text",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-012",
+      "page_type": "image_text",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-013",
+      "page_type": "comparison",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-014",
+      "page_type": "comparison",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-015",
+      "page_type": "comparison",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-016",
+      "page_type": "process",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-017",
+      "page_type": "process",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-018",
+      "page_type": "process",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-019",
+      "page_type": "timeline",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-020",
+      "page_type": "timeline",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-021",
+      "page_type": "timeline",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-022",
+      "page_type": "data_chart",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-023",
+      "page_type": "data_chart",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-024",
+      "page_type": "data_chart",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-025",
+      "page_type": "conclusion",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-026",
+      "page_type": "conclusion",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-027",
+      "page_type": "conclusion",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-028",
+      "page_type": "case_study",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-029",
+      "page_type": "case_study",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    },
+    {
+      "page_id": "education-v2-030",
+      "page_type": "case_study",
+      "safe_area": {
+        "left": 0.05,
+        "top": 0.05,
+        "right": 0.95,
+        "bottom": 0.95
+      },
+      "cues": [0, 30, 60],
+      "keyframes": [0, 30, 60],
+      "disabled_modules": [],
+      "degrade_path": ["L3", "L2", "L1"]
+    }
+  ]
+}

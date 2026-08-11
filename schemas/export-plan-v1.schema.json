@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/export-plan-v1.schema.json",
+  "title": "Multi-spec Export Plan v1",
+  "type": "object",
+  "required": [
+    "plan_id",
+    "project_id",
+    "revision",
+    "created_at",
+    "preset",
+    "output_relative_path",
+    "segment_paths",
+    "ffmpeg_video_filter",
+    "execution_ready",
+    "content_hash"
+  ],
+  "properties": {
+    "plan_id": { "type": "string", "format": "uuid" },
+    "project_id": { "type": "string", "format": "uuid" },
+    "revision": { "type": "integer", "minimum": 1 },
+    "created_at": { "type": "string" },
+    "source_timeline_revision": { "type": ["integer", "null"], "minimum": 1 },
+    "output_relative_path": { "type": "string", "pattern": "^08_输出/" },
+    "segment_paths": { "type": "array", "items": { "type": "string" } },
+    "ffmpeg_video_filter": { "type": "string" },
+    "execution_ready": { "type": "boolean" },
+    "content_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "preset": { "$ref": "#/$defs/preset" }
+  },
+  "$defs": {
+    "preset": {
+      "type": "object",
+      "required": [
+        "id",
+        "label",
+        "platform",
+        "width",
+        "height",
+        "fps",
+        "video_bitrate",
+        "audio_bitrate",
+        "container",
+        "video_codec",
+        "max_segment_seconds"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "platform": { "enum": ["master", "youtube", "bilibili", "douyin", "instagram", "gif"] },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "fps": { "enum": [24, 25, 30, 60] },
+        "video_bitrate": { "type": "string" },
+        "audio_bitrate": { "type": "string" },
+        "container": { "enum": ["mp4", "gif"] },
+        "video_codec": { "enum": ["libx264", "libx265", "gif"] },
+        "max_segment_seconds": { "type": ["integer", "null"], "minimum": 1 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

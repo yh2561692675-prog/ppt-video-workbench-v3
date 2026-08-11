@@ -86,6 +86,7 @@
 - Changes: added `scripts/effect-engine-windows-acceptance.ps1`, `tests/acceptance/effect-engine-plan.md`, `docs/effect-engine-acceptance-report-RC1.md`, and `docs/effect-template-catalog.md`; updated `CHANGELOG.md`.
 - Preparation check: `powershell -ExecutionPolicy Bypass -File scripts/effect-engine-windows-acceptance.ps1 -PlanOnly` passed and confirmed the supplied reference video exists.
 - Safety: the script performs no installation, GUI automation, protected-path writes, or acceptance claim unless a human executes and records the manual checklist.
+
 ### E12 - isolated Windows acceptance evidence (partial)
 
 - Temporary workspace: `F:\ppt-video-workbench-v3\\.tmp\\workspace-acceptance`; copied project data and generated a separate `workspace.db`, cache, logs, and output directory.
@@ -108,6 +109,7 @@
 - 回归测试：`pnpm --dir apps/web test -- HeyGenAudioPanel` -> `3 passed`；全量 Web 测试 `25 files / 43 tests passed`；`pnpm --dir apps/web typecheck` 和生产构建均通过。
 - 临时浏览器复现：复制配置到 `.tmp\\workspace-acceptance` 后，配置下拉框可显示 6 个选项；原始项目和安装目录未写入。
 - 真实配置接口核对：`Video` 配置可返回 2 个音色；旧配置 `222` 返回 HTTP 422，因此使用时应选择 `Video`，界面不会把失效密钥误显示为可用音色。
+
 ### HeyGen 配音界面 - DPAPI 解密失败提示修复
 
 - 根因：临时运行上下文无法解密由其他 Windows 用户保护的 HeyGen API Key，异常此前未被路由捕获，前端只能显示 HTTP 500。

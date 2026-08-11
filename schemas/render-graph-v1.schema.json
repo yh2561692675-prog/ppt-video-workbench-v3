@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/render-graph-v1.schema.json",
+  "title": "RenderGraphV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "project_id",
+    "timeline_revision",
+    "duration_us",
+    "nodes",
+    "content_hash"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "project_id": { "type": "string", "format": "uuid" },
+    "timeline_revision": { "type": "integer", "minimum": 1 },
+    "duration_us": { "type": "integer", "minimum": 0 },
+    "content_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "clip_id",
+          "track_id",
+          "kind",
+          "start_us",
+          "end_us",
+          "source_ref",
+          "cache_key",
+          "depends_on"
+        ],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "clip_id": { "type": "string", "format": "uuid" },
+          "track_id": { "type": "string", "format": "uuid" },
+          "kind": { "type": "string" },
+          "start_us": { "type": "integer", "minimum": 0 },
+          "end_us": { "type": "integer", "minimum": 1 },
+          "source_ref": { "type": "string", "minLength": 1 },
+          "cache_key": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "depends_on": { "type": "array", "items": { "type": "string", "format": "uuid" } }
+        }
+      }
+    }
+  }
+}

@@ -35,17 +35,27 @@
 ```python
 def test_report_passes_only_when_every_required_phase_passes() -> None:
     from scripts.windows_acceptance_report import build_report
-    report = build_report({
-        "release": {"installer_sha256": "a" * 64},
-        "phases": {name: {"result": "passed"} for name in REQUIRED_PHASES},
-    })
+
+    report = build_report(
+        {
+            "release": {"installer_sha256": "a" * 64},
+            "phases": {name: {"result": "passed"} for name in REQUIRED_PHASES},
+        }
+    )
     assert report["decision"] == "pass"
     assert report["blocking_failures"] == []
 
+
 def test_report_blocks_and_redacts_user_paths_and_tokens() -> None:
     from scripts.windows_acceptance_report import build_report
-    report = build_report({"token": "Bearer secret-value", "release": {
-        "installer_path": r"C:\\Users\\HanYu\\setup.exe"}, "phases": {}})
+
+    report = build_report(
+        {
+            "token": "Bearer secret-value",
+            "release": {"installer_path": r"C:\\Users\\HanYu\\setup.exe"},
+            "phases": {},
+        }
+    )
     serialized = json.dumps(report)
     assert report["decision"] == "block"
     assert "HanYu" not in serialized
@@ -61,12 +71,17 @@ Run `uv run pytest tests/release/test_windows_acceptance_report.py -v`. Expected
 ```python
 REQUIRED_PHASES = ("install", "first_launch", "restart", "uninstall", "workspace_retention")
 
+
 def build_report(evidence: dict[str, object]) -> dict[str, object]:
     redacted = redact(evidence)
     phases = redacted.get("phases", {})
     failures = [name for name in REQUIRED_PHASES if phases.get(name, {}).get("result") != "passed"]
-    return {"schema_version": "1.0", "decision": "pass" if not failures else "block",
-            "blocking_failures": failures, "evidence": redacted}
+    return {
+        "schema_version": "1.0",
+        "decision": "pass" if not failures else "block",
+        "blocking_failures": failures,
+        "evidence": redacted,
+    }
 ```
 
 `redact` masks the keys `token`, `authorization`, `api_key`, `secret`, and `cookie`; changes `Bearer <value>` to `Bearer ***`; and changes `C:\\Users\\<name>` to `%USERPROFILE%`. The CLI accepts `--evidence` and `--output-dir`, writes escaped HTML, and exits zero only for a pass.
@@ -92,9 +107,17 @@ Run `uv run pytest tests/release/test_windows_acceptance_report.py -v`. Expected
 ```python
 def test_windows_acceptance_runner_proves_start_restart_and_retention() -> None:
     source = (REPOSITORY_ROOT / "tests/release/windows-acceptance.ps1").read_text(encoding="utf-8")
-    for text in ("Get-FileHash -Algorithm SHA256", "Start-Process", "endpoint.json",
-                 "first_launch", "restart", "workspace_retention",
-                 "P01_WINDOWS_ACCEPTANCE=PASS", "P01_WINDOWS_ACCEPTANCE=BLOCK", "F:\\Video"):
+    for text in (
+        "Get-FileHash -Algorithm SHA256",
+        "Start-Process",
+        "endpoint.json",
+        "first_launch",
+        "restart",
+        "workspace_retention",
+        "P01_WINDOWS_ACCEPTANCE=PASS",
+        "P01_WINDOWS_ACCEPTANCE=BLOCK",
+        "F:\\Video",
+    ):
         assert text in source
     assert "Remove-Item -LiteralPath $workspaceRoot" not in source
 ```

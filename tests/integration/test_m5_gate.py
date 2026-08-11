@@ -152,7 +152,8 @@ def _eight_page_project(tmp_path: Path):
     return app, project.id
 
 
-def test_m5_gate_runs_complete_eight_page_video_chain(tmp_path: Path) -> None:
+def test_m5_gate_runs_complete_eight_page_video_chain(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("WORKBENCH_ASYNC_RENDER_ENABLED", "false")
     app, project_id = _eight_page_project(tmp_path)
 
     with TestClient(app) as client:

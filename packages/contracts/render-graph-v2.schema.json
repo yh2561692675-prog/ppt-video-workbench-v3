@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/contracts/render-graph-v2.schema.json",
+  "$ref": "../../schemas/render-graph-v2.schema.json"
+}

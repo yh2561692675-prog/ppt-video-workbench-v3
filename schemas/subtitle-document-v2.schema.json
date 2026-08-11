@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/subtitle-document-v2.schema.json",
+  "title": "Subtitle Workbench Document v2",
+  "type": "object",
+  "required": [
+    "version",
+    "revision",
+    "duration_ms",
+    "render_mode",
+    "default_style",
+    "tracks",
+    "updated_at"
+  ],
+  "properties": {
+    "version": { "const": 2 },
+    "revision": { "type": "integer", "minimum": 1 },
+    "duration_ms": { "type": "integer", "minimum": 0 },
+    "render_mode": { "enum": ["soft", "burn_in"] },
+    "default_style": { "$ref": "#/$defs/style" },
+    "templates": { "type": "array", "items": { "$ref": "#/$defs/style" } },
+    "tracks": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/track" } },
+    "updated_at": { "type": "string" },
+    "content_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  },
+  "$defs": {
+    "style": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "font_family",
+        "font_size",
+        "color",
+        "outline_color",
+        "outline_width",
+        "background_color",
+        "background_opacity",
+        "position",
+        "animation",
+        "highlight_color"
+      ],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "name": { "type": "string", "minLength": 1 },
+        "font_family": { "type": "string" },
+        "font_size": { "type": "integer", "minimum": 8, "maximum": 240 },
+        "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "outline_color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "outline_width": { "type": "integer", "minimum": 0, "maximum": 32 },
+        "background_color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "background_opacity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "position": { "enum": ["top", "center", "bottom"] },
+        "animation": { "enum": ["none", "fade", "word_highlight"] },
+        "highlight_color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
+      },
+      "additionalProperties": false
+    },
+    "word": {
+      "type": "object",
+      "required": ["text", "start_ms", "end_ms", "highlighted"],
+      "properties": {
+        "text": { "type": "string" },
+        "start_ms": { "type": "integer", "minimum": 0 },
+        "end_ms": { "type": "integer", "minimum": 0 },
+        "highlighted": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "cue": {
+      "type": "object",
+      "required": [
+        "id",
+        "start_ms",
+        "end_ms",
+        "text",
+        "words",
+        "line_breaks",
+        "source_word_indexes",
+        "locked"
+      ],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "start_ms": { "type": "integer", "minimum": 0 },
+        "end_ms": { "type": "integer", "minimum": 0 },
+        "text": { "type": "string", "minLength": 1 },
+        "translation": { "type": ["string", "null"] },
+        "words": { "type": "array", "items": { "$ref": "#/$defs/word" } },
+        "style_template_id": { "type": ["string", "null"], "format": "uuid" },
+        "style_override": { "anyOf": [{ "$ref": "#/$defs/style" }, { "type": "null" }] },
+        "line_breaks": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+        "source_word_indexes": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+        "locked": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "track": {
+      "type": "object",
+      "required": ["id", "language", "label", "primary", "visible", "cues"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "language": { "type": "string" },
+        "label": { "type": "string" },
+        "primary": { "type": "boolean" },
+        "visible": { "type": "boolean" },
+        "cues": { "type": "array", "items": { "$ref": "#/$defs/cue" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

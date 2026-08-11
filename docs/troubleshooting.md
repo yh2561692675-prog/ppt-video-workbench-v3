@@ -9,6 +9,15 @@
 - 任务失败：记录页面显示的稳定 `error_code`，先检查磁盘空间、FFmpeg/Remotion 运行时和输入指纹，再点击重试。失败运行不会覆盖上一次成功的 MP4 或制作包。
 - 任务取消：取消请求会先终止当前外部进程，页面缓存保留，可直接重新提交或重试。
 
+诊断中的“渲染任务工作器”只返回稳定统计：`worker_alive`、`queued_jobs`、`stale_running_jobs` 和 `recent_failure_codes`。它不会返回项目名称、绝对路径、任务消息或底层 stderr。若 `stale_running_jobs` 大于 0，先重启应用使任务恢复为暂停，再从最近检查点继续。
+
+常见最终渲染错误码：
+
+- `render_input_stale` / `render_input_changed`：项目输入在入队或渲染期间变化，重新运行预检后重试。
+- `render_cancel_cleanup_failed`：取消任务的临时目录清理失败，确认目录权限和占用进程后再重试。
+- `renderer_runtime_unavailable`：Node、Chromium、Remotion、FFmpeg 或 FFprobe 运行时不可用。
+- `package_validation_failed` / `media_validation_failed`：制作包清单或成片媒体校验失败；上一份成功产物不会被覆盖。
+
 ## 安装与运行环境
 
 | code                             | 含义                                                                   | 处理方式                                                                 |

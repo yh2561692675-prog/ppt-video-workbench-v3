@@ -7,6 +7,7 @@ import pytest
 from PIL import Image
 from workbench.jobs.execution import RenderCancelled
 from workbench.video.models import ProjectVideoProps, SubtitlePlacement, TextRect, VideoPageProps
+from workbench.video.process_runner import ProcessCancelled
 from workbench.video.render_service import RemotionPageRenderer, RenderError, VideoRenderService
 
 
@@ -161,9 +162,58 @@ def test_remotion_renderer_serializes_resolved_page_props_and_uses_frame_range(
     assert "pnpm" not in commands[0]
     assert "render" in commands[0]
     assert "--frames=0-29" in commands[0]
+    assert "--timeout=120000" in commands[0]
     serialized = rendered_props[0]
     assert '"reduced_motion": true' in serialized
     assert '"position": "fallback-panel"' in serialized
+
+
+def test_remotion_renderer_maps_process_cancellation_to_render_cancellation(
+    tmp_path: Path,
+) -> None:
+    class CancellingProcessRunner:
+        def run(self, command, cwd, control):
+            raise ProcessCancelled("cancelled")
+
+    props = _props(tmp_path, page_count=1)
+    renderer = RemotionPageRenderer(
+        tmp_path,
+        runtime=_renderer_runtime(tmp_path),
+        process_runner=CancellingProcessRunner(),
+    )
+
+    with pytest.raises(RenderCancelled, match="render process cancelled"):
+        renderer.render(
+            props,
+            props.pages[0],
+            tmp_path / "preview-1.png",
+            tmp_path / "page.mp4",
+        )
+
+
+def test_remotion_renderer_ceil_frame_count_preserves_short_page_duration(
+    tmp_path: Path,
+) -> None:
+    props = _props(tmp_path, page_count=1).model_copy(
+        update={
+            "duration_ms": 250,
+            "pages": [_props(tmp_path, page_count=1).pages[0].model_copy(update={"end_ms": 250})],
+        }
+    )
+    commands: list[list[str]] = []
+
+    def run(command: list[str], _: Path) -> None:
+        commands.append(command)
+        Path(command[5]).write_bytes(b"remotion-video")
+
+    RemotionPageRenderer(tmp_path, runtime=_renderer_runtime(tmp_path), run=run).render(
+        props,
+        props.pages[0],
+        tmp_path / "preview-1.png",
+        tmp_path / "page.mp4",
+    )
+
+    assert "--frames=0-7" in commands[0]
 
 
 def test_render_pages_reports_progress_and_checks_cancellation(tmp_path: Path) -> None:

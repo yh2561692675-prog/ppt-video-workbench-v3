@@ -70,7 +70,7 @@ def _render_html(report: Mapping[str, object]) -> str:
         json.dumps(report["evidence"], ensure_ascii=False, indent=2, sort_keys=True)
     )
     return (
-        "<!doctype html><html><head><meta charset=\"utf-8\">"
+        '<!doctype html><html><head><meta charset="utf-8">'
         "<title>P01 Windows Acceptance</title></head><body>"
         f"<h1>P01 Windows Acceptance: {decision}</h1>"
         f"<p>Blocking failures: {html.escape(', '.join(map(str, blockers)) or 'none')}</p>"

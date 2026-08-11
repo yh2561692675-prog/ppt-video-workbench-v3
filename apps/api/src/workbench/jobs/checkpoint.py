@@ -35,6 +35,8 @@ class Checkpoint(BaseModel):
     artifacts: list[CheckpointArtifact] = Field(default_factory=list)
     temporary_paths: list[str] = Field(default_factory=list)
     remote_task_ids: list[str] = Field(default_factory=list)
+    completed_stages: list[str] = Field(default_factory=list)
+    preserve_manual_locks: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
@@ -152,6 +154,8 @@ class JobContext:
                 self.project_dir, sanitized.get("temporary_paths", [])
             ),
             remote_task_ids=_string_list(sanitized.get("remote_task_ids", [])),
+            completed_stages=_string_list(sanitized.get("completed_stages", [])),
+            preserve_manual_locks=bool(sanitized.get("preserve_manual_locks", False)),
         )
         return self.store.write(checkpoint)
 

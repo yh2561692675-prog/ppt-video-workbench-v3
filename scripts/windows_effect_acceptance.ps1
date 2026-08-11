@@ -13,6 +13,20 @@ $ErrorActionPreference = "Stop"
 $helperPath = Join-Path $PSScriptRoot "windows_effect_acceptance_lib.ps1"
 . $helperPath
 
+function Invoke-SourcePython {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string[]]$Arguments
+  )
+
+  $uv = Get-Command uv -ErrorAction SilentlyContinue
+  if ($null -ne $uv) {
+    & $uv.Source run python @Arguments
+  } else {
+    & python @Arguments
+  }
+}
+
 if ([string]::IsNullOrWhiteSpace($InstallRoot)) {
   $InstallRoot = Join-Path $Root "acceptance-app"
 }
@@ -50,7 +64,7 @@ Write-EvidenceRecord -EvidencePath $evidencePath -Step "isolation" -Result "pass
 }
 
 Write-Host "Verifying effect release from $Root"
-& python "$Root\scripts\verify_effect_release.py" --root $Root
+Invoke-SourcePython -Arguments @("$Root\scripts\verify_effect_release.py", "--root", $Root)
 if ($LASTEXITCODE -ne 0) {
   throw "E_RELEASE_VERIFY: release verification failed"
 }
@@ -58,15 +72,16 @@ if ($LASTEXITCODE -ne 0) {
 if ($RunTests) {
   Push-Location $Root
   try {
-    & python -m pytest -q
+    $env:CI = "true"
+    Invoke-SourcePython -Arguments @("-m", "pytest", "-q", "--import-mode=importlib")
     if ($LASTEXITCODE -ne 0) { throw "E_TESTS: pytest failed" }
-    & pnpm --dir "$Root\apps\web" run typecheck
+    & pnpm --filter "@workbench/web" run typecheck
     if ($LASTEXITCODE -ne 0) { throw "E_TESTS: web typecheck failed" }
-    & pnpm --dir "$Root\apps\web" run test -- --run
+    & pnpm --filter "@workbench/web" run test -- --run
     if ($LASTEXITCODE -ne 0) { throw "E_TESTS: web tests failed" }
-    & pnpm --dir "$Root\remotion" run typecheck
+    & pnpm --filter "@workbench/remotion" run typecheck
     if ($LASTEXITCODE -ne 0) { throw "E_TESTS: remotion typecheck failed" }
-    & pnpm --dir "$Root\remotion" run test
+    & pnpm --filter "@workbench/remotion" run test
     if ($LASTEXITCODE -ne 0) { throw "E_TESTS: remotion tests failed" }
   } finally {
     Pop-Location

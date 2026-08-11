@@ -4,7 +4,9 @@ from pathlib import Path
 from uuid import UUID
 
 from workbench.audio.service import AudioService
+from workbench.domain.audio import AudioTimelineSegment
 from workbench.domain.models import ProjectManifest
+from workbench.domain.presenter import PresentationMode, SlideAnchor
 from workbench.subtitles.models import SubtitleTimeline
 from workbench.video.models import ProjectVideoProps, VideoPageProps
 
@@ -18,28 +20,43 @@ class VideoPropsService:
         project: ProjectManifest,
         subtitles: SubtitleTimeline,
     ) -> ProjectVideoProps:
-        page_audio = {item.page_id: item for item in self.audio.resolve_page_audio(project)}
-        segments = (
-            {segment.page_id: segment for segment in project.audio_timeline.segments}
-            if project.audio_timeline is not None
-            else {}
-        )
+        human_mode = project.presentation_mode is PresentationMode.HUMAN_PRESENTER
+        segments: dict[UUID, SlideAnchor | AudioTimelineSegment]
+        if human_mode:
+            if project.presenter_source is None or project.presenter_timeline is None:
+                raise ValueError("human presenter video props require an analyzed presenter source")
+            page_audio = {}
+            segments = {anchor.page_id: anchor for anchor in project.presenter_timeline.anchors}
+        else:
+            page_audio = {item.page_id: item for item in self.audio.resolve_page_audio(project)}
+            segments = (
+                {segment.page_id: segment for segment in project.audio_timeline.segments}
+                if project.audio_timeline is not None
+                else {}
+            )
         pages = []
         cursor_ms = 0
         for page in sorted(project.pages, key=lambda item: item.order):
-            audio = page_audio[page.id]
             segment = segments.get(page.id)
-            if segment is None:
-                start_ms, end_ms = cursor_ms, cursor_ms + audio.duration_ms
-            else:
+            if human_mode:
+                if segment is None or project.presenter_source is None:
+                    raise ValueError(f"presenter timeline is missing page {page.order}")
                 start_ms, end_ms = segment.start_ms, segment.end_ms
+                audio_path = project.presenter_source.relative_path
+            else:
+                audio = page_audio[page.id]
+                if segment is None:
+                    start_ms, end_ms = cursor_ms, cursor_ms + audio.duration_ms
+                else:
+                    start_ms, end_ms = segment.start_ms, segment.end_ms
+                audio_path = audio.path
             pages.append(
                 VideoPageProps(
                     page_id=page.id,
                     page_order=page.order,
                     title=page.title or "",
                     image_path=self._page_image_path(project, page.id),
-                    audio_path=audio.path,
+                    audio_path=audio_path,
                     start_ms=start_ms,
                     end_ms=end_ms,
                     subtitle_cue_ids=[cue.id for cue in subtitles.cues if cue.page_id == page.id],
@@ -50,6 +67,10 @@ class VideoPropsService:
             )
             cursor_ms = end_ms
         all_effects_ready = bool(pages) and all(item.effect_plan is not None for item in pages)
+        presenter_timeline = project.presenter_timeline
+        presenter_source_path = None
+        if presenter_timeline is not None and project.presenter_source is not None:
+            presenter_source_path = project.presenter_source.relative_path
         return ProjectVideoProps(
             project_id=project.id,
             duration_ms=subtitles.duration_ms,
@@ -60,6 +81,10 @@ class VideoPropsService:
             catalog_version=project.effect_policy.catalog_version if all_effects_ready else None,
             pages=pages,
             subtitles=subtitles.cues,
+            presenter_timeline=presenter_timeline,
+            presenter_source_path=presenter_source_path,
+            timeline_revision=(presenter_timeline.revision if presenter_timeline else None),
+            timeline_hash=(presenter_timeline.timeline_hash if presenter_timeline else None),
         )
 
     def _page_image_path(self, project: ProjectManifest, page_id: UUID) -> str:

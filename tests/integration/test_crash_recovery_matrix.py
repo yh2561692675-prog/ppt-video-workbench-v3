@@ -4,7 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from workbench.domain.enums import JobType
+from workbench.domain.enums import JobStatus, JobType
 from workbench.jobs.checkpoint import JobContext
 from workbench.jobs.repository import JobRepository, JobSpec
 from workbench.jobs.runner import JobRunner
@@ -111,7 +111,7 @@ def test_long_task_recovery_matrix_preserves_completed_artifacts(
         job_id, handler, context=recovered_context
     )
 
-    assert result.status.value == "completed"
+    assert result.status is JobStatus.SUCCEEDED
     assert result.progress == 1.0
     assert queried_remote_ids == remote_ids if paid else queried_remote_ids == []
     assert created_remote_ids == []

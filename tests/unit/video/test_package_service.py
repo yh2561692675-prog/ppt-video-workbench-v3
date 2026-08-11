@@ -8,9 +8,40 @@ from workbench.video.package_service import (
     VideoExportError,
     VideoExportService,
     build_package_manifest,
+    build_page_mux_command,
     validate_media_probe,
 )
 from workbench.video.process_runner import ProcessCancelled, ProcessExecutionError
+
+
+def test_presenter_page_mux_seeks_the_single_master_audio_track(tmp_path: Path) -> None:
+    command = build_page_mux_command(
+        "ffmpeg",
+        tmp_path / "page.mp4",
+        tmp_path / "presenter.mp4",
+        tmp_path / "segment.mp4",
+        start_ms=12_500,
+        end_ms=15_000,
+        seek_master_audio=True,
+    )
+
+    assert command[command.index("-ss") + 1] == "12.500"
+    assert command[command.index("-t") + 1] == "2.500"
+    assert command.count(str(tmp_path / "presenter.mp4")) == 1
+
+
+def test_ai_page_mux_does_not_seek_page_audio(tmp_path: Path) -> None:
+    command = build_page_mux_command(
+        "ffmpeg",
+        tmp_path / "page.mp4",
+        tmp_path / "page.wav",
+        tmp_path / "segment.mp4",
+        start_ms=12_500,
+        end_ms=15_000,
+        seek_master_audio=False,
+    )
+
+    assert "-ss" not in command
 
 
 def test_package_manifest_contains_sha256_and_size_for_required_artifacts(tmp_path: Path) -> None:

@@ -19,11 +19,12 @@ from peripheral_contracts import (
     JobResult,
     OutputArtifact,
 )
-from pydantic import JsonValue
+from pydantic import JsonValue, TypeAdapter
 
 Handler = Callable[[JobEnvelope, Path], "BusinessExecution"]
 _SECRET_PATTERN = re.compile(r"(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+")
 _PATH_PATTERN = re.compile(r"(?i)(?:[A-Z]:\\|/)[^\s]+")
+_JSON_OBJECT_ADAPTER = TypeAdapter(dict[str, JsonValue])
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +72,17 @@ def business_parameters(job: JobEnvelope) -> dict[str, JsonValue]:
         "project_snapshot_sha256",
     }
     return {key: value for key, value in job.parameters.items() if key not in metadata}
+
+
+def json_object(value: object) -> dict[str, JsonValue]:
+    return _JSON_OBJECT_ADAPTER.validate_python(value)
+
+
+def project_revision(job: JobEnvelope) -> int:
+    value = job.parameters.get("project_revision", 1)
+    if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+        raise ValueError("project_revision must be a positive integer")
+    return value
 
 
 def execute_business_handler(

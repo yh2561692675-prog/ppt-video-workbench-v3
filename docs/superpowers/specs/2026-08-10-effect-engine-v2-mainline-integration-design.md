@@ -183,6 +183,7 @@ class PageRecord(BaseModel):
     # existing fields remain unchanged
     effect_plan: EffectPlanRecord | None = None
 
+
 class ProjectManifest(BaseModel):
     # existing fields remain unchanged
     effect_policy: EffectProjectPolicy = Field(default_factory=EffectProjectPolicy)
@@ -192,21 +193,21 @@ class ProjectManifest(BaseModel):
 
 ## 8. 模板目录与 payload 约束
 
-| 模板 | 用途 | 最小 payload 约束 | 渲染说明 |
-|---|---|---|---|
-| `ProgressiveReveal` | 顺序揭示要点 | `items` 1–6 项 | 按 cue 逐项进入 |
-| `ChapterCurtain` | 章节转场 | 章节号、标题、palette | 页内开场/收场，不跨页重叠 |
-| `StatCounter` | 数字强调 | label、start、end、format | 帧驱动计数，reduced motion 直接到终值 |
-| `ChartNarration` | 数据叙述 | series 2–12、cue_points、annotation | SVG/DOM 图表，不加载网络资源 |
-| `CompareMode` | 双栏对比 | left、right | 普通 grid 布局，保留安全区 |
-| `FocusSpotlight` | 聚焦原页区域 | 目标矩形 1–3、label | 原页图为底层，遮罩聚焦 |
-| `CardStack` | 卡片编组 | cards 1–3 | 逐帧位移和层级变化 |
-| `GaugeAndRatio` | 比率/进度 | label、value 0–1 | SVG gauge 或条形比率 |
-| `PathBuilder` | 流程/路径 | nodes 2–6 | 路径与节点按 cue 建立 |
-| `TagMatrix` | 标签矩阵 | tags 2–15 | flex/grid，自适应画幅 |
-| `RiskAlert` | 风险提示 | title、reason | 高对比但不遮挡字幕 |
-| `MapHighlight` | 地理点位表达 | points 1–5、conclusion | 使用抽象内置地图背景，无网络地图 |
-| `SafeSlide` | 内部保底 | 可选 title、summary | 始终保留原页图与基础字幕 |
+| 模板                | 用途         | 最小 payload 约束                   | 渲染说明                              |
+| ------------------- | ------------ | ----------------------------------- | ------------------------------------- |
+| `ProgressiveReveal` | 顺序揭示要点 | `items` 1–6 项                      | 按 cue 逐项进入                       |
+| `ChapterCurtain`    | 章节转场     | 章节号、标题、palette               | 页内开场/收场，不跨页重叠             |
+| `StatCounter`       | 数字强调     | label、start、end、format           | 帧驱动计数，reduced motion 直接到终值 |
+| `ChartNarration`    | 数据叙述     | series 2–12、cue_points、annotation | SVG/DOM 图表，不加载网络资源          |
+| `CompareMode`       | 双栏对比     | left、right                         | 普通 grid 布局，保留安全区            |
+| `FocusSpotlight`    | 聚焦原页区域 | 目标矩形 1–3、label                 | 原页图为底层，遮罩聚焦                |
+| `CardStack`         | 卡片编组     | cards 1–3                           | 逐帧位移和层级变化                    |
+| `GaugeAndRatio`     | 比率/进度    | label、value 0–1                    | SVG gauge 或条形比率                  |
+| `PathBuilder`       | 流程/路径    | nodes 2–6                           | 路径与节点按 cue 建立                 |
+| `TagMatrix`         | 标签矩阵     | tags 2–15                           | flex/grid，自适应画幅                 |
+| `RiskAlert`         | 风险提示     | title、reason                       | 高对比但不遮挡字幕                    |
+| `MapHighlight`      | 地理点位表达 | points 1–5、conclusion              | 使用抽象内置地图背景，无网络地图      |
+| `SafeSlide`         | 内部保底     | 可选 title、summary                 | 始终保留原页图与基础字幕              |
 
 `NarrativePreview` 是工作台辅助视图，不是可持久化模板。
 
@@ -292,7 +293,7 @@ type EffectPageState = {
 请求：
 
 ```json
-{"page_ids": ["optional-page-uuid"], "force": false}
+{ "page_ids": ["optional-page-uuid"], "force": false }
 ```
 
 `force` 只允许重算未锁定页，永不覆盖锁定计划。响应返回 changed/skipped/blocked 页与依赖失效计划。
@@ -328,7 +329,7 @@ Props 升级为 `schema_version: 2`：
 type ProjectVideoPropsV2 = {
   schema_version: 2;
   project_id: string;
-  template_version: "effect-engine-v2";
+  template_version: 'effect-engine-v2';
   catalog_version: string;
   fps: number;
   width: 1920 | 1080;
@@ -433,12 +434,12 @@ TypeScript 入口先执行严格解析。未知模板、payload 不匹配或非�
 
 依赖事件：
 
-| 事件 | 失效范围 |
-|---|---|
-| `effect_plan_changed(page)` | 该页分段 + 最终视频 |
-| `effect_plan_regenerated(pages)` | 实际 hash 变化的页面 + 最终视频 |
-| `effect_policy_changed` | 全部页面分段 + 最终视频；所有自动计划标 stale |
-| `effect_catalog_upgraded` | 不兼容模板所在页面；必要时全量 |
+| 事件                             | 失效范围                                      |
+| -------------------------------- | --------------------------------------------- |
+| `effect_plan_changed(page)`      | 该页分段 + 最终视频                           |
+| `effect_plan_regenerated(pages)` | 实际 hash 变化的页面 + 最终视频               |
+| `effect_policy_changed`          | 全部页面分段 + 最终视频；所有自动计划标 stale |
+| `effect_catalog_upgraded`        | 不兼容模板所在页面；必要时全量                |
 
 相同 fingerprint 生成相同 hash 时不得无意义清缓存。每个页面渲染完成后继续沿用现有原子缓存写入，失败不得污染已成功缓存。
 
@@ -544,16 +545,16 @@ Remotion工程/
 
 ## 21. 风险与缓解
 
-| 风险 | 缓解 |
-|---|---|
-| Python/TypeScript 契约漂移 | 提交 JSON Schema 快照并在两端做 parity 门禁 |
-| 旧项目被隐式改写 | GET 只读；首次生成必须是显式 POST |
-| 分段渲染与跨页转场冲突 | 本期限定页内 entrance/exit，保证时长守恒 |
-| 手工编辑被自动生成覆盖 | revision + lock；force 也不能覆盖锁定页 |
-| fallback 掩盖真实错误 | 仅未锁定规划失败可显式 fallback，导出与审计可见 |
-| 画幅切换造成锁定计划失效 | 标 stale 并阻断，要求人工解锁或编辑 |
-| 缓存误命中 | cache key 包含 plan hash、目录、画幅与 presenter |
-| 现有 Git 元数据损坏 | 不初始化或重建仓库；实施时在有效 worktree 提交，当前副本只保存可审阅文件 |
+| 风险                       | 缓解                                                                     |
+| -------------------------- | ------------------------------------------------------------------------ |
+| Python/TypeScript 契约漂移 | 提交 JSON Schema 快照并在两端做 parity 门禁                              |
+| 旧项目被隐式改写           | GET 只读；首次生成必须是显式 POST                                        |
+| 分段渲染与跨页转场冲突     | 本期限定页内 entrance/exit，保证时长守恒                                 |
+| 手工编辑被自动生成覆盖     | revision + lock；force 也不能覆盖锁定页                                  |
+| fallback 掩盖真实错误      | 仅未锁定规划失败可显式 fallback，导出与审计可见                          |
+| 画幅切换造成锁定计划失效   | 标 stale 并阻断，要求人工解锁或编辑                                      |
+| 缓存误命中                 | cache key 包含 plan hash、目录、画幅与 presenter                         |
+| 现有 Git 元数据损坏        | 不初始化或重建仓库；实施时在有效 worktree 提交，当前副本只保存可审阅文件 |
 
 ## 22. 完成标准
 

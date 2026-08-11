@@ -5,6 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from workbench.domain.presenter import PresenterTimelineV1
 from workbench.effects.schema import EffectPlanV2
 from workbench.subtitles.models import SubtitleCue
 
@@ -61,9 +62,30 @@ class ProjectVideoProps(VideoModel):
     subtitles: list[SubtitleCue] = Field(default_factory=list)
     subtitle_placements: list[SubtitlePlacement] = Field(default_factory=list)
     catalog_version: str | None = None
+    presenter_timeline: PresenterTimelineV1 | None = None
+    presenter_source_path: str | None = None
+    timeline_revision: int | None = Field(default=None, ge=1)
+    timeline_hash: str | None = None
 
     @model_validator(mode="after")
     def validate_pages(self) -> ProjectVideoProps:
+        if self.presenter_timeline is None:
+            if any(
+                value is not None
+                for value in (
+                    self.presenter_source_path,
+                    self.timeline_revision,
+                    self.timeline_hash,
+                )
+            ):
+                raise ValueError("presenter timeline metadata requires presenter_timeline")
+        else:
+            if not self.presenter_source_path:
+                raise ValueError("presenter timeline requires presenter_source_path")
+            if self.timeline_revision != self.presenter_timeline.revision:
+                raise ValueError("presenter timeline revision mismatch")
+            if self.timeline_hash != self.presenter_timeline.timeline_hash:
+                raise ValueError("presenter timeline hash mismatch")
         orders = [page.page_order for page in self.pages]
         if orders != sorted(orders) or orders != list(range(1, len(orders) + 1)):
             raise ValueError("页面顺序必须从 1 连续递增")

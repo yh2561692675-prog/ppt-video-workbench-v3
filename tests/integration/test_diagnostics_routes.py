@@ -46,7 +46,7 @@ def test_run_latest_and_package_routes_share_the_same_report(tmp_path: Path) -> 
         package = client.post("/api/diagnostics/package")
 
     assert run.status_code == 200
-    assert run.json()["data"]["summary"] == {"green": 13, "yellow": 0, "red": 0}
+    assert run.json()["data"]["summary"] == {"green": 14, "yellow": 0, "red": 0}
     assert latest.json()["data"]["report_id"] == run.json()["data"]["report_id"]
     assert package.json()["data"]["report_id"] == run.json()["data"]["report_id"]
     archive_path = tmp_path / package.json()["data"]["relative_path"]
@@ -72,7 +72,7 @@ def test_diagnostic_factory_failure_does_not_block_application_health(
     assert diagnostics.status_code == 200
     payload = diagnostics.json()["data"]
     assert payload["overall_status"] == "red"
-    assert len(payload["checks"]) == 13
+    assert len(payload["checks"]) == 14
     assert all(check["code"] == "DIAGNOSTIC_CENTER_UNAVAILABLE" for check in payload["checks"])
     assert "private bootstrap detail" not in str(payload)
 

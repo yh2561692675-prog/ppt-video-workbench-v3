@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import insert, select
-
 from workbench.domain.enums import JobStatus, JobType
 from workbench.domain.models import JobRecord
 from workbench.storage.workspace_db import WorkspaceDatabase, jobs, schema_meta
@@ -45,8 +44,12 @@ def _insert_v1_job(database: WorkspaceDatabase, *, project_id, cache_key: str, s
 def test_initialize_migrates_v1_jobs_and_creates_v2_index(tmp_path) -> None:
     database = _v1_database(tmp_path / "workspace.db")
     project_id = uuid4()
-    first_id = _insert_v1_job(database, project_id=project_id, cache_key="first", status="not_started")
-    second_id = _insert_v1_job(database, project_id=project_id, cache_key="second", status="completed")
+    first_id = _insert_v1_job(
+        database, project_id=project_id, cache_key="first", status="not_started"
+    )
+    second_id = _insert_v1_job(
+        database, project_id=project_id, cache_key="second", status="completed"
+    )
 
     database.initialize()
 
@@ -66,13 +69,19 @@ def test_initialize_migrates_v1_jobs_and_creates_v2_index(tmp_path) -> None:
 def test_migration_supersedes_duplicate_active_export_jobs(tmp_path) -> None:
     database = _v1_database(tmp_path / "workspace.db")
     project_id = uuid4()
-    older_id = _insert_v1_job(database, project_id=project_id, cache_key="older", status="not_started")
+    older_id = _insert_v1_job(
+        database, project_id=project_id, cache_key="older", status="not_started"
+    )
     newer_id = _insert_v1_job(database, project_id=project_id, cache_key="newer", status="running")
 
     database.initialize()
 
     with database.connect() as connection:
-        rows = connection.execute(select(jobs).where(jobs.c.project_id == str(project_id))).mappings().all()
+        rows = (
+            connection.execute(select(jobs).where(jobs.c.project_id == str(project_id)))
+            .mappings()
+            .all()
+        )
 
     by_id = {row["id"]: row for row in rows}
     assert by_id[newer_id]["status"] in {JobStatus.QUEUED.value, JobStatus.RUNNING.value}

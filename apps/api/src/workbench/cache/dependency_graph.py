@@ -23,6 +23,36 @@ class InvalidationPlan(BaseModel):
     preserve: list[str] = Field(default_factory=list)
     rebuild: list[str] = Field(default_factory=list)
     reason: str
+    preserve_manual_locks: bool = True
+
+
+_PRESENTER_INVALIDATION: dict[str, tuple[str, ...]] = {
+    "presenter_style_changed": ("segments", "final"),
+    "manual_anchor_changed": ("cues", "segments", "final"),
+    "slide_text_changed": ("match", "anchors", "cues", "segments", "final"),
+    "source_video_changed": (
+        "transcript",
+        "match",
+        "anchors",
+        "cues",
+        "segments",
+        "final",
+    ),
+}
+
+
+def invalidate_presenter(event: str) -> InvalidationPlan:
+    try:
+        rebuild = list(_PRESENTER_INVALIDATION[event])
+    except KeyError as error:
+        raise ValueError(f"unsupported presenter invalidation event: {event}") from error
+    pipeline = ["transcript", "match", "anchors", "cues", "segments", "final"]
+    return InvalidationPlan(
+        preserve=[stage for stage in pipeline if stage not in rebuild],
+        rebuild=rebuild,
+        reason=event,
+        preserve_manual_locks=True,
+    )
 
 
 class DependencyGraph:

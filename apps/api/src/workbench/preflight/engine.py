@@ -16,6 +16,7 @@ from .checks.common import digest
 from .checks.common import issue as build_issue
 from .checks.content import check_content
 from .checks.materials import check_materials
+from .checks.presenter import check_presenter_source
 from .checks.runtime import check_runtime
 from .checks.video import check_video
 
@@ -39,12 +40,15 @@ class PreflightEngine:
         previous: PreflightReport | None = None,
     ) -> PreflightReport:
         root = (self.workspace_root / project.project_dir).resolve()
-        selected = set(scope or {"materials", "content", "audio", "video", "runtime", "resources"})
+        selected = set(
+            scope or {"materials", "content", "audio", "video", "presenter", "runtime", "resources"}
+        )
         checkers: dict[str, Callable[[], tuple[str, list[PreflightIssue]]]] = {
             "materials": lambda: check_materials(project, root),
             "content": lambda: check_content(project, root),
             "audio": lambda: check_audio(project, root),
             "video": lambda: check_video(project, root),
+            "presenter": lambda: check_presenter_source(project, root),
             "runtime": lambda: check_runtime(project, root, self.runtime_probe()),
             "resources": lambda: self._check_resources(project, root),
         }

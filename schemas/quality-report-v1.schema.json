@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/quality-report-v1.schema.json",
+  "title": "QualityReportV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "project_id",
+    "render_job_id",
+    "report_id",
+    "input_fingerprint",
+    "result",
+    "metrics",
+    "issues",
+    "analyzer_versions",
+    "sampled_frames"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "project_id": { "type": "string", "format": "uuid" },
+    "render_job_id": { "type": "string", "format": "uuid" },
+    "report_id": { "type": "string", "format": "uuid" },
+    "input_fingerprint": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "result": { "enum": ["pass", "pass_with_warnings", "blocked"] },
+    "metrics": { "type": "array", "items": { "$ref": "#/$defs/metric" } },
+    "issues": { "type": "array", "items": { "$ref": "#/$defs/issue" } },
+    "analyzer_versions": { "type": "object", "additionalProperties": { "type": "string" } },
+    "sampled_frames": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+    "report_path": { "type": ["string", "null"] }
+  },
+  "$defs": {
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "value"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "value": { "type": ["number", "string", "boolean"] },
+        "unit": { "type": ["string", "null"] }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "issue_id",
+        "code",
+        "severity",
+        "scope",
+        "message",
+        "action",
+        "evidence_refs",
+        "retry_policy"
+      ],
+      "properties": {
+        "issue_id": { "type": "string", "format": "uuid" },
+        "code": { "type": "string", "minLength": 1 },
+        "severity": { "enum": ["P0", "P1", "P2", "P3"] },
+        "scope": { "enum": ["project", "page", "time_range", "artifact"] },
+        "page_id": { "type": ["string", "null"], "format": "uuid" },
+        "start_ms": { "type": ["integer", "null"], "minimum": 0 },
+        "end_ms": { "type": ["integer", "null"], "minimum": 0 },
+        "message": { "type": "string", "minLength": 1 },
+        "action": { "type": "string", "minLength": 1 },
+        "evidence_refs": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
+        "retry_policy": { "enum": ["none", "rerender_page", "reassemble", "recompile"] }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relative_path", "kind"],
+      "properties": {
+        "relative_path": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["frame", "audio", "log", "json"] },
+        "page_id": { "type": ["string", "null"], "format": "uuid" },
+        "start_ms": { "type": ["integer", "null"], "minimum": 0 },
+        "end_ms": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    }
+  }
+}

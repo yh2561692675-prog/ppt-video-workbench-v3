@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from uuid import UUID, uuid5
 
-from workbench.domain.issues import IssueLevel, IssueLocation, PreflightIssue
+from workbench.domain.issues import IssueLevel, IssueLocation, IssueTimeRange, PreflightIssue
 
 
 def digest(payload: object) -> str:
@@ -24,9 +24,14 @@ def issue(
     fingerprint: str,
     location: IssueLocation | None = None,
     blocking: bool | None = None,
+    reason: str | None = None,
+    time_range: IssueTimeRange | None = None,
 ) -> PreflightIssue:
     clean_location = location or IssueLocation(node=check)
-    identity = f"{project_id}:{check}:{code}:{clean_location.model_dump_json()}:{fingerprint}"
+    identity = (
+        f"{project_id}:{check}:{code}:{clean_location.model_dump_json()}:"
+        f"{time_range.model_dump_json() if time_range else ''}:{fingerprint}"
+    )
     return PreflightIssue(
         issue_id=uuid5(project_id, identity),
         check=check,
@@ -34,6 +39,8 @@ def issue(
         level=level,
         message=message,
         action=action,
+        reason=reason,
+        time_range=time_range,
         location=clean_location,
         fingerprint=fingerprint,
         blocking=level is IssueLevel.BLOCKING if blocking is None else blocking,

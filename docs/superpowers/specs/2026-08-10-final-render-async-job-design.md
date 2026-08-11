@@ -103,16 +103,16 @@ flowchart LR
 
 新增独立 `JobStatus`，不再用项目节点状态表达作业生命周期：
 
-| 状态 | 含义 | 是否终态 |
-| --- | --- | --- |
-| `queued` | 已持久化，等待 Worker | 否 |
-| `running` | Worker 已领取并执行 | 否 |
-| `pause_requested` | 用户请求暂停，等待安全点 | 否 |
-| `paused` | 已在检查点停下，可继续 | 否 |
-| `cancel_requested` | 用户请求取消，等待安全清理 | 否 |
-| `succeeded` | 结果已校验并发布 | 是 |
-| `failed` | 执行失败，保留错误分类 | 是 |
-| `cancelled` | 用户取消且临时产物已清理 | 是 |
+| 状态               | 含义                       | 是否终态 |
+| ------------------ | -------------------------- | -------- |
+| `queued`           | 已持久化，等待 Worker      | 否       |
+| `running`          | Worker 已领取并执行        | 否       |
+| `pause_requested`  | 用户请求暂停，等待安全点   | 否       |
+| `paused`           | 已在检查点停下，可继续     | 否       |
+| `cancel_requested` | 用户请求取消，等待安全清理 | 否       |
+| `succeeded`        | 结果已校验并发布           | 是       |
+| `failed`           | 执行失败，保留错误分类     | 是       |
+| `cancelled`        | 用户取消且临时产物已清理   | 是       |
 
 状态转换：
 
@@ -137,16 +137,16 @@ stateDiagram-v2
 
 ### 7.2 阶段与进度
 
-| 阶段 | 进度区间 | 更新时机 |
-| --- | ---: | --- |
-| `queued` | 0% | 入队 |
-| `validating_input` | 1%–5% | 恢复输入快照并重新核对指纹 |
-| `rendering_pages` | 5%–65% | 每页缓存命中或成功发布后 |
-| `muxing_pages` | 65%–85% | 每个分页音视频段校验后 |
-| `concatenating` | 85%–91% | 整片生成并完成 FFprobe 后 |
-| `packaging` | 91%–98% | 制作包文件和清单生成后 |
-| `publishing` | 98%–99% | 最终输入复核与原子目录替换 |
-| `completed` | 100% | 项目清单、任务结果和审计事件都落盘 |
+| 阶段               | 进度区间 | 更新时机                           |
+| ------------------ | -------: | ---------------------------------- |
+| `queued`           |       0% | 入队                               |
+| `validating_input` |    1%–5% | 恢复输入快照并重新核对指纹         |
+| `rendering_pages`  |   5%–65% | 每页缓存命中或成功发布后           |
+| `muxing_pages`     |  65%–85% | 每个分页音视频段校验后             |
+| `concatenating`    |  85%–91% | 整片生成并完成 FFprobe 后          |
+| `packaging`        |  91%–98% | 制作包文件和清单生成后             |
+| `publishing`       |  98%–99% | 最终输入复核与原子目录替换         |
+| `completed`        |     100% | 项目清单、任务结果和审计事件都落盘 |
 
 页级进度按页数等分。缓存命中也推进一页，但 UI 同时显示 `cached_pages`。进度只允许单调增加；恢复执行从检查点进度开始，不倒退。
 
@@ -373,21 +373,21 @@ class RenderExecutionContext(Protocol):
 
 ## 13. 错误分类
 
-| 错误码 | 场景 | 可重试 | 建议动作 |
-| --- | --- | --- | --- |
-| `video_preflight_blocked` | 入队前门禁失败 | 否 | 回到预检修复 |
-| `render_input_stale` | 开始时输入指纹已变化 | 否 | 重新创建任务 |
-| `render_input_changed` | 执行期间输入变化 | 否 | 确认修改后重新创建 |
-| `renderer_runtime_unavailable` | Node/Remotion/Chromium 缺失 | 条件性 | 运行环境诊断后重试 |
-| `render_page_failed` | Remotion 页面失败 | 是 | 查看页码并重试 |
-| `ffmpeg_mux_failed` | 分页音视频合成失败 | 是 | 检查媒体与磁盘后重试 |
-| `ffmpeg_concat_failed` | 整片拼接失败 | 是 | 检查分页产物后重试 |
-| `media_validation_failed` | 编码、尺寸或时长不符 | 是 | 查看诊断并重试 |
-| `package_validation_failed` | 制作包缺失或哈希不符 | 是 | 清理临时包后重试 |
-| `render_disk_full` | 空间不足 | 是 | 释放空间后重试 |
-| `render_cancelled` | 用户取消 | 是 | 需要时重新创建 |
-| `render_worker_interrupted` | 应用异常退出 | 是 | 点击继续 |
-| `video_export_rejected` | 未分类的安全兜底 | 条件性 | 导出诊断包 |
+| 错误码                         | 场景                        | 可重试 | 建议动作             |
+| ------------------------------ | --------------------------- | ------ | -------------------- |
+| `video_preflight_blocked`      | 入队前门禁失败              | 否     | 回到预检修复         |
+| `render_input_stale`           | 开始时输入指纹已变化        | 否     | 重新创建任务         |
+| `render_input_changed`         | 执行期间输入变化            | 否     | 确认修改后重新创建   |
+| `renderer_runtime_unavailable` | Node/Remotion/Chromium 缺失 | 条件性 | 运行环境诊断后重试   |
+| `render_page_failed`           | Remotion 页面失败           | 是     | 查看页码并重试       |
+| `ffmpeg_mux_failed`            | 分页音视频合成失败          | 是     | 检查媒体与磁盘后重试 |
+| `ffmpeg_concat_failed`         | 整片拼接失败                | 是     | 检查分页产物后重试   |
+| `media_validation_failed`      | 编码、尺寸或时长不符        | 是     | 查看诊断并重试       |
+| `package_validation_failed`    | 制作包缺失或哈希不符        | 是     | 清理临时包后重试     |
+| `render_disk_full`             | 空间不足                    | 是     | 释放空间后重试       |
+| `render_cancelled`             | 用户取消                    | 是     | 需要时重新创建       |
+| `render_worker_interrupted`    | 应用异常退出                | 是     | 点击继续             |
+| `video_export_rejected`        | 未分类的安全兜底            | 条件性 | 导出诊断包           |
 
 数据库中允许保存经过脱敏的内部摘要；API 只返回稳定文案。命令行参数、stderr、用户绝对路径和可能含凭据的值只能写入经过现有 redaction 处理的诊断日志。
 

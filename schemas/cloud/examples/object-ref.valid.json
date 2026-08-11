@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "object_id": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "size_bytes": 1048576,
+  "media_type": "application/pdf",
+  "logical_path": "materials/course-slides.pdf",
+  "display_name": "course-slides.pdf",
+  "scan_status": "clean"
+}

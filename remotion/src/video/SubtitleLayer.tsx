@@ -22,7 +22,12 @@ export function SubtitleLayer({
     (cue) => cue.page_id === page.page_id && cue.start_ms <= frameMs && frameMs < cue.end_ms,
   );
   if (!active) return null;
-  const rect = placement?.rect ?? { x: width * 0.1, y: height * 0.82, width: width * 0.8, height: 96 };
+  const rect = placement?.rect ?? {
+    x: width * 0.1,
+    y: height * 0.82,
+    width: width * 0.8,
+    height: 96,
+  };
   return (
     <div
       className="subtitle-layer"

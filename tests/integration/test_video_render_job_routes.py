@@ -79,9 +79,7 @@ def test_legacy_render_route_submits_async_job_with_successor_headers(
 
     assert response.status_code == 202
     assert response.headers["Deprecation"] == "true"
-    assert response.headers["Link"].startswith(
-        f"</api/projects/{project.id}/video/render-jobs>"
-    )
+    assert response.headers["Link"].startswith(f"</api/projects/{project.id}/video/render-jobs>")
     assert response.json()["data"]["job"]["id"] == str(record.id)
 
 

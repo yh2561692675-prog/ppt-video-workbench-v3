@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "workbench://schemas/foundation/gate-evidence-v1.schema.json",
+  "title": "GateEvidenceV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "gate_id",
+    "command_id",
+    "foundation_id",
+    "snapshot_sha256",
+    "status",
+    "started_at",
+    "finished_at",
+    "tool_versions",
+    "counts",
+    "log_refs",
+    "artifact_refs"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "gate_id": { "type": "string", "pattern": "^G[0-7](?:-[A-Z0-9-]+)?$" },
+    "command_id": { "type": "string", "minLength": 1 },
+    "foundation_id": { "type": "string", "minLength": 1 },
+    "snapshot_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "status": { "enum": ["passed", "failed", "cancelled", "invalid"] },
+    "started_at": { "type": "string", "format": "date-time" },
+    "finished_at": { "type": "string", "format": "date-time" },
+    "exit_code": { "type": ["integer", "null"] },
+    "tool_versions": { "type": "object", "additionalProperties": { "type": "string" } },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passed", "failed", "skipped", "warnings"],
+      "properties": {
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 },
+        "warnings": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "log_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "artifact_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "invalid_reason": { "type": ["string", "null"], "maxLength": 2000 },
+    "approved_by": { "type": ["string", "null"], "maxLength": 240 },
+    "approved_at": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

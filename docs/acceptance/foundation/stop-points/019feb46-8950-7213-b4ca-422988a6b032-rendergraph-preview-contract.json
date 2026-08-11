@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "window_id": "019feb46-8950-7213-b4ca-422988a6b032",
+  "task_name": "RenderGraph timebase fixture and authoritative preview contract slice",
+  "mode": "idle",
+  "repository": {
+    "path": "source-root",
+    "branch": "recovery/root-snapshot-20260810",
+    "head": "956929e7b75f80df8d17891420ccc812574a682e",
+    "status_manifest_sha256": "c37b26745ae191adca5266a3f657e5deacb2a7b22931d932360b3ae5449477a0"
+  },
+  "owned_paths": [
+    "tests/fixtures/rendergraph-v2/timebase.json",
+    "tests/unit/rendering/test_timebase.py",
+    "remotion/src/render-graph/timebase.test.ts",
+    "apps/api/src/workbench/rendering/preview.py",
+    "apps/api/src/workbench/rendering/__init__.py",
+    "apps/api/src/workbench/api/timeline_production.py",
+    "tests/unit/rendering/test_preview.py",
+    "tests/integration/test_render_graph_routes.py"
+  ],
+  "shared_paths_touched": [
+    "apps/api/src/workbench/rendering/preview.py",
+    "apps/api/src/workbench/rendering/__init__.py",
+    "apps/api/src/workbench/api/timeline_production.py",
+    "tests/fixtures/rendergraph-v2/timebase.json",
+    "tests/unit/rendering/test_timebase.py",
+    "remotion/src/render-graph/timebase.test.ts",
+    "tests/unit/rendering/test_preview.py",
+    "tests/integration/test_render_graph_routes.py"
+  ],
+  "completed": [
+    "Unified 24/25/30/60 fps timebase fixture consumed by Python and TypeScript tests",
+    "Deterministic authoritative preview range plan and cache key contract",
+    "Affected-range intersection selection and range validation",
+    "Preview-plan API route with invalid-range response",
+    "Targeted tests, Ruff, Prettier, and Remotion TypeScript build"
+  ],
+  "evidence": {
+    "python_tests": "4 passed for preview unit and render graph route tests; 2 passed for timebase tests",
+    "remotion_tests": "2 passed for remotion timebase fixture test",
+    "ruff": "All checks passed",
+    "prettier": "All matched files use Prettier code style",
+    "remotion_build": "tsc --noEmit passed",
+    "known_warning": "Pytest cache writes are denied by the existing workspace permissions"
+  },
+  "remaining": [
+    "Do not implement the preview worker or preview UI wiring from this stop point",
+    "Do not begin the next RenderGraph execution slice",
+    "Real media/FFmpeg preview acceptance remains outside this slice"
+  ],
+  "will_write_again": false,
+  "safe_resume": "Read this stop point first; resume only after the main recovery task completes the shared foundation checkpoint and explicitly opens the next slice."
+}

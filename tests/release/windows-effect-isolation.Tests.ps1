@@ -1,15 +1,20 @@
-BeforeAll {
-    $root = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
-    . (Join-Path $root "scripts/windows_effect_acceptance_lib.ps1")
-}
+$root = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
+. (Join-Path $root "scripts/windows_effect_acceptance_lib.ps1")
 
 Describe "acceptance isolation" {
     It "blocks a database outside the isolated workspace" {
         $install = Join-Path $TestDrive "install"
         $workspace = Join-Path $TestDrive "workspace"
         $production = Join-Path $TestDrive "production/workspace.db"
-        { Assert-AcceptanceIsolation -Root $root -InstallRoot $install -WorkspaceRoot $workspace -DatabasePath $production -ProductionDatabasePath $production } |
-            Should -Throw "*E_ISOLATION_DB*"
+        $caught = $null
+        try {
+            Assert-AcceptanceIsolation -Root $root -InstallRoot $install -WorkspaceRoot $workspace -DatabasePath $production -ProductionDatabasePath $production
+        } catch {
+            $caught = $_.Exception
+        }
+        if ($null -eq $caught -or $caught.Message -notlike "*E_ISOLATION_DB*") {
+            throw "Expected E_ISOLATION_DB, got: $($caught.Message)"
+        }
     }
 
     It "accepts an isolated install and workspace" {
@@ -24,9 +29,13 @@ Describe "acceptance isolation" {
         $listener.Start()
         try {
             $occupied = ([Net.IPEndPoint]$listener.LocalEndpoint).Port
-            $free = Get-FreeAcceptancePort -StartPort $occupied -EndPort ($occupied + 2)
-            $free | Should -Not -Be $occupied
-            $listener.Server.IsBound | Should -BeTrue
+            $free = Get-FreeAcceptancePort -StartPort $occupied -EndPort ($occupied + 20)
+            if ($free -eq $occupied) {
+                throw "The acceptance port probe returned the occupied port."
+            }
+            if (-not $listener.Server.IsBound) {
+                throw "The occupied listener was terminated by the acceptance port probe."
+            }
         }
         finally {
             $listener.Stop()
@@ -34,8 +43,15 @@ Describe "acceptance isolation" {
     }
 
     It "rejects a port range when every port is unavailable" {
-        { Get-FreeAcceptancePort -StartPort 0 -EndPort 0 } |
-            Should -Throw "*E_PORT_UNAVAILABLE*"
+        $caught = $null
+        try {
+            Get-FreeAcceptancePort -StartPort 0 -EndPort 0
+        } catch {
+            $caught = $_.Exception
+        }
+        if ($null -eq $caught -or $caught.Message -notlike "*E_PORT_UNAVAILABLE*") {
+            throw "Expected E_PORT_UNAVAILABLE, got: $($caught.Message)"
+        }
     }
 
     It "stops only a process owned by the current batch" {
@@ -45,10 +61,19 @@ Describe "acceptance isolation" {
         }
         $process = Start-OwnedProcess -FilePath $shell -ArgumentList @("-NoLogo", "-NoProfile", "-Command", "Start-Sleep -Seconds 30")
         try {
-            { Stop-OwnedProcess -ProcessId $process.ProcessId -OwnerToken "wrong-token" } |
-                Should -Throw "*E_PROCESS_NOT_OWNED*"
+            $caught = $null
+            try {
+                Stop-OwnedProcess -ProcessId $process.ProcessId -OwnerToken "wrong-token"
+            } catch {
+                $caught = $_.Exception
+            }
+            if ($null -eq $caught -or $caught.Message -notlike "*E_PROCESS_NOT_OWNED*") {
+                throw "Expected E_PROCESS_NOT_OWNED, got: $($caught.Message)"
+            }
             Stop-OwnedProcess -ProcessId $process.ProcessId -OwnerToken $process.OwnerToken
-            (Get-Process -Id $process.ProcessId -ErrorAction SilentlyContinue) | Should -BeNullOrEmpty
+            if (Get-Process -Id $process.ProcessId -ErrorAction SilentlyContinue) {
+                throw "The owned process was not stopped."
+            }
         }
         finally {
             if (Get-Process -Id $process.ProcessId -ErrorAction SilentlyContinue) {
@@ -61,9 +86,9 @@ Describe "acceptance isolation" {
         $path = Join-Path $TestDrive "evidence.jsonl"
         Write-EvidenceRecord -EvidencePath $path -Step "isolation" -Result "passed" -Details @{ database = "isolated" }
         $record = Get-Content -Raw -LiteralPath $path | ConvertFrom-Json
-        $record.step | Should -Be "isolation"
-        $record.result | Should -Be "passed"
-        $record.details.database | Should -Be "isolated"
+        if ($record.step -ne "isolation" -or $record.result -ne "passed" -or $record.details.database -ne "isolated") {
+            throw "The evidence record did not preserve the expected structured fields."
+        }
     }
 
     It "keeps the acceptance PowerShell scripts ASCII" {
@@ -73,7 +98,9 @@ Describe "acceptance isolation" {
             $PSCommandPath
         )
         foreach ($file in $files) {
-            [IO.File]::ReadAllBytes($file) | Where-Object { $_ -ge 128 } | Should -BeNullOrEmpty
+            if (@([IO.File]::ReadAllBytes($file) | Where-Object { $_ -ge 128 }).Count -gt 0) {
+                throw "Acceptance script is not ASCII-only: $file"
+            }
         }
     }
 }

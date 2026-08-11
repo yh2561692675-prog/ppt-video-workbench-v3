@@ -14,6 +14,10 @@ class ReleaseManifestError(ValueError):
     pass
 
 
+def _default_feature_flags() -> dict[str, Literal["disabled", "internal", "stable_optional"]]:
+    return {"presenter_mode": "internal"}
+
+
 class ReleaseArtifact(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -41,6 +45,9 @@ class RuntimeManifest(BaseModel):
     artifacts: list[ReleaseArtifact] = Field(default_factory=list)
     licenses: list[ReleaseLicense] = Field(default_factory=list)
     sbom_relative_path: str | None = None
+    feature_flags: dict[str, Literal["disabled", "internal", "stable_optional"]] = Field(
+        default_factory=_default_feature_flags
+    )
 
 
 class ManifestValidation(BaseModel):

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Literal, Mapping, Sequence
+from typing import Literal
 
 from .backgrounds import choose_background
 from .template_catalog import get_template
-
 
 Strength = Literal["restrained", "standard", "enhanced"]
 

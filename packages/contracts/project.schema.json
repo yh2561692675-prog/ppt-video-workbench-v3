@@ -1424,6 +1424,27 @@
       "title": "IssueLocation",
       "type": "object"
     },
+    "IssueTimeRange": {
+      "additionalProperties": false,
+      "properties": {
+        "end_ms": {
+          "exclusiveMinimum": 0,
+          "title": "End Ms",
+          "type": "integer"
+        },
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_ms",
+        "end_ms"
+      ],
+      "title": "IssueTimeRange",
+      "type": "object"
+    },
     "JobRecord": {
       "additionalProperties": false,
       "properties": {
@@ -1663,7 +1684,8 @@
         "synthesize_page",
         "build_subtitles",
         "render_page",
-        "export_package"
+        "export_package",
+        "presenter_sync"
       ],
       "title": "JobType",
       "type": "string"
@@ -2356,6 +2378,29 @@
         "message": {
           "title": "Message",
           "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "time_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IssueTimeRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -2452,6 +2497,14 @@
       "title": "PreflightReport",
       "type": "object"
     },
+    "PresentationMode": {
+      "enum": [
+        "ai_narration",
+        "human_presenter"
+      ],
+      "title": "PresentationMode",
+      "type": "string"
+    },
     "PresenterCue": {
       "additionalProperties": false,
       "properties": {
@@ -2487,6 +2540,236 @@
         "end_ms"
       ],
       "title": "PresenterCue",
+      "type": "object"
+    },
+    "PresenterSegment": {
+      "additionalProperties": false,
+      "properties": {
+        "end_ms": {
+          "exclusiveMinimum": 0,
+          "title": "End Ms",
+          "type": "integer"
+        },
+        "layout": {
+          "enum": [
+            "top_left",
+            "top_right",
+            "bottom_left",
+            "bottom_right",
+            "center",
+            "split",
+            "hidden"
+          ],
+          "title": "Layout",
+          "type": "string"
+        },
+        "manual_lock": {
+          "default": false,
+          "title": "Manual Lock",
+          "type": "boolean"
+        },
+        "source_revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Revision"
+        },
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "integer"
+        },
+        "width_ratio": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Width Ratio",
+          "type": "number"
+        }
+      },
+      "required": [
+        "start_ms",
+        "end_ms",
+        "layout",
+        "width_ratio"
+      ],
+      "title": "PresenterSegment",
+      "type": "object"
+    },
+    "PresenterSource": {
+      "additionalProperties": false,
+      "properties": {
+        "duration_ms": {
+          "exclusiveMinimum": 0,
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "imported_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Imported At"
+        },
+        "media_type": {
+          "default": "video/mp4",
+          "enum": [
+            "video/mp4",
+            "video/quicktime"
+          ],
+          "title": "Media Type",
+          "type": "string"
+        },
+        "probe_snapshot": {
+          "additionalProperties": true,
+          "title": "Probe Snapshot",
+          "type": "object"
+        },
+        "relative_path": {
+          "minLength": 1,
+          "title": "Relative Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-fA-F]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "relative_path",
+        "sha256",
+        "duration_ms"
+      ],
+      "title": "PresenterSource",
+      "type": "object"
+    },
+    "PresenterTimeRange": {
+      "additionalProperties": false,
+      "properties": {
+        "end_ms": {
+          "exclusiveMinimum": 0,
+          "title": "End Ms",
+          "type": "integer"
+        },
+        "reason": {
+          "default": "unassigned",
+          "title": "Reason",
+          "type": "string"
+        },
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_ms",
+        "end_ms"
+      ],
+      "title": "PresenterTimeRange",
+      "type": "object"
+    },
+    "PresenterTimelineV1": {
+      "additionalProperties": false,
+      "properties": {
+        "anchors": {
+          "items": {
+            "$ref": "#/$defs/SlideAnchor"
+          },
+          "title": "Anchors",
+          "type": "array"
+        },
+        "duration_ms": {
+          "exclusiveMinimum": 0,
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "generated_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generated At"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "segments": {
+          "items": {
+            "$ref": "#/$defs/PresenterSegment"
+          },
+          "title": "Segments",
+          "type": "array"
+        },
+        "source_id": {
+          "format": "uuid",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_version": {
+          "minLength": 1,
+          "title": "Source Version",
+          "type": "string"
+        },
+        "timeline_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeline Hash"
+        },
+        "unassigned_ranges": {
+          "items": {
+            "$ref": "#/$defs/PresenterTimeRange"
+          },
+          "title": "Unassigned Ranges",
+          "type": "array"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_version",
+        "duration_ms"
+      ],
+      "title": "PresenterTimelineV1",
       "type": "object"
     },
     "ProgressiveRevealPayload": {
@@ -2608,6 +2891,75 @@
         }
       },
       "title": "SafeSlidePayload",
+      "type": "object"
+    },
+    "SlideAnchor": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "end_ms": {
+          "exclusiveMinimum": 0,
+          "title": "End Ms",
+          "type": "integer"
+        },
+        "manual_lock": {
+          "default": false,
+          "title": "Manual Lock",
+          "type": "boolean"
+        },
+        "page_id": {
+          "format": "uuid",
+          "title": "Page Id",
+          "type": "string"
+        },
+        "sentence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Sentence Ids",
+          "type": "array"
+        },
+        "source_revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Revision"
+        },
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "auto",
+            "review",
+            "blocked",
+            "confirmed"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "page_id",
+        "start_ms",
+        "end_ms",
+        "confidence",
+        "status"
+      ],
+      "title": "SlideAnchor",
       "type": "object"
     },
     "SourceFile": {
@@ -3281,6 +3633,32 @@
       "anyOf": [
         {
           "$ref": "#/$defs/PreflightReport"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "presentation_mode": {
+      "$ref": "#/$defs/PresentationMode",
+      "default": "ai_narration"
+    },
+    "presenter_source": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PresenterSource"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "presenter_timeline": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PresenterTimelineV1"
         },
         {
           "type": "null"

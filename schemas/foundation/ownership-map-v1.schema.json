@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "workbench://schemas/foundation/ownership-map-v1.schema.json",
+  "title": "OwnershipMapV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "entries",
+    "unknown_paths",
+    "semantic_conflicts",
+    "source_status_manifest_sha256"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "owner_window_id", "category", "authority"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "owner_window_id": { "type": "string", "minLength": 1 },
+          "category": {
+            "enum": [
+              "source",
+              "test",
+              "contract",
+              "doc",
+              "generated",
+              "cache",
+              "backup",
+              "evidence",
+              "user_data"
+            ]
+          },
+          "authority": { "type": "boolean" }
+        }
+      }
+    },
+    "unknown_paths": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "semantic_conflicts": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "source_status_manifest_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

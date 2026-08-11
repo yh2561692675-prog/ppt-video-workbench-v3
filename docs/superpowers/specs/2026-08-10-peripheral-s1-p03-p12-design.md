@@ -75,14 +75,14 @@ flowchart LR
 
 ### 4.1 权威边界
 
-| 数据或动作 | 唯一权威 | 说明 |
-| --- | --- | --- |
-| 项目业务状态、当前步骤、人工确认 | 主程序 `ProjectManifest` | 只由主程序存储服务原子写入 |
-| 任务队列、attempt、重试、取消 | S0 SQLite | 主程序不自行推断外围运行状态 |
-| 工件版本、大小、SHA-256 | S0 工件仓库 | 发布后不可覆盖，只能产生新版本 |
-| 缓存失效范围 | 主程序 `DependencyGraph` | 模块只报告输入指纹，不决定业务清理范围 |
-| 远端付费请求 ID | P07 结果及检查点 | 重试前必须先查询远端状态 |
-| 最终放行与人工确认 | P10/P12 报告 + 主程序确认记录 | 模块不能自行越过阻断项 |
+| 数据或动作                       | 唯一权威                      | 说明                                   |
+| -------------------------------- | ----------------------------- | -------------------------------------- |
+| 项目业务状态、当前步骤、人工确认 | 主程序 `ProjectManifest`      | 只由主程序存储服务原子写入             |
+| 任务队列、attempt、重试、取消    | S0 SQLite                     | 主程序不自行推断外围运行状态           |
+| 工件版本、大小、SHA-256          | S0 工件仓库                   | 发布后不可覆盖，只能产生新版本         |
+| 缓存失效范围                     | 主程序 `DependencyGraph`      | 模块只报告输入指纹，不决定业务清理范围 |
+| 远端付费请求 ID                  | P07 结果及检查点              | 重试前必须先查询远端状态               |
+| 最终放行与人工确认               | P10/P12 报告 + 主程序确认记录 | 模块不能自行越过阻断项                 |
 
 ### 4.2 代码组织
 
@@ -140,18 +140,18 @@ S0 的 `peripheral_contracts`、`peripheral_host` 和 `workbench_peripheral_adap
 
 ## 6. P03—P12 模块定义
 
-| 编号 | 模块 | 主要 job type | 输入 | 输出 | 放行条件 |
-| --- | --- | --- | --- | --- | --- |
-| P03 | 项目与素材接入 | `material.ingest`、`material.reorder` | DOCX/PPTX/PDF/图片及项目快照 | 安全副本、来源清单、顺序、哈希 | 文件头合法、路径安全、无同名覆盖 |
-| P04 | 文档解析与 OCR | `document.extract`、`document.ocr` | P03 来源工件 | 大纲、逐页文本、bbox、预览图、解析报告 | 页数一致；加密/空页/低置信度显式报告 |
-| P05 | 页面匹配与结构校审 | `content.match` | P04 大纲与页提取 | 候选、置信度、匹配理由、冲突清单 | 每个目标页有唯一有效匹配或人工覆盖 |
-| P06 | 旁白生成与版本确认 | `narration.generate`、`narration.import`、`narration.export` | 当前页、匹配大纲、LLM 配置引用 | 不可变旁白 revision、来源引用、DOCX | 所有当前 revision 经人工确认 |
-| P07 | 配音与音频对齐 | `audio.normalize`、`audio.transcribe`、`audio.synthesize`、`audio.align` | P06 确认旁白、本地录音或 HeyGen 引用 | 逐页音频、转写、差异、时间线、远端审计 | 单一路线完整；差异已处理；revision 一致 |
-| P08 | 字幕与时间轴 | `subtitle.build` | P07 逐页音频、词级时间戳、确认旁白 | 字幕时间线、SRT、字幕布局约束 | 时间戳有序、无负时长和不可接受重叠 |
-| P09 | 视觉效果与视频参数 | `effect.plan`、`video.props.build` | 页面预览、文本、P07/P08 时间轴 | EffectPlan V2、ProjectVideoProps、避让结果 | schema 有效；碰撞与节奏规则通过 |
-| P10 | 效果预览与完整预检 | `preview.build`、`preflight.run` | P03—P09 当前工件、运行时探针 | 预览、六域问题目录、JSON/Markdown 报告 | 阻断项为零，确认项均有审计记录 |
-| P11 | 分页渲染与制作包 | `video.render`、`video.assemble`、`package.build` | P09 props、P08 字幕、P07 音频、P10 放行报告 | 分页 MP4、成片、制作包和清单 | 每页和成片编码、时长、哈希验证通过 |
-| P12 | 质量验收与交付归档 | `quality.verify`、`delivery.archive` | P11 制作包、P10 报告、验收策略 | 质量报告、交付判定、归档索引、证据清单 | 自动门禁通过；需人工项完成签署 |
+| 编号 | 模块               | 主要 job type                                                            | 输入                                        | 输出                                       | 放行条件                                |
+| ---- | ------------------ | ------------------------------------------------------------------------ | ------------------------------------------- | ------------------------------------------ | --------------------------------------- |
+| P03  | 项目与素材接入     | `material.ingest`、`material.reorder`                                    | DOCX/PPTX/PDF/图片及项目快照                | 安全副本、来源清单、顺序、哈希             | 文件头合法、路径安全、无同名覆盖        |
+| P04  | 文档解析与 OCR     | `document.extract`、`document.ocr`                                       | P03 来源工件                                | 大纲、逐页文本、bbox、预览图、解析报告     | 页数一致；加密/空页/低置信度显式报告    |
+| P05  | 页面匹配与结构校审 | `content.match`                                                          | P04 大纲与页提取                            | 候选、置信度、匹配理由、冲突清单           | 每个目标页有唯一有效匹配或人工覆盖      |
+| P06  | 旁白生成与版本确认 | `narration.generate`、`narration.import`、`narration.export`             | 当前页、匹配大纲、LLM 配置引用              | 不可变旁白 revision、来源引用、DOCX        | 所有当前 revision 经人工确认            |
+| P07  | 配音与音频对齐     | `audio.normalize`、`audio.transcribe`、`audio.synthesize`、`audio.align` | P06 确认旁白、本地录音或 HeyGen 引用        | 逐页音频、转写、差异、时间线、远端审计     | 单一路线完整；差异已处理；revision 一致 |
+| P08  | 字幕与时间轴       | `subtitle.build`                                                         | P07 逐页音频、词级时间戳、确认旁白          | 字幕时间线、SRT、字幕布局约束              | 时间戳有序、无负时长和不可接受重叠      |
+| P09  | 视觉效果与视频参数 | `effect.plan`、`video.props.build`                                       | 页面预览、文本、P07/P08 时间轴              | EffectPlan V2、ProjectVideoProps、避让结果 | schema 有效；碰撞与节奏规则通过         |
+| P10  | 效果预览与完整预检 | `preview.build`、`preflight.run`                                         | P03—P09 当前工件、运行时探针                | 预览、六域问题目录、JSON/Markdown 报告     | 阻断项为零，确认项均有审计记录          |
+| P11  | 分页渲染与制作包   | `video.render`、`video.assemble`、`package.build`                        | P09 props、P08 字幕、P07 音频、P10 放行报告 | 分页 MP4、成片、制作包和清单               | 每页和成片编码、时长、哈希验证通过      |
+| P12  | 质量验收与交付归档 | `quality.verify`、`delivery.archive`                                     | P11 制作包、P10 报告、验收策略              | 质量报告、交付判定、归档索引、证据清单     | 自动门禁通过；需人工项完成签署          |
 
 ### 6.1 P03 项目与素材接入
 

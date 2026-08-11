@@ -3,15 +3,17 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from peripheral_contracts import BusinessResultManifest, JobEnvelope
 
-from .runtime import BusinessExecution, StagedArtifact, execute_business_handler
+from .runtime import BusinessExecution, StagedArtifact, execute_business_handler, project_revision
+
+BusinessModuleId = Literal["P03", "P04", "P05", "P06", "P07", "P08", "P09", "P10", "P11", "P12"]
 
 
 def generic_main(
-    module_id: str,
+    module_id: BusinessModuleId,
     result_type: str | dict[str, str],
     *,
     output_name: str = "result.json",
@@ -53,7 +55,7 @@ def generic_main(
             module_id=module_id,
             job_type=received.job_type,
             project_id=received.project_id,
-            project_revision=int(received.parameters.get("project_revision", 1)),
+            project_revision=project_revision(received),
             input_fingerprint=fingerprint,
             cache_key=hashlib.sha256((fingerprint + selected_result_type).encode()).hexdigest(),
             result_type=selected_result_type,

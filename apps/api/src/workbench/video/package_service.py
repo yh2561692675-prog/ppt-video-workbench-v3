@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from workbench.domain.enums import NodeStatus
 from workbench.domain.issues import PreflightReport
 from workbench.domain.models import AuditEvent, ProjectManifest, VideoExportRecord
+from workbench.domain.presenter import PresentationMode
 from workbench.exports.narration_docx import export_narration_docx
 from workbench.jobs.execution import (
     InlineRenderExecutionContext,
@@ -79,6 +80,41 @@ class VideoExportResult(BaseModel):
 
 
 MEDIA_DURATION_TOLERANCE_MS = 100
+
+
+def build_page_mux_command(
+    ffmpeg: str,
+    rendered_page: Path,
+    audio: Path,
+    output: Path,
+    *,
+    start_ms: int,
+    end_ms: int,
+    seek_master_audio: bool,
+) -> list[str]:
+    inputs = [ffmpeg, "-y", "-loglevel", "error", "-i", str(rendered_page)]
+    if seek_master_audio:
+        inputs.extend(["-ss", f"{start_ms / 1_000:.3f}"])
+    inputs.extend(["-i", str(audio)])
+    return [
+        *inputs,
+        "-t",
+        f"{(end_ms - start_ms) / 1_000:.3f}",
+        "-map",
+        "0:v:0",
+        "-map",
+        "1:a:0",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "128k",
+        "-shortest",
+        str(output),
+    ]
 
 
 class VideoExportService:
@@ -185,40 +221,23 @@ class VideoExportService:
         segments_dir = staging_root / "segments"
         segments_dir.mkdir(parents=True, exist_ok=True)
         segments = []
+        human_mode = project.presentation_mode is PresentationMode.HUMAN_PRESENTER
         for page, rendered_page in zip(props.pages, rendered, strict=True):
             execution.raise_if_cancelled()
             segment = segments_dir / f"page-{page.page_order:04d}.mp4"
             audio = self._safe_path(root, page.audio_path)
             if not audio.is_file():
                 raise VideoExportError(f"第{page.page_order}页音频文件不存在")
-            duration = (page.end_ms - page.start_ms) / 1_000
             self._run_ffmpeg(
-                [
+                build_page_mux_command(
                     self.ffmpeg,
-                    "-y",
-                    "-loglevel",
-                    "error",
-                    "-i",
-                    str(rendered_page.path),
-                    "-i",
-                    str(audio),
-                    "-t",
-                    f"{duration:.3f}",
-                    "-map",
-                    "0:v:0",
-                    "-map",
-                    "1:a:0",
-                    "-c:v",
-                    "libx264",
-                    "-pix_fmt",
-                    "yuv420p",
-                    "-c:a",
-                    "aac",
-                    "-b:a",
-                    "128k",
-                    "-shortest",
-                    str(segment),
-                ],
+                    rendered_page.path,
+                    audio,
+                    segment,
+                    start_ms=page.start_ms,
+                    end_ms=page.end_ms,
+                    seek_master_audio=human_mode,
+                ),
                 root,
                 execution,
             )
@@ -250,6 +269,8 @@ class VideoExportService:
                 "0",
                 "-i",
                 str(concat_file),
+                "-t",
+                f"{props.duration_ms / 1_000:.3f}",
                 "-c",
                 "copy",
                 str(final_mp4),
@@ -277,13 +298,46 @@ class VideoExportService:
         if not srt.is_file():
             raise VideoExportError("缺少字幕 SRT")
         shutil.copy2(srt, package / "字幕.srt")
-        narration = export_narration_docx(project, root)
-        shutil.copy2(narration, package / "旁白确认版.docx")
-        audio_dir = package / "分页音频"
-        audio_dir.mkdir(parents=True, exist_ok=True)
-        for page in props.pages:
-            audio = self._safe_path(root, page.audio_path)
-            shutil.copy2(audio, audio_dir / f"page-{page.page_order:04d}.wav")
+        if human_mode:
+            if project.presenter_source is None:
+                raise VideoExportError("真人模式缺少讲解视频源")
+            presenter_dir = package / "presenter"
+            presenter_dir.mkdir(parents=True, exist_ok=True)
+            source = self._safe_path(root, project.presenter_source.relative_path)
+            shutil.copy2(source, presenter_dir / f"source{source.suffix.lower()}")
+            presenter_artifacts = root / "03_文字识别" / "presenter"
+            for name in ("transcript.json", "matches.json", "timeline.json"):
+                artifact = presenter_artifacts / name
+                if not artifact.is_file():
+                    raise VideoExportError(f"真人模式缺少分析产物：{name}")
+                shutil.copy2(artifact, presenter_dir / name)
+            if props.presenter_timeline is None or props.timeline_hash is None:
+                raise VideoExportError("真人模式缺少可交付的时间轴哈希")
+            (presenter_dir / "window-plan.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": props.presenter_timeline.schema_version,
+                        "timeline_revision": props.timeline_revision,
+                        "timeline_hash": props.timeline_hash,
+                        "segments": [
+                            item.model_dump(mode="json")
+                            for item in props.presenter_timeline.segments
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+        else:
+            narration = export_narration_docx(project, root)
+            shutil.copy2(narration, package / "旁白确认版.docx")
+            audio_dir = package / "分页音频"
+            audio_dir.mkdir(parents=True, exist_ok=True)
+            for page in props.pages:
+                audio = self._safe_path(root, page.audio_path)
+                shutil.copy2(audio, audio_dir / f"page-{page.page_order:04d}.wav")
         remotion_dir = package / "Remotion工程"
         remotion_dir.mkdir(parents=True, exist_ok=True)
         (remotion_dir / "ProjectVideoProps.json").write_text(

@@ -62,6 +62,8 @@ $scriptTarget = Join-Path $peripheralRoot "scripts"
 New-Item -ItemType Directory -Path $scriptTarget -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "initialize-s0.ps1") `
     -Destination (Join-Path $scriptTarget "initialize-s0.ps1") -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot "verify-s1.ps1") `
+    -Destination (Join-Path $scriptTarget "verify-s1.ps1") -Force
 
 $manifest = Get-Content -LiteralPath $manifestTarget -Raw | ConvertFrom-Json
 $hashes = @()

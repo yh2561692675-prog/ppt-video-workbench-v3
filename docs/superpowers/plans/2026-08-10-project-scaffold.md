@@ -48,6 +48,7 @@
 ### Task 1: FastAPI Health Service
 
 **Files:**
+
 - Create: `backend/pyproject.toml`
 - Create: `backend/app/__init__.py`
 - Create: `backend/app/api/__init__.py`
@@ -56,6 +57,7 @@
 - Create: `backend/tests/test_health.py`
 
 **Interfaces:**
+
 - Consumes: HTTP `GET /api/health` requests.
 - Produces: JSON `{ "status": "ok", "app": "ppt-video-workbench-v3" }` and importable `app.main:app`.
 
@@ -204,6 +206,7 @@ git commit -m "feat: add backend health service"
 ### Task 2: React Backend Status Page
 
 **Files:**
+
 - Create: `frontend/package.json`
 - Create: `frontend/tsconfig.json`
 - Create: `frontend/vite.config.ts`
@@ -215,6 +218,7 @@ git commit -m "feat: add backend health service"
 - Create: `frontend/src/styles.css`
 
 **Interfaces:**
+
 - Consumes: `GET /api/health` returning `HealthStatus`.
 - Produces: `fetchHealth(fetcher?: typeof fetch): Promise<HealthStatus>` and a browser page that displays checking, healthy, or unavailable state.
 
@@ -276,14 +280,14 @@ Create `frontend/tsconfig.json`:
 Create `frontend/vite.config.ts`:
 
 ```typescript
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      "/api": "http://127.0.0.1:8000",
+      '/api': 'http://127.0.0.1:8000',
     },
   },
 });
@@ -292,30 +296,31 @@ export default defineConfig({
 Create `frontend/src/api.test.ts`:
 
 ```typescript
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from 'vitest';
 
-import { fetchHealth } from "./api";
+import { fetchHealth } from './api';
 
-describe("fetchHealth", () => {
-  it("returns the typed health payload", async () => {
-    const fetcher = vi.fn(async () =>
-      new Response(
-        JSON.stringify({ status: "ok", app: "ppt-video-workbench-v3" }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
+describe('fetchHealth', () => {
+  it('returns the typed health payload', async () => {
+    const fetcher = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ status: 'ok', app: 'ppt-video-workbench-v3' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
     );
 
     await expect(fetchHealth(fetcher)).resolves.toEqual({
-      status: "ok",
-      app: "ppt-video-workbench-v3",
+      status: 'ok',
+      app: 'ppt-video-workbench-v3',
     });
-    expect(fetcher).toHaveBeenCalledWith("/api/health");
+    expect(fetcher).toHaveBeenCalledWith('/api/health');
   });
 
-  it("rejects an unhealthy HTTP response", async () => {
+  it('rejects an unhealthy HTTP response', async () => {
     const fetcher = vi.fn(async () => new Response(null, { status: 503 }));
 
-    await expect(fetchHealth(fetcher)).rejects.toThrow("Health request failed: 503");
+    await expect(fetchHealth(fetcher)).rejects.toThrow('Health request failed: 503');
   });
 });
 ```
@@ -339,14 +344,12 @@ Create `frontend/src/api.ts`:
 
 ```typescript
 export type HealthStatus = {
-  status: "ok";
+  status: 'ok';
   app: string;
 };
 
-export async function fetchHealth(
-  fetcher: typeof fetch = fetch,
-): Promise<HealthStatus> {
-  const response = await fetcher("/api/health");
+export async function fetchHealth(fetcher: typeof fetch = fetch): Promise<HealthStatus> {
+  const response = await fetcher('/api/health');
   if (!response.ok) {
     throw new Error(`Health request failed: ${response.status}`);
   }
@@ -389,22 +392,22 @@ Create `frontend/index.html`:
 Create `frontend/src/App.tsx`:
 
 ```tsx
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from 'react';
 
-import { fetchHealth } from "./api";
+import { fetchHealth } from './api';
 
-type ConnectionState = "checking" | "healthy" | "unavailable";
+type ConnectionState = 'checking' | 'healthy' | 'unavailable';
 
 export function App() {
-  const [connection, setConnection] = useState<ConnectionState>("checking");
+  const [connection, setConnection] = useState<ConnectionState>('checking');
 
   const checkBackend = useCallback(async () => {
-    setConnection("checking");
+    setConnection('checking');
     try {
       await fetchHealth();
-      setConnection("healthy");
+      setConnection('healthy');
     } catch {
-      setConnection("unavailable");
+      setConnection('unavailable');
     }
   }, []);
 
@@ -413,16 +416,18 @@ export function App() {
   }, [checkBackend]);
 
   const statusText = {
-    checking: "正在连接后端…",
-    healthy: "后端服务正常",
-    unavailable: "后端暂不可用",
+    checking: '正在连接后端…',
+    healthy: '后端服务正常',
+    unavailable: '后端暂不可用',
   }[connection];
 
   return (
     <main className="shell">
       <section className="hero">
         <p className="eyebrow">PPT · VIDEO · WORKFLOW</p>
-        <h1>PPT Video Workbench <span>V3</span></h1>
+        <h1>
+          PPT Video Workbench <span>V3</span>
+        </h1>
         <p className="intro">
           面向演示文稿与视频生产的本地工作台。项目骨架已经就绪，可以继续接入 PPT
           解析、素材管理和渲染流水线。
@@ -431,7 +436,7 @@ export function App() {
           <span className="status__dot" aria-hidden="true" />
           <span>{statusText}</span>
         </div>
-        {connection === "unavailable" && (
+        {connection === 'unavailable' && (
           <button type="button" onClick={() => void checkBackend()}>
             重新连接
           </button>
@@ -445,13 +450,13 @@ export function App() {
 Create `frontend/src/main.tsx`:
 
 ```tsx
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
 
-import { App } from "./App";
-import "./styles.css";
+import { App } from './App';
+import './styles.css';
 
-createRoot(document.getElementById("root")!).render(
+createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
   </StrictMode>,
@@ -464,13 +469,21 @@ Create `frontend/src/styles.css` with a focused responsive layout:
 :root {
   color: #eef6ff;
   background: #07111f;
-  font-family: Inter, "Segoe UI", sans-serif;
+  font-family: Inter, 'Segoe UI', sans-serif;
   font-synthesis: none;
 }
 
-* { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; min-height: 100vh; }
-button { font: inherit; }
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+button {
+  font: inherit;
+}
 
 .shell {
   min-height: 100vh;
@@ -479,8 +492,7 @@ button { font: inherit; }
   padding: 32px;
   background:
     radial-gradient(circle at 15% 20%, rgba(42, 196, 255, 0.18), transparent 32%),
-    radial-gradient(circle at 85% 80%, rgba(136, 87, 255, 0.18), transparent 30%),
-    #07111f;
+    radial-gradient(circle at 85% 80%, rgba(136, 87, 255, 0.18), transparent 30%), #07111f;
 }
 
 .hero {
@@ -493,16 +505,58 @@ button { font: inherit; }
   backdrop-filter: blur(18px);
 }
 
-.eyebrow { color: #66d9ff; letter-spacing: 0.2em; font-size: 0.78rem; font-weight: 700; }
-h1 { margin: 18px 0; font-size: clamp(2.6rem, 8vw, 5.6rem); line-height: 0.98; letter-spacing: -0.05em; }
-h1 span { color: #8f7cff; }
-.intro { max-width: 58ch; color: #a9bfd6; line-height: 1.8; }
-.status { display: inline-flex; align-items: center; gap: 10px; margin-top: 26px; color: #c5d5e5; }
-.status__dot { width: 10px; height: 10px; border-radius: 50%; background: #f7b84b; box-shadow: 0 0 18px currentColor; }
-.status--healthy .status__dot { background: #48e09b; }
-.status--unavailable .status__dot { background: #ff6b7b; }
-button { margin-top: 20px; padding: 10px 18px; border: 0; border-radius: 999px; color: #07111f; background: #66d9ff; cursor: pointer; }
-button:hover { background: #94e6ff; }
+.eyebrow {
+  color: #66d9ff;
+  letter-spacing: 0.2em;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+h1 {
+  margin: 18px 0;
+  font-size: clamp(2.6rem, 8vw, 5.6rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+}
+h1 span {
+  color: #8f7cff;
+}
+.intro {
+  max-width: 58ch;
+  color: #a9bfd6;
+  line-height: 1.8;
+}
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 26px;
+  color: #c5d5e5;
+}
+.status__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f7b84b;
+  box-shadow: 0 0 18px currentColor;
+}
+.status--healthy .status__dot {
+  background: #48e09b;
+}
+.status--unavailable .status__dot {
+  background: #ff6b7b;
+}
+button {
+  margin-top: 20px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 999px;
+  color: #07111f;
+  background: #66d9ff;
+  cursor: pointer;
+}
+button:hover {
+  background: #94e6ff;
+}
 ```
 
 - [ ] **Step 6: Verify the production build**
@@ -529,6 +583,7 @@ git commit -m "feat: add frontend backend-status page"
 ### Task 3: Windows Tooling and Repository Guidance
 
 **Files:**
+
 - Create: `.gitignore`
 - Create: `.editorconfig`
 - Create: `.codex/config.toml`
@@ -541,6 +596,7 @@ git commit -m "feat: add frontend backend-status page"
 - Create: `data/temp/.gitkeep`
 
 **Interfaces:**
+
 - Consumes: Node.js 22+, npm, Python 3.11+, `frontend/package.json`, and `backend/pyproject.toml`.
 - Produces: `./scripts/setup.ps1` for setup and `./scripts/dev.ps1` for a coordinated local session on ports 5173 and 8000.
 
@@ -803,9 +859,11 @@ git commit -m "chore: add project tooling and repository guidance"
 ### Task 4: Full Verification and Repository Discovery
 
 **Files:**
+
 - Modify only if verification exposes a concrete defect in a file created by Tasks 1-3.
 
 **Interfaces:**
+
 - Consumes: setup script, development script, backend API, frontend page, and repository indexer.
 - Produces: passing verification evidence and a clean independently discovered repository.
 

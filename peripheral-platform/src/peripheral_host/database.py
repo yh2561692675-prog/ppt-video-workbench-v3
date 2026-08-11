@@ -87,9 +87,7 @@ class Database:
 
     def _write_backup(self, source: sqlite3.Connection) -> Path:
         timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
-        backup_path = self.path.with_name(
-            f"{self.path.name}.pre-migration-{timestamp}.bak"
-        )
+        backup_path = self.path.with_name(f"{self.path.name}.pre-migration-{timestamp}.bak")
         destination = sqlite3.connect(backup_path)
         try:
             source.backup(destination)

@@ -92,6 +92,32 @@ function Assert-ToolIdentity {
     }
 }
 
+function Assert-QualityFilterCapabilities {
+    param(
+        [string]$Executable
+    )
+
+    $filterOutput = @(& $Executable -hide_banner -filters 2>&1 | Out-String)
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        throw "FFmpeg filter capability probe failed: $Executable"
+    }
+    $filterText = ($filterOutput -join "`n")
+    $requiredFilters = @(
+        "blackdetect",
+        "freezedetect",
+        "ebur128",
+        "silencedetect",
+        "select",
+        "showinfo"
+    )
+    foreach ($filterName in $requiredFilters) {
+        if ($filterText -notmatch "(?im)\s$filterName(\s|$)") {
+            throw "FFmpeg runtime is missing required quality filter '$filterName': $Executable"
+        }
+    }
+}
+
 $node = Resolve-ToolPath -ConfiguredPath $NodeExecutable -CommandName "node.exe" -Description "NodeExecutable"
 $ffmpeg = Resolve-ToolPath -ConfiguredPath $FfmpegExecutable -CommandName "ffmpeg.exe" -Description "FfmpegExecutable"
 $ffprobe = Resolve-ToolPath -ConfiguredPath $FfprobeExecutable -CommandName "ffprobe.exe" -Description "FfprobeExecutable"
@@ -99,6 +125,7 @@ $pnpm = Resolve-ToolPath -ConfiguredPath $PnpmExecutable -CommandName "pnpm.cmd"
 
 Assert-ToolIdentity -Executable $ffmpeg -ExpectedName "ffmpeg" -Description "FfmpegExecutable"
 Assert-ToolIdentity -Executable $ffprobe -ExpectedName "ffprobe" -Description "FfprobeExecutable"
+Assert-QualityFilterCapabilities -Executable $ffmpeg
 
 if (Test-Path -LiteralPath $runtimeRoot) {
     Remove-Item -LiteralPath $runtimeRoot -Recurse -Force

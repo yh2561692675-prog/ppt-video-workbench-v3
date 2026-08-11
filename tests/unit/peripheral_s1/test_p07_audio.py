@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 
 def test_p07_normalizes_audio_metadata_and_builds_page_segments() -> None:
@@ -21,3 +22,27 @@ def test_p07_rejects_duration_mismatch() -> None:
 
     with pytest.raises(AudioRejected):
         build_audio_pipeline({"duration_ms": 1000, "sample_rate": 48000, "channels": 2}, [])
+
+
+def test_p07_rejects_mixed_local_and_heygen_routes() -> None:
+    from workbench.business_modules.p07_audio.policy import ensure_route
+
+    with pytest.raises(ValueError, match="AUDIO_ROUTE_CONFLICT"):
+        ensure_route("local", "heygen")
+    with pytest.raises(ValueError, match="AUDIO_ROUTE_CONFLICT"):
+        ensure_route("heygen", "local")
+
+
+def test_p07_rejects_stale_narration_revision() -> None:
+    from uuid import uuid4
+
+    from workbench.business_modules.p07_audio.models import ConfirmedNarration
+
+    with pytest.raises(ValidationError, match="current confirmed"):
+        ConfirmedNarration(
+            page_id=uuid4(),
+            page_order=1,
+            revision_id=uuid4(),
+            confirmed_revision_id=uuid4(),
+            text="confirmed text",
+        )

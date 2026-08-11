@@ -142,9 +142,7 @@ class JobRepository:
 
     def get(self, job_id: UUID) -> JobRecord | None:
         with self.database.read_connection() as connection:
-            row = connection.execute(
-                "SELECT * FROM jobs WHERE job_id=?", (str(job_id),)
-            ).fetchone()
+            row = connection.execute("SELECT * FROM jobs WHERE job_id=?", (str(job_id),)).fetchone()
         return None if row is None else _job_record(row)
 
     def count(self) -> int:
@@ -169,14 +167,14 @@ class JobRepository:
         now: datetime,
     ) -> JobRecord | None:
         row = connection.execute(
-                """
+            """
                 SELECT * FROM jobs
                 WHERE status=?
                 ORDER BY priority DESC, created_at ASC
                 LIMIT 1
                 """,
-                (JobStatus.QUEUED.value,),
-            ).fetchone()
+            (JobStatus.QUEUED.value,),
+        ).fetchone()
         if row is None:
             return None
         updated_at = _utc_text(now)
@@ -267,9 +265,7 @@ class JobRepository:
             raise ConcurrentTransitionError(
                 f"job {job_id} is not in expected state {expected.value}"
             )
-        row = connection.execute(
-            "SELECT * FROM jobs WHERE job_id=?", (str(job_id),)
-        ).fetchone()
+        row = connection.execute("SELECT * FROM jobs WHERE job_id=?", (str(job_id),)).fetchone()
         if row is None:
             raise RuntimeError("transitioned job could not be reloaded")
         return _job_record(row)

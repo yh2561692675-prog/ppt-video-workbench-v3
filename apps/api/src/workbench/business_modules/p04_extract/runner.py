@@ -3,14 +3,19 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
-import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Literal
 from uuid import NAMESPACE_URL, uuid5
 
 from peripheral_contracts import BusinessResultManifest, ErrorCategory, JobEnvelope
 
+from workbench.business_modules.p04_extract.models import (
+    DocumentExtractionParameters,
+    DocumentExtractionPayload,
+    ExtractedDocument,
+    PreviewArtifact,
+)
 from workbench.business_modules.runtime import (
     BusinessExecution,
     BusinessModuleError,
@@ -18,18 +23,12 @@ from workbench.business_modules.runtime import (
     business_input_fingerprint,
     business_parameters,
     execute_business_handler,
-)
-from workbench.business_modules.p04_extract.models import (
-    DocumentExtractionParameters,
-    DocumentExtractionPayload,
-    ExtractedDocument,
-    PreviewArtifact,
+    project_revision,
 )
 from workbench.domain.extraction import PageExtraction
 from workbench.domain.models import AuditEvent, PageRecord, ProjectManifest
-from workbench.parsers.docx_parser import parse_docx
 from workbench.ocr.paddle_adapter import OcrUnavailableError
-from workbench.parsers.docx_parser import DocumentParseError
+from workbench.parsers.docx_parser import DocumentParseError, parse_docx
 from workbench.parsers.image_parser import ImageParseError, parse_images
 from workbench.parsers.pdf_parser import EncryptedPdfError, OcrPolicy, PdfParseError, parse_pdf
 from workbench.parsers.pptx_parser import PresentationParseError, parse_pptx
@@ -78,12 +77,10 @@ def main() -> int:
     parser.add_argument("--request", required=True, type=Path)
     parser.add_argument("--result", required=True, type=Path)
     args = parser.parse_args()
-    job = JobEnvelope.model_validate_json(args.request.read_text(encoding="utf-8"))
+    job = JobEnvelope.model_validate_json(args.request.read_text(encoding="utf-8-sig"))
 
     def handler(received: JobEnvelope, attempt_root: Path) -> BusinessExecution:
-        parameters = DocumentExtractionParameters.model_validate(
-            business_parameters(received)
-        )
+        parameters = DocumentExtractionParameters.model_validate(business_parameters(received))
         sources = _extraction_inputs(received, attempt_root, parameters)
         if not sources:
             raise ExtractionRejected("at least one extraction source is required")
@@ -128,7 +125,9 @@ def main() -> int:
                     retryable=False,
                 ) from error
             raw_pages = raw.get("pages", [])
-            normalized_pages = []
+            if not isinstance(raw_pages, list):
+                raise ExtractionRejected("extracted pages payload is invalid")
+            normalized_pages: list[PageExtraction] = []
             for page_index, item in enumerate(raw_pages, start=1):
                 page = PageExtraction.model_validate(item)
                 if page.preview_path is not None:
@@ -136,9 +135,7 @@ def main() -> int:
                     if not preview_path.is_relative_to(attempt_root.resolve()):
                         raise ExtractionRejected("preview artifact escaped attempt root")
                     logical_name = f"preview-{index + 1:04d}-{page_index:04d}"
-                    relative_path = (
-                        Path("02_页面预览") / preview_path.name
-                    ).as_posix()
+                    relative_path = (Path("02_页面预览") / preview_path.name).as_posix()
                     size = preview_path.stat().st_size
                     digest = hashlib.sha256(preview_path.read_bytes()).hexdigest()
                     preview_artifacts.append(
@@ -149,9 +146,7 @@ def main() -> int:
                             sha256=digest,
                         )
                     )
-                    staged_artifacts.append(
-                        StagedArtifact(logical_name, "png", preview_path)
-                    )
+                    staged_artifacts.append(StagedArtifact(logical_name, "png", preview_path))
                     page = page.model_copy(update={"preview_path": Path(relative_path)})
                 normalized_pages.append(page)
             raw["pages"] = [item.model_dump(mode="json") for item in normalized_pages]
@@ -160,7 +155,9 @@ def main() -> int:
             if isinstance(outline, dict):
                 outline["source_name"] = name
             documents.append(ExtractedDocument.model_validate(raw))
-        operation = "ocr" if received.job_type == "document.ocr" else "extract"
+        operation: Literal["extract", "ocr"] = (
+            "ocr" if received.job_type == "document.ocr" else "extract"
+        )
         payload = DocumentExtractionPayload(
             operation=operation,
             documents=tuple(documents),
@@ -178,7 +175,7 @@ def main() -> int:
             module_id="P04",
             job_type=received.job_type,
             project_id=received.project_id,
-            project_revision=int(received.parameters.get("project_revision", 1)),
+            project_revision=project_revision(received),
             input_fingerprint=fingerprint,
             cache_key=hashlib.sha256((fingerprint + "document_extraction").encode()).hexdigest(),
             result_type="document_extraction",

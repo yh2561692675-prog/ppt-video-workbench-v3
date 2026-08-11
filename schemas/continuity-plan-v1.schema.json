@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/continuity-plan-v1.schema.json",
+  "title": "Continuity Plan v1",
+  "type": "object",
+  "required": [
+    "version",
+    "revision",
+    "project_id",
+    "duration_ms",
+    "transitions",
+    "overlays",
+    "chapters",
+    "content_hash"
+  ],
+  "properties": {
+    "version": { "const": 1 },
+    "revision": { "type": "integer", "minimum": 1 },
+    "project_id": { "type": "string", "format": "uuid" },
+    "duration_ms": { "type": "integer", "minimum": 0 },
+    "transitions": { "type": "array", "items": { "$ref": "#/$defs/transition" } },
+    "overlays": { "type": "array", "items": { "$ref": "#/$defs/overlay" } },
+    "chapters": { "type": "array", "items": { "$ref": "#/$defs/chapter" } },
+    "content_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  },
+  "$defs": {
+    "transition": {
+      "type": "object",
+      "required": [
+        "id",
+        "from_page_id",
+        "to_page_id",
+        "kind",
+        "duration_ms",
+        "audio_mode",
+        "audio_offset_ms",
+        "easing",
+        "enabled",
+        "chapter_boundary"
+      ],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "from_page_id": { "type": "string", "format": "uuid" },
+        "to_page_id": { "type": "string", "format": "uuid" },
+        "kind": { "enum": ["cut", "dissolve", "wipe", "slide", "match"] },
+        "duration_ms": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "audio_mode": { "enum": ["cut", "j_cut", "l_cut"] },
+        "audio_offset_ms": { "type": "integer", "minimum": -10000, "maximum": 10000 },
+        "easing": { "enum": ["linear", "ease_in", "ease_out", "ease_in_out"] },
+        "enabled": { "type": "boolean" },
+        "chapter_boundary": { "type": "boolean" },
+        "parameters": { "type": "object", "additionalProperties": true }
+      },
+      "additionalProperties": false
+    },
+    "overlay": {
+      "type": "object",
+      "required": [
+        "id",
+        "source_ref",
+        "kind",
+        "start_ms",
+        "duration_ms",
+        "x",
+        "y",
+        "width",
+        "height",
+        "opacity",
+        "crop",
+        "mask",
+        "enter_ms",
+        "exit_ms",
+        "license_asset_id",
+        "z_index"
+      ],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "source_ref": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["image", "video", "logo", "sticker", "text"] },
+        "start_ms": { "type": "integer", "minimum": 0 },
+        "duration_ms": { "type": "integer", "exclusiveMinimum": 0 },
+        "x": { "type": "number", "minimum": 0, "maximum": 1 },
+        "y": { "type": "number", "minimum": 0, "maximum": 1 },
+        "width": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        "height": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        "opacity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "crop": { "enum": ["contain", "cover", "fill"] },
+        "mask": { "enum": ["none", "circle", "rounded"] },
+        "enter_ms": { "type": "integer", "minimum": 0 },
+        "exit_ms": { "type": "integer", "minimum": 0 },
+        "license_asset_id": { "type": ["string", "null"], "format": "uuid" },
+        "z_index": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "chapter": {
+      "type": "object",
+      "required": ["id", "title", "start_ms", "end_ms", "page_ids"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "title": { "type": "string", "minLength": 1 },
+        "start_ms": { "type": "integer", "minimum": 0 },
+        "end_ms": { "type": "integer", "minimum": 0 },
+        "page_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "format": "uuid" }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

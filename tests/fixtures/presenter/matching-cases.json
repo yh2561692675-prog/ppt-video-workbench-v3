@@ -1,0 +1,27 @@
+{
+  "pages": [
+    {
+      "page_id": "00000000-0000-0000-0000-000000000001",
+      "page_index": 0,
+      "title": "专业概览",
+      "slide_text": "电子信息工程 专业介绍"
+    },
+    {
+      "page_id": "00000000-0000-0000-0000-000000000002",
+      "page_index": 1,
+      "title": "核心课程",
+      "slide_text": "电路 信号与系统 通信原理"
+    },
+    {
+      "page_id": "00000000-0000-0000-0000-000000000003",
+      "page_index": 2,
+      "title": "就业方向",
+      "slide_text": "通信 芯片 软件 就业"
+    }
+  ],
+  "sentences": [
+    { "id": "s1", "text": "首先介绍电子信息工程专业", "expected_page_index": 0 },
+    { "id": "s2", "text": "核心课程包括电路和通信原理", "expected_page_index": 1 },
+    { "id": "s3", "text": "毕业后可以从事通信芯片和软件工作", "expected_page_index": 2 }
+  ]
+}

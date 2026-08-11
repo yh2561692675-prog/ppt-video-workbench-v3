@@ -27,6 +27,7 @@ from workbench.business_modules.runtime import (
     business_input_fingerprint,
     business_parameters,
     execute_business_handler,
+    project_revision,
 )
 from workbench.domain.models import AuditEvent, ProjectManifest
 from workbench.domain.source_file import SourceFile, SourceKind
@@ -84,13 +85,15 @@ def main() -> int:
     parser.add_argument("--request", required=True, type=Path)
     parser.add_argument("--result", required=True, type=Path)
     args = parser.parse_args()
-    job = JobEnvelope.model_validate_json(args.request.read_text(encoding="utf-8"))
+    job = JobEnvelope.model_validate_json(args.request.read_text(encoding="utf-8-sig"))
 
     def handler(received: JobEnvelope, attempt_root: Path) -> BusinessExecution:
         staged_dir = attempt_root / "materials"
         if received.job_type == "material.ingest":
-            parameters = MaterialIngestParameters.model_validate(business_parameters(received))
-            items = _ingest_items(received, attempt_root, parameters)
+            ingest_parameters = MaterialIngestParameters.model_validate(
+                business_parameters(received)
+            )
+            items = _ingest_items(received, attempt_root, ingest_parameters)
             raw_sources = stage_material_bytes(items, staged_dir)
             payload = MaterialSourcesPayload(
                 operation="ingest",
@@ -106,11 +109,13 @@ def main() -> int:
                 for source in payload.sources
             )
         elif received.job_type == "material.reorder":
-            parameters = MaterialReorderParameters.model_validate(business_parameters(received))
-            by_name = {item.safe_name: item for item in parameters.sources}
+            reorder_parameters = MaterialReorderParameters.model_validate(
+                business_parameters(received)
+            )
+            by_name = {item.safe_name: item for item in reorder_parameters.sources}
             reordered: list[MaterialSource] = []
             image_order = 0
-            for name in parameters.ordered_names:
+            for name in reorder_parameters.ordered_names:
                 source = by_name[name]
                 if source.kind == "image":
                     image_order += 1
@@ -122,7 +127,7 @@ def main() -> int:
             payload = MaterialSourcesPayload(
                 operation="reorder",
                 sources=tuple(reordered),
-                ordered_names=parameters.ordered_names,
+                ordered_names=reorder_parameters.ordered_names,
             )
             artifacts = ()
         else:
@@ -133,7 +138,7 @@ def main() -> int:
             module_id="P03",
             job_type=received.job_type,
             project_id=received.project_id,
-            project_revision=int(received.parameters.get("project_revision", 1)),
+            project_revision=project_revision(received),
             input_fingerprint=fingerprint,
             cache_key=hashlib.sha256(
                 (fingerprint + received.job_type + "material_sources").encode()

@@ -16,6 +16,8 @@ export default tseslint.config(
       '**/.mypy_cache/**',
       '**/.ruff_cache/**',
       '**/.tmp-*/**',
+      '.tmp/**',
+      '.worktrees/**',
       'backup/**',
       'cache/**',
       'workspace-data/**',

@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/asset-manifest-v1.schema.json",
+  "title": "AssetManifestV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "asset_id",
+    "revision",
+    "project_id",
+    "kind",
+    "content_hash",
+    "relative_object_path",
+    "original_name",
+    "mime_type",
+    "size_bytes",
+    "license",
+    "tags"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "asset_id": { "type": "string", "format": "uuid" },
+    "revision": { "type": "integer", "minimum": 1 },
+    "project_id": { "type": "string", "format": "uuid" },
+    "kind": {
+      "enum": [
+        "image",
+        "video",
+        "audio",
+        "document",
+        "presentation",
+        "logo",
+        "sticker",
+        "icon",
+        "font",
+        "lut"
+      ]
+    },
+    "content_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "relative_object_path": { "type": "string", "pattern": "^(?!/)(?!.*(^|/)\\.\\.(/|$)).+" },
+    "original_name": { "type": "string", "minLength": 1, "maxLength": 255 },
+    "mime_type": { "type": "string", "minLength": 1 },
+    "size_bytes": { "type": "integer", "minimum": 0 },
+    "duration_us": { "type": ["integer", "null"], "minimum": 0 },
+    "width": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+    "height": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+    "fps_num": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+    "fps_den": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+    "alpha_mode": { "enum": ["none", "straight", "premultiplied"] },
+    "license": { "type": "object" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "brand_pack_id": { "type": ["string", "null"], "format": "uuid" },
+    "derived_from": { "type": ["string", "null"], "format": "uuid" },
+    "operation": { "type": ["string", "null"] },
+    "created_at": { "type": "string", "format": "date-time" }
+  }
+}

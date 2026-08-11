@@ -102,6 +102,4 @@ def test_registered_temporary_paths_survive_later_checkpoints_without_progress_r
     restored = context.store.latest(context.job_id)
     assert record.progress == 0.7
     assert restored is not None
-    assert restored.temporary_paths == [
-        f"08_输出/.render-jobs/{context.job_id}"
-    ]
+    assert restored.temporary_paths == [f"08_输出/.render-jobs/{context.job_id}"]

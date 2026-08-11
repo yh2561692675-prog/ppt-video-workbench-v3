@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Literal
 
-
 BackgroundPreset = Literal["tech_blue", "risk_red", "warm_gold", "paper_grid", "regional_teal"]
 
 

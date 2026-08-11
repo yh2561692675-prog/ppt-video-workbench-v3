@@ -4,19 +4,19 @@
 
 `pending_manual_windows`
 
-本报告模板已冻结，但当前没有 Windows 10/11 干净 VM、真实 Office 文件、真实用户声音、受控 HeyGen 小额凭证或人工视听记录。因此不能签署 RC1，也不能创建 `v1.0.0` tag。Linux 自动化结果见 [M8-GATE.md](../M8-GATE.md)；任务和需求映射见 [traceability.xlsx](traceability.xlsx) 与 [验收计划](../tests/acceptance/acceptance-plan.md)。
+本报告模板已冻结。P01 隔离安装验收已通过，但当前仍没有 Windows 10/11 干净 VM、真实 Office 文件、真实用户声音、受控 HeyGen 小额凭证或人工视听记录。因此不能签署 RC1，也不能创建 `v1.0.0` tag。Linux 自动化结果见 [M8-GATE.md](../M8-GATE.md)；任务和需求映射见 [traceability.xlsx](traceability.xlsx) 与 [验收计划](../tests/acceptance/acceptance-plan.md)。
 
 ## 环境与前置条件
 
-| 项目                                 | 结果                 | 证据                                                  |
-| ------------------------------------ | -------------------- | ----------------------------------------------------- |
-| Windows 10/11 干净 VM 或目标用户电脑 | 待执行               | `tests/acceptance/results/RC1/evidence-manifest.json` |
-| RC 安装器、启动器和卸载              | 待执行               | `tests/release/install-smoke.ps1`                     |
-| 真实 Word+PPTX                       | 待执行               | `results/RC1/RC-LOCAL/`                               |
-| 真实 Word+扫描 PDF                   | 待执行               | `results/RC1/RC-SCAN/`                                |
-| 真实 Word+多图片                     | 待执行               | `results/RC1/RC-IMAGES/`                              |
-| 2 页真实声音                         | 待执行且需要受控额度 | `results/RC1/RC-HEYGEN/`                              |
-| 人工视听检查                         | 待执行               | `results/RC1/RC-AUDIOVISUAL/`                         |
+| 项目                                 | 结果                     | 证据                                                                        |
+| ------------------------------------ | ------------------------ | --------------------------------------------------------------------------- |
+| Windows 10/11 干净 VM 或目标用户电脑 | 待执行                   | `tests/acceptance/results/RC1/evidence-manifest.json`                       |
+| RC 安装器、启动器和卸载              | `passed`（P01 隔离验收） | `F:\Video\acceptance-effects-v2\p01-report-20260811\acceptance-report.json` |
+| 真实 Word+PPTX                       | 待执行                   | `results/RC1/RC-LOCAL/`                                                     |
+| 真实 Word+扫描 PDF                   | 待执行                   | `results/RC1/RC-SCAN/`                                                      |
+| 真实 Word+多图片                     | 待执行                   | `results/RC1/RC-IMAGES/`                                                    |
+| 2 页真实声音                         | 待执行且需要受控额度     | `results/RC1/RC-HEYGEN/`                                                    |
+| 人工视听检查                         | 待执行                   | `results/RC1/RC-AUDIOVISUAL/`                                               |
 
 ## 完整制作包
 
