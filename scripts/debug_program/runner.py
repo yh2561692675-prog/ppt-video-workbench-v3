@@ -518,7 +518,8 @@ def full_automation_plan(
                 "scripts.debug_program.ci_preflight",
                 "--repo-root",
                 str(repo_root),
-            ],
+            ]
+            + (["--candidate", str(candidate)] if candidate is not None else []),
             300,
             python_env,
             blocked_exit_codes=(2,),
