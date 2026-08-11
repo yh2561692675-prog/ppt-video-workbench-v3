@@ -26,7 +26,7 @@ $env:PYTHONPATH = 'apps/api/src'
 & $py -m ruff check apps/api/src/workbench/p2.py apps/api/src/workbench/contracts/p2_platform.py apps/api/src/workbench/cache apps/api/src/workbench/diagnostics/p2_privacy.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype tests/contract tests/unit/providers tests/unit/platform_foundation tests/unit/cache/test_p2_matrix.py tests/unit/diagnostics/test_p2_privacy.py tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/integration/test_narration_generation_api.py tests/cloud tests/platform
 ```
 
-Current result: **101 focused P2 tests passed**, mypy reports no issues in 32 source files,
+Current result: **102 focused P2 tests passed**, mypy reports no issues in 32 source files,
 and Ruff reports no violations.
 
 The independent `peripheral-platform` S0 host also passes **128 tests** on the

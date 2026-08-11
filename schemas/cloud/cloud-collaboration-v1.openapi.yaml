@@ -24,6 +24,34 @@ tags:
   - name: Collaboration
   - name: Jobs
 paths:
+  /health:
+    get:
+      tags: [Identity]
+      operationId: getCloudHealth
+      summary: Report prototype mode and production-gate state
+      security: []
+      responses:
+        "200":
+          description: Cloud control-plane health
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status, mode, auth_mode, production_gate]
+                properties:
+                  status:
+                    type: string
+                    const: ok
+                  mode:
+                    type: string
+                    const: prototype
+                  auth_mode:
+                    type: string
+                    enum: [development, production]
+                  production_gate:
+                    type: string
+                    enum: [ready, blocked]
   /me:
     get:
       tags: [Identity]
@@ -382,6 +410,50 @@ paths:
           $ref: "#/components/responses/Conflict"
         "422":
           $ref: "#/components/responses/ValidationFailed"
+  /workspaces/{workspaceId}/projects/{projectId}/objects/uploads/{uploadId}/parts/{partNumber}:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceId"
+      - $ref: "#/components/parameters/ProjectId"
+      - name: uploadId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/Uuid"
+      - name: partNumber
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 10000
+    put:
+      tags: [Objects]
+      operationId: uploadObjectPart
+      summary: Stage one bounded upload part
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Staged part digest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadedPart"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
   /workspaces/{workspaceId}/projects/{projectId}/objects/{objectId}/download:
     parameters:
       - $ref: "#/components/parameters/WorkspaceId"
@@ -413,6 +485,37 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /workspaces/{workspaceId}/projects/{projectId}/objects/{objectId}/content:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceId"
+      - $ref: "#/components/parameters/ProjectId"
+      - name: objectId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/Sha256"
+    get:
+      tags: [Objects]
+      operationId: downloadObjectContent
+      summary: Stream verified project-scoped object bytes
+      responses:
+        "200":
+          description: Object content
+          headers:
+            ETag:
+              schema:
+                $ref: "#/components/schemas/Sha256"
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
   /workspaces/{workspaceId}/projects/{projectId}/comments:
     parameters:
       - $ref: "#/components/parameters/WorkspaceId"
@@ -523,6 +626,62 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Lease"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+  /workspaces/{workspaceId}/executors:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceId"
+    get:
+      tags: [Jobs]
+      operationId: listExecutors
+      summary: List workspace-scoped executor registrations
+      responses:
+        "200":
+          description: Executor registrations
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 1000
+                    items:
+                      $ref: "#/components/schemas/ExecutorRegistration"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Jobs]
+      operationId: registerExecutor
+      summary: Register a bounded built-in executor capability snapshot
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecutorRegisterRequest"
+      responses:
+        "201":
+          description: Executor registration
+          headers:
+            Operation-Id:
+              $ref: "#/components/headers/OperationId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutorRegistration"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -765,6 +924,12 @@ components:
         application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
+    ServerError:
+      description: An unexpected integrity or service failure occurred
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
     RateLimited:
       description: Tenant, principal, or operation quota exceeded
       headers:
@@ -923,6 +1088,78 @@ components:
           $ref: "#/components/schemas/Sha256"
         last_seen_at:
           $ref: "#/components/schemas/Timestamp"
+    ExecutorRegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [platform, capabilities, region]
+      properties:
+        executor_id:
+          $ref: "#/components/schemas/Uuid"
+        platform:
+          type: string
+          enum: [windows, macos, linux]
+        capabilities:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          items:
+            type: string
+            pattern: "^[a-z][a-z0-9_.-]{0,99}$"
+        region:
+          type: string
+          minLength: 1
+          maxLength: 64
+        ttl_seconds:
+          type: integer
+          minimum: 30
+          maximum: 900
+          default: 120
+        capability_snapshot:
+          type: object
+          maxProperties: 128
+          additionalProperties: true
+    ExecutorRegistration:
+      type: object
+      additionalProperties: false
+      required:
+        - executor_id
+        - workspace_id
+        - platform
+        - capabilities
+        - region
+        - status
+        - expires_at
+        - capability_snapshot
+      properties:
+        executor_id:
+          $ref: "#/components/schemas/Uuid"
+        workspace_id:
+          $ref: "#/components/schemas/Uuid"
+        platform:
+          type: string
+          enum: [windows, macos, linux]
+        capabilities:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          items:
+            type: string
+            pattern: "^[a-z][a-z0-9_.-]{0,99}$"
+        region:
+          type: string
+          minLength: 1
+          maxLength: 64
+        status:
+          type: string
+          enum: [active, expired]
+        expires_at:
+          $ref: "#/components/schemas/Timestamp"
+        capability_snapshot:
+          type: object
+          maxProperties: 128
+          additionalProperties: true
     Membership:
       type: object
       additionalProperties: false
@@ -1074,6 +1311,23 @@ components:
           pattern: "^https://"
         expires_at:
           $ref: "#/components/schemas/Timestamp"
+    UploadedPart:
+      type: object
+      additionalProperties: false
+      required: [upload_id, part_number, size_bytes, etag]
+      properties:
+        upload_id:
+          $ref: "#/components/schemas/Uuid"
+        part_number:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        size_bytes:
+          type: integer
+          minimum: 0
+          maximum: 67108864
+        etag:
+          $ref: "#/components/schemas/Sha256"
     UploadSession:
       type: object
       additionalProperties: false

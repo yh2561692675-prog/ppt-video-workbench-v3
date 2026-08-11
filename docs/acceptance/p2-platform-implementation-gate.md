@@ -25,8 +25,8 @@ This file records evidence for the isolated integration branch
 | P2 settings UI panels | three focused Vitest suites under `apps/web/src/features/{providers,settings/platform,cloud}` | pass |
 | Full web UI regression | Vitest 28 files / 47 tests | pass; TypeScript `--noEmit` not rerun because this worktree has no TypeScript compiler binary |
 | Static quality | Ruff + mypy on 32 P2 source files | pass |
-| Focused P2 regression | 101 tests across contracts/providers/platform/cache/diagnostics/sync/cloud/integration | pass |
-| Full recovery snapshot | `pytest --import-mode=importlib -q --maxfail=20` | pending: latest run 521 passed / 12 failed — 10 crash-recovery status mismatches (`succeeded` vs legacy `completed`), M5 async render status mismatch (202 vs legacy 201), and one isolated-branch AI narration compatibility assertion; P04 legacy-result projection is now covered; S1 module smoke is 10/10 after linking the shared venv |
+| Focused P2 regression | 102 tests across contracts/providers/platform/cache/diagnostics/sync/cloud/integration | pass |
+| Full recovery snapshot | `pytest --import-mode=importlib -q --maxfail=20` | pending: latest run 523 passed / 12 failed — 10 crash-recovery status mismatches (`succeeded` vs legacy `completed`), M5 async render status mismatch (202 vs legacy 201), and one isolated-branch AI narration compatibility assertion; P04 legacy-result projection is now covered; S1 module smoke is 10/10 after linking the shared venv |
 | Real macOS/Linux media and signed installers | three-OS CI/tag evidence | pending runner artifacts |
 | Production cloud | OIDC, PostgreSQL PITR, object retention, security scans | pending production environment |
 
