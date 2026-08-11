@@ -379,6 +379,8 @@ def test_full_automation_plan_is_explicit_and_sequential(tmp_path: Path) -> None
         "python-ruff",
     ]
     assert "python-mypy" in names
+    release_build = next(item for item in plan if item.name == "release-build")
+    assert release_build.env["CI"] == "true"
     assert "root-lint" in names
     assert "root-tests" in names
     assert "export-contracts-check" in names

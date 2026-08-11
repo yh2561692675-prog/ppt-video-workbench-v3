@@ -349,6 +349,7 @@ def full_automation_plan(
                 str(installer_root),
             ],
             7200,
+            {"CI": "true"},
         ),
         spec("python-full-tests", [python, "-m", "pytest", "-q"], 3600, python_env),
         spec(
