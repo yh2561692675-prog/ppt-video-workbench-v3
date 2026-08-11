@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "run_id": "v1-rc-abc1234-20260811T193000Z-local-e2e-20260811T193001Z",
+  "candidate_id": "v1-rc-abc1234-20260811T193000Z",
+  "matrix": "local-e2e",
+  "started_at": "2026-08-11T19:30:01Z",
+  "attempt": 1,
+  "status": "interrupted",
+  "artifacts": [],
+  "orphan_processes": []
+}

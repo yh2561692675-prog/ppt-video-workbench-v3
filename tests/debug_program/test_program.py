@@ -1,0 +1,128 @@
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path
+
+import pytest
+
+from scripts.debug_program.evidence import EvidenceWriter
+from scripts.debug_program.isolation import IsolatedRun
+from scripts.debug_program.models import (
+    ValidationError,
+    validate_candidate_manifest,
+    validate_defect,
+    validate_run,
+    validate_scenario,
+    validate_signoff,
+)
+from scripts.debug_program.registry import list_scenarios
+
+
+def candidate(tmp_path: Path) -> dict[str, object]:
+    payload = tmp_path / "payload.txt"
+    payload.write_text("payload", encoding="utf-8")
+    return {
+        "schema_version": "1.0",
+        "candidate_id": "v1-rc-abc1234-20260811T193000Z",
+        "generated_at": "2026-08-11T19:30:00Z",
+        "source": {"commit": "a" * 40, "branch": "codex/test", "dirty": False},
+        "files": [
+            {
+                "path": "payload.txt",
+                "size": payload.stat().st_size,
+                "sha256": hashlib.sha256(payload.read_bytes()).hexdigest(),
+            }
+        ],
+    }
+
+
+def test_candidate_manifest_rejects_dirty_or_escape(tmp_path: Path) -> None:
+    value = candidate(tmp_path)
+    validate_candidate_manifest(value, tmp_path)
+    value["source"] = {"commit": "a" * 40, "branch": "codex/test", "dirty": True}
+    with pytest.raises(ValidationError, match="dirty"):
+        validate_candidate_manifest(value)
+    value = candidate(tmp_path)
+    value["files"] = [{"path": "../payload.txt", "size": 1, "sha256": "0" * 64}]
+    with pytest.raises(ValidationError, match="inside"):
+        validate_candidate_manifest(value)
+
+
+def test_contract_validators_cover_scenario_run_defect_signoff() -> None:
+    scenario = list_scenarios(matrix="local-e2e")[0]
+    validate_scenario(scenario)
+    validate_run(
+        {
+            "schema_version": "1.0",
+            "run_id": "run-local-e2e-001",
+            "candidate_id": "v1-rc-abc1234-20260811T193000Z",
+            "matrix": "local-e2e",
+            "started_at": "2026-08-11T19:30:01Z",
+            "attempt": 1,
+            "status": "planned",
+            "artifacts": [],
+            "orphan_processes": [],
+        }
+    )
+    candidate_id = "v1-rc-abc1234-20260811T193000Z"
+    validate_defect(
+        {
+            "schema_version": "1.0",
+            "defect_id": "DEF-v1-rc-abc1234-001",
+            "severity": "P1",
+            "owner": "A",
+            "title": "example",
+            "reproduction": "run fixture",
+            "status": "open",
+            "candidate_id": candidate_id,
+        }
+    )
+    validate_signoff(
+        {
+            "schema_version": "1.0",
+            "candidate_id": candidate_id,
+            "role": "product",
+            "reviewer": "test",
+            "decision": "blocked",
+            "signed_at": "2026-08-11T19:30:01Z",
+            "evidence_hashes": ["0" * 64],
+        }
+    )
+
+
+def test_evidence_writer_is_append_only_and_recovers(tmp_path: Path) -> None:
+    writer = EvidenceWriter(
+        tmp_path / "evidence", "v1-rc-abc1234-20260811T193000Z", "run-local-e2e-001"
+    )
+    writer.create_run("local-e2e")
+    _, first = writer.start_attempt("DBG-recovery-001")
+    writer.finish_attempt(first, status="failed", notes=["first attempt is retained"])
+    _, second = writer.start_attempt("DBG-recovery-001")
+    recovered = writer.recover_interrupted()
+    assert recovered == [second / "interrupted.json"]
+    with pytest.raises(FileExistsError):
+        writer.finish_attempt(first, status="passed")
+    manifest = writer.manifest()
+    assert json.loads(manifest.read_text(encoding="utf-8"))["files"]
+
+
+def test_isolation_owns_paths_and_ports(tmp_path: Path) -> None:
+    root = tmp_path / "runs"
+    with IsolatedRun(
+        root, "v1-rc-abc1234-20260811T193000Z", "run-local-e2e-001", requested_ports=1
+    ) as run:
+        assert len(run.ports) == 1
+        assert run.path("workspace/input.txt").parent == run.workspace
+        with pytest.raises(ValueError):
+            run.path("../outside.txt")
+    assert (
+        root / "v1-rc-abc1234-20260811T193000Z" / "run-local-e2e-001" / "environment.json"
+    ).exists()
+
+
+def test_registry_restricts_destructive_and_paid_by_default() -> None:
+    safe = list_scenarios()
+    assert {item["scenario_id"] for item in safe} == {"DBG-core-001", "DBG-recovery-001"}
+    release = list_scenarios(matrix="release", include_restricted=True)
+    assert release[0]["destructive"] is True
