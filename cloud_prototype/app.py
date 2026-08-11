@@ -23,6 +23,44 @@ def _expires(seconds: int) -> str:
     return (datetime.now(UTC) + timedelta(seconds=seconds)).isoformat().replace("+00:00", "Z")
 
 
+_SENSITIVE_KEYS = {
+    "api_key",
+    "apikey",
+    "authorization",
+    "cookie",
+    "password",
+    "secret",
+    "token",
+}
+
+
+def _assert_portable_document(value: object, *, field: str = "document") -> None:
+    """Reject secrets and host paths before a manifest enters a cloud revision."""
+
+    if isinstance(value, dict):
+        for key, item in value.items():
+            normalized_key = str(key).lower()
+            if normalized_key in _SENSITIVE_KEYS or any(
+                marker in normalized_key for marker in ("api_key", "authorization", "password")
+            ):
+                raise HTTPException(status_code=422, detail="sensitive_field_rejected")
+            _assert_portable_document(item, field=f"{field}.{key}")
+        return
+    if isinstance(value, list):
+        for index, item in enumerate(value):
+            _assert_portable_document(item, field=f"{field}[{index}]")
+        return
+    if not isinstance(value, str):
+        return
+    lowered = field.lower()
+    if not lowered.endswith(("path", "_path", "file", "_file", "directory", "_dir")):
+        return
+    if value.startswith(("/", "\\")) or re.match(r"^[A-Za-z]:[\\/]", value):
+        raise HTTPException(status_code=422, detail="absolute_path_rejected")
+    if value.startswith("../") or value.startswith("..\\") or value == "..":
+        raise HTTPException(status_code=422, detail="path_escape_rejected")
+
+
 class CloudModel(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
@@ -98,6 +136,15 @@ class JobCreate(CloudModel):
     parameters: dict[str, Any] = Field(default_factory=dict)
 
 
+class JobResultReport(CloudModel):
+    attempt_id: UUID
+    executor_id: UUID
+    status: Literal["completed", "failed"]
+    result: dict[str, Any] = Field(default_factory=dict)
+    result_sha256: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
+    output_refs: list[str] = Field(default_factory=list, max_length=1000)
+
+
 class ExecutorRegister(CloudModel):
     executor_id: UUID = Field(default_factory=uuid4)
     platform: Literal["windows", "macos", "linux"]
@@ -115,6 +162,36 @@ class CloudAuthConfig:
     @property
     def production_ready(self) -> bool:
         return self.mode == "production" and bool(self.oidc_issuer and self.oidc_audience)
+
+
+@dataclass(frozen=True)
+class CloudProductionEvidence:
+    """Release evidence that must be supplied before production auth can open."""
+
+    oidc_validation: bool = False
+    postgres_pitr_restore: bool = False
+    object_retention_and_export: bool = False
+    security_scans: bool = False
+    data_residency_and_slo: bool = False
+    executor_result_verification: bool = False
+
+    def missing(self) -> list[str]:
+        return [
+            field_name
+            for field_name, present in (
+                ("oidc_validation", self.oidc_validation),
+                ("postgres_pitr_restore", self.postgres_pitr_restore),
+                ("object_retention_and_export", self.object_retention_and_export),
+                ("security_scans", self.security_scans),
+                ("data_residency_and_slo", self.data_residency_and_slo),
+                ("executor_result_verification", self.executor_result_verification),
+            )
+            if not present
+        ]
+
+    @property
+    def ready(self) -> bool:
+        return not self.missing()
 
 
 class CloudRepository:
@@ -213,6 +290,11 @@ class CloudRepository:
                     parameters_json TEXT NOT NULL, status TEXT NOT NULL,
                     executor_id TEXT, created_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS job_results (
+                    attempt_id TEXT PRIMARY KEY, job_id TEXT NOT NULL REFERENCES jobs(id),
+                    status TEXT NOT NULL, result_sha256 TEXT NOT NULL,
+                    result_json TEXT NOT NULL, created_at TEXT NOT NULL
+                );
                 CREATE TABLE IF NOT EXISTS executors (
                     id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL REFERENCES workspaces(id),
                     actor_id TEXT NOT NULL, platform TEXT NOT NULL, capabilities_json TEXT NOT NULL,
@@ -288,6 +370,7 @@ class CloudRepository:
     def create_project(
         self, workspace_id: str, actor_id: str, name: str, manifest: dict[str, Any]
     ) -> dict[str, Any]:
+        _assert_portable_document(manifest, field="manifest")
         project_id, revision_id = str(uuid4()), str(uuid4())
         created_at = _now()
         manifest_json = json.dumps(
@@ -380,6 +463,7 @@ class CloudRepository:
             raise HTTPException(status_code=422, detail="operation_scope_mismatch")
         if canonical_sha256(operation.payload) != operation.payload_sha256:
             raise HTTPException(status_code=422, detail="payload_hash_mismatch")
+        _assert_portable_document(operation.payload, field="operation.payload")
         with self._lock, self._connect() as db:
             self._workspace_access(db, workspace_id, actor_id)
             project = db.execute(
@@ -531,6 +615,29 @@ class CloudRepository:
                 raise HTTPException(status_code=409, detail="upload_expired")
             if not parts:
                 raise HTTPException(status_code=422, detail="parts_required")
+            part_numbers: set[int] = set()
+            declared_sizes: list[int] = []
+            for part in parts:
+                try:
+                    part_number = int(part.get("part_number", 0))
+                    etag = str(part.get("etag", ""))
+                except (AttributeError, TypeError, ValueError) as error:
+                    raise HTTPException(status_code=422, detail="invalid_upload_part") from error
+                if part_number < 1 or part_number in part_numbers or not etag:
+                    raise HTTPException(status_code=422, detail="invalid_upload_part")
+                part_numbers.add(part_number)
+                if "size_bytes" in part:
+                    try:
+                        part_size = int(part["size_bytes"])
+                    except (TypeError, ValueError) as error:
+                        raise HTTPException(
+                            status_code=422, detail="invalid_upload_part"
+                        ) from error
+                    if part_size < 0:
+                        raise HTTPException(status_code=422, detail="invalid_upload_part")
+                    declared_sizes.append(part_size)
+            if declared_sizes and sum(declared_sizes) != upload["size_bytes"]:
+                raise HTTPException(status_code=422, detail="upload_size_mismatch")
             object_path = self._object_path(project_id, upload["object_id"])
             storage_key = f"{project_id}/{upload['object_id'].removeprefix('sha256:')}"
             object_path.parent.mkdir(parents=True, exist_ok=True)
@@ -759,6 +866,7 @@ class CloudRepository:
         project = self.project(workspace_id, project_id, actor_id)
         if str(request.revision_id) != project["current_revision_id"]:
             raise HTTPException(status_code=409, detail="job_revision_is_not_head")
+        _assert_portable_document(request.parameters, field="job.parameters")
         job_id, created_at = str(uuid4()), _now()
         with self._connect() as db:
             executor_id = self._select_executor(db, project["workspace_id"], request.kind)
@@ -808,9 +916,69 @@ class CloudRepository:
                 "WHERE id=? AND project_id=?",
                 (job_id, project_id),
             ).fetchone()
+            result = db.execute(
+                "SELECT attempt_id, status, result_sha256, result_json, created_at "
+                "FROM job_results WHERE job_id=? ORDER BY created_at DESC LIMIT 1",
+                (job_id,),
+            ).fetchone()
         if row is None:
             raise HTTPException(status_code=404, detail="job_not_found")
-        return dict(row)
+        payload = dict(row)
+        if result is not None:
+            payload["result"] = {
+                "attempt_id": result["attempt_id"],
+                "status": result["status"],
+                "result_sha256": result["result_sha256"],
+                "result": json.loads(result["result_json"]),
+                "created_at": result["created_at"],
+            }
+        return payload
+
+    def report_job_result(
+        self,
+        workspace_id: str,
+        project_id: str,
+        job_id: str,
+        actor_id: str,
+        report: JobResultReport,
+    ) -> dict[str, Any]:
+        job = self.get_job(workspace_id, project_id, job_id, actor_id)
+        if job["executor_id"] != str(report.executor_id):
+            raise HTTPException(status_code=403, detail="executor_scope_mismatch")
+        if job["status"] == "cancelled":
+            raise HTTPException(status_code=409, detail="job_cancelled")
+        if canonical_sha256(report.result) != report.result_sha256:
+            raise HTTPException(status_code=422, detail="result_hash_mismatch")
+        _assert_portable_document(report.result, field="job.result")
+        if any(
+            not re.fullmatch(r"(?:artifact://)?sha256:[0-9a-f]{64}", item)
+            for item in report.output_refs
+        ):
+            raise HTTPException(status_code=422, detail="invalid_result_reference")
+        created_at = _now()
+        with self._lock, self._connect() as db:
+            existing = db.execute(
+                "SELECT * FROM job_results WHERE attempt_id=?", (str(report.attempt_id),)
+            ).fetchone()
+            if existing is None:
+                db.execute(
+                    "INSERT INTO job_results VALUES (?, ?, ?, ?, ?, ?)",
+                    (
+                        str(report.attempt_id),
+                        job_id,
+                        report.status,
+                        report.result_sha256,
+                        json.dumps(report.result, ensure_ascii=False, sort_keys=True),
+                        created_at,
+                    ),
+                )
+                db.execute(
+                    "UPDATE jobs SET status=? WHERE id=?",
+                    (report.status, job_id),
+                )
+        updated = self.get_job(workspace_id, project_id, job_id, actor_id)
+        updated["output_refs"] = report.output_refs
+        return updated
 
     def cancel_job(
         self, workspace_id: str, project_id: str, job_id: str, actor_id: str
@@ -831,6 +999,7 @@ def create_cloud_app(
     auth_mode: Literal["development", "production"] = "development",
     oidc_issuer: str | None = None,
     oidc_audience: str | None = None,
+    production_evidence: CloudProductionEvidence | None = None,
 ) -> FastAPI:
     repository = CloudRepository(
         db_path or Path("cloud-prototype/data/control-plane.db"),
@@ -839,6 +1008,7 @@ def create_cloud_app(
     app = FastAPI(title="PPT Video Workbench Cloud Prototype", version="0.1.0")
     app.state.cloud_repository = repository
     app.state.cloud_auth = CloudAuthConfig(auth_mode, oidc_issuer, oidc_audience)
+    app.state.cloud_production_evidence = production_evidence or CloudProductionEvidence()
     router = APIRouter(prefix="/v1")
 
     def actor(x_actor_id: str | None) -> str:
@@ -846,13 +1016,28 @@ def create_cloud_app(
         if auth.mode == "production":
             if not auth.production_ready:
                 raise HTTPException(status_code=503, detail="oidc_not_configured")
+            evidence: CloudProductionEvidence = app.state.cloud_production_evidence
+            if not evidence.ready:
+                raise HTTPException(
+                    status_code=503,
+                    detail={
+                        "code": "production_gate_incomplete",
+                        "missing": evidence.missing(),
+                    },
+                )
             raise HTTPException(status_code=501, detail="oidc_validation_adapter_required")
         return x_actor_id or "dev-user"
 
     @router.get("/health")
     def health() -> dict[str, str]:
         auth: CloudAuthConfig = app.state.cloud_auth
-        return {"status": "ok", "mode": "prototype", "auth_mode": auth.mode}
+        evidence: CloudProductionEvidence = app.state.cloud_production_evidence
+        return {
+            "status": "ok",
+            "mode": "prototype",
+            "auth_mode": auth.mode,
+            "production_gate": "ready" if evidence.ready else "blocked",
+        }
 
     @router.get("/me")
     def me(x_actor_id: str | None = Header(default=None)) -> dict[str, str]:
@@ -1060,6 +1245,20 @@ def create_cloud_app(
     ) -> dict[str, Any]:
         return repository.get_job(
             workspace_id(request), project_id(request), jobId, actor(x_actor_id)
+        )
+
+    @router.post(
+        "/workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}/result",
+        status_code=200,
+    )
+    def report_job_result(
+        request: Request,
+        jobId: str,
+        payload: JobResultReport,
+        x_actor_id: str | None = Header(default=None),
+    ) -> dict[str, Any]:
+        return repository.report_job_result(
+            workspace_id(request), project_id(request), jobId, actor(x_actor_id), payload
         )
 
     @router.delete("/workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}")

@@ -18,4 +18,7 @@ Required evidence before enabling production traffic:
   and no user-provided code execution.
 
 Until those artifacts exist, `CLOUD_SYNC_ENABLED` remains a beta/local flag and
-the desktop's local-first behavior is the supported default.
+the desktop's local-first behavior is the supported default. The prototype now
+also requires `CloudProductionEvidence` to mark every item before it will even
+reach the (still unimplemented) OIDC validation adapter; configured issuer and
+audience alone cannot open production traffic.

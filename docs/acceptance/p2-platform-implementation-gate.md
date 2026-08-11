@@ -11,10 +11,11 @@ This file records evidence for the isolated integration branch
 | Platform paths/process/capability states | `tests/unit/platform_foundation`, `tests/platform` | pass (tool version/hash probes, explicit unsupported/missing states) |
 | Platform credentials/redaction | `test_platform_credentials.py` | pass |
 | Cloud control plane/RBAC/revision/object/sync | `tests/cloud` | pass (logical object storage keys, bounded declarations, restricted upload rejection) |
+| Production cloud fail-closed gate | `CloudProductionEvidence` and production-auth tests | pass (missing external evidence blocks traffic) |
 | Desktop outbox/inbox/conflict | `tests/unit/sync` and stale-base cloud test | pass |
 | Opt-in composition and diagnostics | `tests/unit/test_p2_composition.py`, `tests/integration/test_p2_opt_in.py` | pass |
 | Static quality | Ruff + mypy on 24 P2 source files | pass |
-| Focused P2 regression | 51 tests across contracts/providers/platform/sync/cloud/integration | pass |
+| Focused P2 regression | 52 tests across contracts/providers/platform/sync/cloud/integration | pass |
 | Full recovery snapshot | existing acceptance/OpenAPI/crash-recovery/effect fixtures | pending unrelated baseline fixes |
 | Real macOS/Linux media and signed installers | three-OS CI/tag evidence | pending runner artifacts |
 | Production cloud | OIDC, PostgreSQL PITR, object retention, security scans | pending production environment |

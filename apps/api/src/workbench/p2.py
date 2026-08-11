@@ -19,7 +19,11 @@ from workbench.platform.local import LocalPlatformServices
 from workbench.providers.adapter import ProviderAdapterError
 from workbench.providers.api import ProviderApiState, create_provider_router
 from workbench.providers.registry import ProviderRegistry
-from workbench.providers.upstream import BuiltinProviderAdapter, builtin_descriptors
+from workbench.providers.upstream import (
+    BuiltinHandler,
+    BuiltinProviderAdapter,
+    builtin_descriptors,
+)
 from workbench.sync import SyncClient
 
 
@@ -82,6 +86,7 @@ class P2Composition:
         *,
         app_version: str = "0.1.0",
         flags: P2FeatureFlags | None = None,
+        provider_handlers: dict[str, BuiltinHandler] | None = None,
     ) -> P2Composition:
         configured = flags or P2FeatureFlags.from_environment()
         platform = (
@@ -93,7 +98,10 @@ class P2Composition:
             ProviderApiState(
                 registry=ProviderRegistry(builtin_descriptors()),
                 adapters={
-                    descriptor.provider_id: BuiltinProviderAdapter(descriptor, _not_configured)
+                    descriptor.provider_id: BuiltinProviderAdapter(
+                        descriptor,
+                        (provider_handlers or {}).get(descriptor.provider_id, _not_configured),
+                    )
                     for descriptor in builtin_descriptors()
                 },
             )

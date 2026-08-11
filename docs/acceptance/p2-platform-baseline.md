@@ -26,7 +26,7 @@ $env:PYTHONPATH = 'apps/api/src'
 & $py -m ruff check apps/api/src/workbench/p2.py apps/api/src/workbench/platform apps/api/src/workbench/providers apps/api/src/workbench/sync cloud_prototype tests/contract/test_p2_platform_contracts.py tests/unit/providers tests/unit/platform_foundation tests/unit/sync tests/unit/test_p2_composition.py tests/integration/test_p2_opt_in.py tests/cloud tests/platform
 ```
 
-Current result: **51 tests passed**, mypy reports no issues in 24 source files,
+Current result: **52 tests passed**, mypy reports no issues in 24 source files,
 and Ruff reports no violations.
 
 ## Explicitly unclaimed evidence

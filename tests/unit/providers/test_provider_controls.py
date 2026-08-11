@@ -134,6 +134,10 @@ def test_provider_api_never_returns_credential_value() -> None:
         listed = client.get("/api/providers")
         assert listed.status_code == 200
         assert listed.json()[0]["provider_id"] == "fake-a"
+        cached = client.get(
+            "/api/providers", headers={"If-None-Match": listed.headers["etag"]}
+        )
+        assert cached.status_code == 304
         sample = client.post(
             "/api/providers/fake-a/probe",
             json={"tenant_id": tenant, "capability_id": "synthesize.speech", "mode": "sample"},
@@ -145,3 +149,20 @@ def test_provider_api_never_returns_credential_value() -> None:
         )
         assert policy.status_code == 200
         assert "secret" not in policy.text.lower()
+        invoked = client.post(
+            "/api/providers/fake-a/invoke",
+            json={
+                "tenant_id": tenant,
+                "capability_id": "synthesize.speech",
+                "expected_output_schema": "audio-v1",
+                "input_refs": ["sha256:" + "a" * 64],
+            },
+        )
+        assert invoked.status_code == 200
+        operation_id = invoked.json()["operation_id"]
+        cancelled = client.post(
+            "/api/providers/fake-a/cancel",
+            json={"operation_id": operation_id},
+        )
+        assert cancelled.status_code == 200
+        assert cancelled.json()["status"] == "cancel_requested"

@@ -6,6 +6,9 @@ gate: it cannot be satisfied by a Linux runner pretending to be macOS or by a
 mock signature.
 
 Each OS must attach evidence for first install, upgrade, rollback, uninstall,
-data preservation, runtime fingerprint, and signed metadata. Until those
+data preservation, runtime fingerprint, and signed metadata under
+`artifacts/platform/{windows,macos,linux}/`. The tag gate requires non-empty
+`install.json`, `upgrade.json`, `rollback.json`, `uninstall.json`,
+`runtime.json`, and `signature.json` for every real runner. Until those
 artifacts exist, the workflow proves only contract portability; it does not
 claim cross-platform release parity.

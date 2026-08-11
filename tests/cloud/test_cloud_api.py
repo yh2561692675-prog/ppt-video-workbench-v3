@@ -8,7 +8,7 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 from workbench.contracts.p2_platform import canonical_sha256
 
-from cloud_prototype.app import create_cloud_app
+from cloud_prototype.app import CloudProductionEvidence, create_cloud_app
 
 
 def _operation(workspace_id: str, project_id: str, revision_id: str) -> dict[str, object]:
@@ -89,6 +89,37 @@ def test_cloud_prototype_enforces_tenant_ownership_and_idempotent_revisions(tmp_
         assert hidden.status_code == 404
 
 
+def test_cloud_revisions_reject_host_paths_and_credentials(tmp_path: Path) -> None:
+    app = create_cloud_app(tmp_path / "control.db", tmp_path / "objects")
+    with TestClient(app) as client:
+        headers = {"X-Actor-ID": "alice"}
+        workspace_id = client.post("/v1/workspaces", json={"name": "Team"}, headers=headers).json()[
+            "workspace_id"
+        ]
+        rejected_project = client.post(
+            f"/v1/workspaces/{workspace_id}/projects",
+            json={"name": "Unsafe", "manifest": {"source_path": "C:\\secret\\deck.pptx"}},
+            headers=headers,
+        )
+        assert rejected_project.status_code == 422
+        project = client.post(
+            f"/v1/workspaces/{workspace_id}/projects",
+            json={"name": "Safe", "manifest": {"pages": []}},
+            headers=headers,
+        ).json()
+        payload = {"api_key": "must-not-persist"}
+        operation = _operation(workspace_id, project["project_id"], project["current_revision_id"])
+        operation["payload"] = payload
+        operation["payload_sha256"] = canonical_sha256(payload)
+        response = client.post(
+            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}/operations",
+            json=operation,
+            headers=headers,
+        )
+        assert response.status_code == 422
+        assert response.json()["detail"] == "sensitive_field_rejected"
+
+
 def test_cloud_prototype_validates_objects_and_supports_review_lease_job(tmp_path: Path) -> None:
     app = create_cloud_app(tmp_path / "control.db", tmp_path / "objects")
     with TestClient(app) as client:
@@ -114,6 +145,13 @@ def test_cloud_prototype_validates_objects_and_supports_review_lease_job(tmp_pat
             headers=headers,
         )
         assert upload.status_code == 201
+        invalid_complete = client.post(
+            f"/v1/workspaces/{workspace_id}/projects/{project_id}/objects/uploads/{upload.json()['upload_id']}/complete",
+            json={"parts": [{"part_number": 1, "etag": "etag", "size_bytes": 4}]},
+            headers=headers,
+        )
+        assert invalid_complete.status_code == 422
+        assert invalid_complete.json()["detail"] == "upload_size_mismatch"
         completed = client.post(
             f"/v1/workspaces/{workspace_id}/projects/{project_id}/objects/uploads/{upload.json()['upload_id']}/complete",
             json={"parts": [{"part_number": 1, "etag": "etag"}]},
@@ -205,6 +243,22 @@ def test_cloud_production_auth_mode_fails_closed_without_oidc(tmp_path: Path) ->
         assert response.status_code == 503
 
 
+def test_cloud_production_gate_requires_external_evidence(tmp_path: Path) -> None:
+    app = create_cloud_app(
+        tmp_path / "control.db",
+        tmp_path / "objects",
+        auth_mode="production",
+        oidc_issuer="https://issuer.invalid",
+        oidc_audience="workbench",
+        production_evidence=CloudProductionEvidence(oidc_validation=True),
+    )
+    with TestClient(app) as client:
+        assert client.get("/v1/health").json()["production_gate"] == "blocked"
+        response = client.post("/v1/workspaces", json={"name": "Blocked"})
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "production_gate_incomplete"
+
+
 def test_cloud_object_declaration_rejects_invalid_hash_and_restricted_data(tmp_path: Path) -> None:
     app = create_cloud_app(tmp_path / "control.db", tmp_path / "objects")
     with TestClient(app) as client:
@@ -236,3 +290,49 @@ def test_cloud_object_declaration_rejects_invalid_hash_and_restricted_data(tmp_p
             headers=headers,
         )
         assert restricted.status_code == 422
+
+
+def test_cloud_executor_result_is_hash_checked_and_idempotent(tmp_path: Path) -> None:
+    app = create_cloud_app(tmp_path / "control.db", tmp_path / "objects")
+    with TestClient(app) as client:
+        headers = {"X-Actor-ID": "alice"}
+        workspace_id = client.post("/v1/workspaces", json={"name": "Team"}, headers=headers).json()[
+            "workspace_id"
+        ]
+        project = client.post(
+            f"/v1/workspaces/{workspace_id}/projects",
+            json={"name": "Course"},
+            headers=headers,
+        ).json()
+        executor = client.post(
+            f"/v1/workspaces/{workspace_id}/executors",
+            json={"platform": "windows", "capabilities": ["render"], "region": "local"},
+            headers=headers,
+        ).json()
+        job = client.post(
+            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}/jobs",
+            json={"revision_id": project["current_revision_id"], "kind": "render"},
+            headers=headers,
+        ).json()
+        result = {"media_type": "video/mp4", "duration_ms": 1000}
+        report = {
+            "attempt_id": str(uuid4()),
+            "executor_id": executor["executor_id"],
+            "status": "completed",
+            "result": result,
+            "result_sha256": canonical_sha256(result),
+            "output_refs": ["artifact://sha256:" + "b" * 64],
+        }
+        result_url = (
+            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}"
+            f"/jobs/{job['job_id']}/result"
+        )
+        completed = client.post(result_url, json=report, headers=headers)
+        assert completed.status_code == 200
+        assert completed.json()["status"] == "completed"
+        repeated = client.post(result_url, json=report, headers=headers)
+        assert repeated.status_code == 200
+        assert client.get(
+            f"/v1/workspaces/{workspace_id}/projects/{project['project_id']}/jobs/{job['job_id']}",
+            headers=headers,
+        ).json()["result"]["result_sha256"] == report["result_sha256"]

@@ -631,6 +631,42 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+  /workspaces/{workspaceId}/projects/{projectId}/jobs/{jobId}/result:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceId"
+      - $ref: "#/components/parameters/ProjectId"
+      - name: jobId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/Uuid"
+    post:
+      tags: [Jobs]
+      operationId: reportRemoteJobResult
+      summary: Verify and publish one executor result attempt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobResultReport"
+      responses:
+        "200":
+          description: Job result accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemoteJob"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
 components:
   securitySchemes:
     oauth2:
@@ -1225,6 +1261,8 @@ components:
           type: integer
           minimum: 0
           maximum: 100
+    JobResultReport:
+      $ref: "./cloud-job-result-v1.schema.json"
     RemoteJob:
       type: object
       additionalProperties: false

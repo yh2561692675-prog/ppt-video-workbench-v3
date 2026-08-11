@@ -15,9 +15,12 @@ def test_flags_are_off_by_default_and_do_not_create_platform_services(tmp_path: 
 
 
 def test_enabled_composition_is_explicit_and_provider_routes_are_opt_in(tmp_path: Path) -> None:
+    def handler(_: object) -> str:
+        return "injected"
     composition = P2Composition.build(
         tmp_path,
         flags=P2FeatureFlags(provider_platform_enabled=True, platform_services_enabled=True),
+        provider_handlers={"builtin-llm": handler},
     )
     app = FastAPI()
     composition.install(app)
@@ -34,6 +37,8 @@ def test_enabled_composition_is_explicit_and_provider_routes_are_opt_in(tmp_path
         "builtin-ocr",
         "builtin-renderer",
     }
+    assert composition.provider_state is not None
+    assert composition.provider_state.adapters["builtin-llm"].handler is handler  # type: ignore[attr-defined]
     diagnostics = client.get("/api/p2/diagnostics")
     assert diagnostics.status_code == 200
     assert "secret" not in diagnostics.text.lower()

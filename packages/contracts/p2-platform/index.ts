@@ -49,3 +49,12 @@ export interface StructuredErrorV1 {
   attempt_id?: UUID;
 }
 
+export interface CloudJobResultV1 {
+  attempt_id: UUID;
+  executor_id: UUID;
+  status: "completed" | "failed";
+  result: Record<string, unknown>;
+  result_sha256: Sha256;
+  output_refs: Array<`artifact://${Sha256}` | Sha256>;
+}
+

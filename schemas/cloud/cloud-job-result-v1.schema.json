@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.invalid/schemas/cloud-job-result-v1.schema.json",
+  "title": "CloudJobResultV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["attempt_id", "executor_id", "status", "result", "result_sha256", "output_refs"],
+  "properties": {
+    "attempt_id": { "type": "string", "format": "uuid" },
+    "executor_id": { "type": "string", "format": "uuid" },
+    "status": { "type": "string", "enum": ["completed", "failed"] },
+    "result": { "type": "object", "additionalProperties": true },
+    "result_sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "output_refs": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "type": "string",
+        "pattern": "^(artifact://)?sha256:[0-9a-f]{64}$"
+      }
+    }
+  }
+}
