@@ -84,6 +84,18 @@ def test_pause_resume_cancel_state_matrix(tmp_path: Path) -> None:
     assert repository.request_cancel(running_id).status is JobStatus.CANCEL_REQUESTED
 
 
+def test_pause_request_preserves_an_in_flight_terminal_result(tmp_path: Path) -> None:
+    repository = repository_at(tmp_path / "workspace.db")
+    job_id = repository.enqueue_or_get(export_spec(uuid4(), fingerprint="pause-race")).record.id
+
+    repository.claim_next(JobType.EXPORT_PACKAGE)
+    assert repository.request_pause(job_id).status is JobStatus.PAUSE_REQUESTED
+
+    completed = repository.succeed(job_id, {"package_relative_path": "08_output/package"})
+
+    assert completed.status is JobStatus.SUCCEEDED
+
+
 def test_succeed_and_retry_preserve_result_and_parent_link(tmp_path: Path) -> None:
     repository = repository_at(tmp_path / "workspace.db")
     original = repository.enqueue_or_get(export_spec(uuid4())).record

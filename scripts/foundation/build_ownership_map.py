@@ -90,14 +90,20 @@ def _load_stop_points(directory: Path) -> list[WindowStopPointV1]:
         directory.glob("*.json"), key=lambda item: (item.stat().st_mtime_ns, item.name)
     ):
         payload = json.loads(path.read_text(encoding="utf-8"))
+        # Some legacy stop points carry non-contract evidence metadata. Keep the
+        # core contract strict while allowing the audit reader to consume it.
+        payload.pop("evidence", None)
         points.append(WindowStopPointV1.model_validate(payload))
     return points
 
 
-def _owner_key(window_id: str) -> str:
-    """Group chronological stop points from the same source window."""
+def _owner_key(window_id: str, task_name: str = "") -> str:
+    """Group chronological Foundation stop points without merging other tasks."""
 
-    return window_id[:36] if len(window_id) >= 36 else window_id
+    base = window_id[:36] if len(window_id) >= 36 else window_id
+    if task_name.startswith("Shared Foundation"):
+        return f"{base}::shared-foundation"
+    return f"{base}::{task_name}"
 
 
 def build_map(repository: Path, stop_points_dir: Path) -> OwnershipMapV1:
@@ -105,7 +111,7 @@ def build_map(repository: Path, stop_points_dir: Path) -> OwnershipMapV1:
     paths = _status_paths(status)
     points_by_owner: dict[str, WindowStopPointV1] = {}
     for point in _load_stop_points(stop_points_dir):
-        points_by_owner[_owner_key(point.window_id)] = point
+        points_by_owner[_owner_key(point.window_id, point.task_name)] = point
     points = list(points_by_owner.values())
     matches: dict[str, list[WindowStopPointV1]] = {}
     for path in paths:

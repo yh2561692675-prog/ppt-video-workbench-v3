@@ -92,18 +92,29 @@ class RenderJobService:
         self.graph_exporter = graph_exporter
         self.feature_flags = feature_flags or RenderFeatureFlags.from_environment()
 
-    def act(self, project_id: UUID, job_id: UUID, action: str) -> RenderJobSubmission:
+    def act(
+        self,
+        project_id: UUID,
+        job_id: UUID,
+        action: str,
+        *,
+        expected_revision: int | None = None,
+    ) -> RenderJobSubmission:
         job = self.repository.get(job_id)
         if job.project_id != project_id:
             raise KeyError(job_id)
         if action == "pause":
-            updated = self.repository.request_pause(job_id)
+            updated = self.repository.request_pause(
+                job_id, expected_revision=expected_revision
+            )
             audit = "video_render_job_pause_requested"
         elif action == "resume":
-            updated = self.repository.resume(job_id)
+            updated = self.repository.resume(job_id, expected_revision=expected_revision)
             audit = "video_render_job_resumed"
         elif action == "cancel":
-            updated = self.repository.request_cancel(job_id)
+            updated = self.repository.request_cancel(
+                job_id, expected_revision=expected_revision
+            )
             audit = "video_render_job_cancel_requested"
         elif action == "retry":
             return self.retry(job_id)
@@ -228,6 +239,7 @@ class RenderJobService:
             project_dir=root,
             repository=self.repository,
             input_fingerprint=record.input_fingerprint,
+            job_type=record.job_type,
         )
         self._audit(record.project_id, "video_render_job_started", {"job_id": str(record.id)})
         self.repository.record_attempt(record.id)

@@ -22,6 +22,8 @@ def migrate_v1_to_v2(connection: Connection) -> None:
         "message": "VARCHAR(500) NOT NULL DEFAULT ''",
         "error_code": "VARCHAR(96)",
         "revision": "INTEGER NOT NULL DEFAULT 1",
+        "priority": "INTEGER NOT NULL DEFAULT 0",
+        "current_attempt_id": "VARCHAR(36)",
         "heartbeat_at": "VARCHAR(40)",
         "started_at": "VARCHAR(40)",
         "finished_at": "VARCHAR(40)",
@@ -74,3 +76,94 @@ def migrate_v1_to_v2(connection: Connection) -> None:
         """
     )
     connection.exec_driver_sql("UPDATE schema_meta SET version = 2 WHERE version = 1")
+
+
+def migrate_v2_to_v3(connection: Connection) -> None:
+    """Add durable attempt, checkpoint, publication, lease and worker tables."""
+
+    connection.exec_driver_sql(
+        """
+        CREATE TABLE IF NOT EXISTS job_attempts (
+            id VARCHAR(36) PRIMARY KEY,
+            job_id VARCHAR(36) NOT NULL,
+            generation INTEGER NOT NULL,
+            status VARCHAR(20) NOT NULL,
+            worker_id VARCHAR(120),
+            runtime_fingerprint VARCHAR(128),
+            started_at VARCHAR(40) NOT NULL,
+            heartbeat_at VARCHAR(40),
+            finished_at VARCHAR(40),
+            exit_code INTEGER,
+            error_code VARCHAR(96),
+            checkpoint_sequence INTEGER,
+            revision INTEGER NOT NULL DEFAULT 1,
+            CONSTRAINT uq_job_attempt_generation UNIQUE (job_id, generation)
+        )
+        """
+    )
+    connection.exec_driver_sql(
+        """
+        CREATE TABLE IF NOT EXISTS job_checkpoints (
+            job_id VARCHAR(36) NOT NULL,
+            attempt_id VARCHAR(36) NOT NULL,
+            sequence INTEGER NOT NULL,
+            checkpoint_json TEXT NOT NULL,
+            checkpoint_hash VARCHAR(64) NOT NULL,
+            created_at VARCHAR(40) NOT NULL,
+            PRIMARY KEY (job_id, sequence)
+        )
+        """
+    )
+    connection.exec_driver_sql(
+        """
+        CREATE TABLE IF NOT EXISTS artifact_publications (
+            publication_key VARCHAR(128) PRIMARY KEY,
+            job_id VARCHAR(36) NOT NULL,
+            attempt_id VARCHAR(36) NOT NULL,
+            state VARCHAR(20) NOT NULL,
+            manifest_json TEXT NOT NULL,
+            manifest_hash VARCHAR(64) NOT NULL,
+            published_at VARCHAR(40),
+            revision INTEGER NOT NULL DEFAULT 1
+        )
+        """
+    )
+    connection.exec_driver_sql(
+        """
+        CREATE TABLE IF NOT EXISTS resource_leases (
+            id VARCHAR(36) PRIMARY KEY,
+            job_id VARCHAR(36) NOT NULL,
+            attempt_id VARCHAR(36) NOT NULL,
+            worker_id VARCHAR(120) NOT NULL,
+            generation INTEGER NOT NULL,
+            cpu_cores INTEGER NOT NULL DEFAULT 0,
+            memory_mb INTEGER NOT NULL DEFAULT 0,
+            gpu_slots INTEGER NOT NULL DEFAULT 0,
+            disk_mb INTEGER NOT NULL DEFAULT 0,
+            status VARCHAR(20) NOT NULL,
+            heartbeat_at VARCHAR(40) NOT NULL,
+            expires_at VARCHAR(40) NOT NULL,
+            revision INTEGER NOT NULL DEFAULT 1
+        )
+        """
+    )
+    connection.exec_driver_sql(
+        """
+        CREATE TABLE IF NOT EXISTS workers (
+            id VARCHAR(120) PRIMARY KEY,
+            status VARCHAR(20) NOT NULL,
+            runtime_fingerprint VARCHAR(128) NOT NULL,
+            capabilities_json TEXT NOT NULL,
+            heartbeat_at VARCHAR(40) NOT NULL,
+            revision INTEGER NOT NULL DEFAULT 1
+        )
+        """
+    )
+    connection.exec_driver_sql(
+        "CREATE INDEX IF NOT EXISTS ix_job_attempts_job_status ON job_attempts(job_id, status)"
+    )
+    connection.exec_driver_sql(
+        "CREATE INDEX IF NOT EXISTS ix_resource_leases_active "
+        "ON resource_leases(status, expires_at)"
+    )
+    connection.exec_driver_sql("UPDATE schema_meta SET version = 3 WHERE version = 2")

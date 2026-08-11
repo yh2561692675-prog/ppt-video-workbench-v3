@@ -2,7 +2,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from workbench.domain.enums import JobStatus, JobType
+from workbench.domain.enums import AttemptStatus, JobStatus, JobType
 from workbench.jobs.checkpoint import JobContext
 from workbench.jobs.repository import JobRepository, JobSpec
 from workbench.jobs.runner import CancellationToken, JobRunner
@@ -33,6 +33,26 @@ def test_running_job_is_paused_after_process_restart(tmp_path: Path, progress: f
     assert recovered[0].status is JobStatus.PAUSED
     assert recovered[0].progress == progress
     assert recovered[0].error_code == "render_worker_interrupted"
+
+
+def test_restart_expires_the_interrupted_attempt_before_resume(tmp_path: Path) -> None:
+    repository = repository_at(tmp_path / "workspace.db")
+    job = repository.enqueue_or_get(
+        JobSpec(project_id=uuid4(), job_type=JobType.RENDER_PREVIEW, cache_key="preview-recovery")
+    ).record
+    claimed = repository.claim_next(JobType.RENDER_PREVIEW)
+    assert claimed is not None
+    previous_attempt = repository.current_attempt(job.id)
+    assert previous_attempt is not None
+
+    repository.recover_interrupted_jobs()
+
+    assert repository.current_attempt(job.id).status is AttemptStatus.EXPIRED
+    resumed = repository.resume(job.id)
+    assert resumed.status is JobStatus.QUEUED
+    next_claim = repository.claim_next(JobType.RENDER_PREVIEW)
+    assert next_claim is not None
+    assert repository.current_attempt(job.id).generation == previous_attempt.generation + 1
 
 
 def test_completed_job_is_reused_instead_of_enqueued_twice(tmp_path: Path) -> None:

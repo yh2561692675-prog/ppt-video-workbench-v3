@@ -113,3 +113,45 @@ def test_worker_stop_requests_pause_for_active_job(tmp_path: Path) -> None:
     assert repository.get(record.id).status is JobStatus.PAUSE_REQUESTED
     release.set()
     worker.stop(timeout=2.0)
+
+
+def test_worker_round_robins_registered_job_types(tmp_path: Path) -> None:
+    repository = repository_at(tmp_path / "workspace.db")
+    project_id = uuid4()
+    export = submit(repository, project_id)
+    preview = repository.enqueue_or_get(
+        JobSpec(
+            project_id=project_id,
+            job_type=JobType.RENDER_PREVIEW,
+            cache_key=f"preview:{uuid4().hex}",
+            input_fingerprint=uuid4().hex,
+            idempotency_key=uuid4().hex,
+        )
+    ).record
+    completed = Event()
+    calls: list[JobType] = []
+
+    def handle(job) -> None:
+        calls.append(job.job_type)
+        repository.succeed(job.id, {"ok": True})
+        if len(calls) == 2:
+            completed.set()
+
+    registry = {
+        JobType.EXPORT_PACKAGE: handle,
+        JobType.RENDER_PREVIEW: handle,
+    }
+    worker = RenderJobWorker(
+        repository,
+        handlers=registry,
+        job_types=(JobType.EXPORT_PACKAGE, JobType.RENDER_PREVIEW),
+        poll_interval=0.01,
+    )
+    worker.start()
+    worker.wake()
+    wait_until(completed.is_set)
+    worker.stop()
+
+    assert set(calls) == {JobType.EXPORT_PACKAGE, JobType.RENDER_PREVIEW}
+    assert repository.get(export.id).status is JobStatus.SUCCEEDED
+    assert repository.get(preview.id).status is JobStatus.SUCCEEDED

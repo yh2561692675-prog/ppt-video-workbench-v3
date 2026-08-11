@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Header, HTTPException, Response
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from workbench.api.projects import Envelope, envelope
 from workbench.domain.enums import JobStatus
@@ -29,6 +29,7 @@ class PreflightRequest(BaseModel):
 
 class RenderJobActionRequest(BaseModel):
     action: Literal["pause", "resume", "cancel", "retry"]
+    expected_revision: int | None = Field(default=None, ge=1)
 
 
 def create_video_router(
@@ -200,7 +201,12 @@ def create_video_router(
         if render_jobs is None:
             raise HTTPException(status_code=503, detail="render worker unavailable")
         try:
-            submission = render_jobs.act(project_id, job_id, request.action)
+            submission = render_jobs.act(
+                project_id,
+                job_id,
+                request.action,
+                expected_revision=request.expected_revision,
+            )
             return envelope(
                 {"job": submission.job.model_dump(mode="json"), "created": submission.created}
             )

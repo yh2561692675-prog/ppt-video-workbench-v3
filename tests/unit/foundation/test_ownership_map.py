@@ -59,6 +59,11 @@ def test_generated_artifact_classification_is_conservative(path: str, category: 
 
 def test_stop_points_from_one_window_share_an_owner_key() -> None:
     base = "019feb46-8950-7213-b4ca-422988a6b032"
-    assert MODULE._owner_key(base + "-phase2") == base
-    assert MODULE._owner_key(base + "-contracts") == base
-    assert MODULE._owner_key("another-window") == "another-window"
+    assert MODULE._owner_key(base + "-phase2", "Shared Foundation ownership") == (
+        base + "::shared-foundation"
+    )
+    assert MODULE._owner_key(base + "-contracts", "Shared Foundation contracts") == (
+        base + "::shared-foundation"
+    )
+    assert MODULE._owner_key(base, "RenderGraph preview") == base + "::RenderGraph preview"
+    assert MODULE._owner_key("another-window", "Other task") == "another-window::Other task"

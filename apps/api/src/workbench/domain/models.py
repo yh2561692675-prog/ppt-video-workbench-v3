@@ -135,6 +135,8 @@ class JobRecord(ContractModel):
     message: str = ""
     error_code: str | None = None
     revision: int = Field(default=1, ge=1)
+    priority: int = Field(default=0, ge=-100, le=100)
+    current_attempt_id: UUID | None = None
     heartbeat_at: datetime | None = None
     started_at: datetime | None = None
     finished_at: datetime | None = None

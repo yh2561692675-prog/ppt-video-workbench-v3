@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "window_id": "019feb46-8950-7213-b4ca-422988a6b032-g4-foundation",
+  "task_name": "Shared Foundation G3/G4 local gate closure",
+  "mode": "idle",
+  "repository": {
+    "path": "source-root",
+    "branch": "recovery/root-snapshot-20260810",
+    "head": "9bca5e97c3d11718a604eb3f2344d19a723de700",
+    "status_manifest_sha256": "1d2f1ed0d69601eb40ea877d826a10dcefe7cf7754e15f3ffc328905bc13f827"
+  },
+  "owned_paths": [
+    "scripts/foundation/build_ownership_map.py",
+    "scripts/foundation/create_frozen_snapshot.ps1",
+    "tests/unit/foundation/test_ownership_map.py",
+    "docs/acceptance/foundation/ownership-map-20260811.json",
+    "docs/acceptance/foundation/stop-points/019feb46-8950-7213-b4ca-422988a6b032-g4-foundation.json"
+  ],
+  "shared_paths_touched": [],
+  "completed": [
+    "Owner-key and generated/cache/backup classification fixed; ownership map has 6930 entries and 0 semantic conflicts",
+    "G3 frozen snapshot created outside the repository at foundation-snapshot-9bca5e9-20260811 from checkpoint 9bca5e9; manifest covers 1004 files and hash verification passed",
+    "Full Python gate from snapshot: 640 passed; the 10 S1 external-entrypoint failures were reproduced as missing .venv in the archive and passed when run from the root interpreter with snapshot PYTHONPATH",
+    "Foundation Ruff check and format check passed; mypy contracts passed with no issues; Foundation contract/unit tests passed 15 tests",
+    "PowerShell parser accepted 2 foundation scripts and JSON parser accepted 4 foundation schemas",
+    "Four repository boundaries were read-only inspected; no installation directory, workspace database, or F:\\Video writes were performed"
+  ],
+  "remaining": [
+    "Do not amend or overwrite checkpoint 9bca5e9; parent recovery must create the next checkpoint for current owner-key changes and the snapshot helper",
+    "Ownership Map still reports 506 formal unknown paths; retain the main recovery audit as the authority and resolve them before release-level ownership closure",
+    "Real Windows restart/render/release and manual visual acceptance remain outside this local gate and must be run on the target environment",
+    "Unrelated in-progress jobs/storage/render and domain edits remain unowned by this stop point; do not modify or revert them",
+    "GraphCompiler Task 1.4 remains paused; do not begin the next project from this stop point"
+  ],
+  "evidence_refs": [
+    "docs/acceptance/foundation/ownership-map-20260811.json",
+    "docs/acceptance/foundation/stop-points/019feb46-8950-7213-b4ca-422988a6b032-phase2-classified.json",
+    "docs/superpowers/specs/2026-08-11-shared-foundation-freeze-design.md",
+    "docs/superpowers/plans/2026-08-11-shared-foundation-freeze.md",
+    "scripts/foundation/build_ownership_map.py",
+    "scripts/foundation/create_frozen_snapshot.ps1",
+    "tests/unit/foundation/test_ownership_map.py"
+  ],
+  "will_write_again": false,
+  "safe_resume": "Read this stop point and verify external snapshot foundation-snapshot-9bca5e9-20260811 manifest a428058015cf5fcb136fca115add0d3bbd03226fd6bd8d8f6b7c6e4737aabfa2; do not write to the four boundaries or amend 9bca5e9. Parent recovery may checkpoint the owned files, then run real Windows/manual G5-G7 acceptance before opening the next project."
+}

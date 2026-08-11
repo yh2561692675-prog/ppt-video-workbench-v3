@@ -41,7 +41,7 @@ def _insert_v1_job(database: WorkspaceDatabase, *, project_id, cache_key: str, s
     return str(job_id)
 
 
-def test_initialize_migrates_v1_jobs_and_creates_v2_index(tmp_path) -> None:
+def test_initialize_migrates_v1_jobs_and_creates_v3_job_tables(tmp_path) -> None:
     database = _v1_database(tmp_path / "workspace.db")
     project_id = uuid4()
     first_id = _insert_v1_job(
@@ -58,7 +58,7 @@ def test_initialize_migrates_v1_jobs_and_creates_v2_index(tmp_path) -> None:
         rows = connection.execute(select(jobs).order_by(jobs.c.id)).mappings().all()
         index_rows = connection.exec_driver_sql("PRAGMA index_list('jobs')").all()
 
-    assert version == 2
+    assert version == 3
     by_id = {row["id"]: row for row in rows}
     assert by_id[first_id]["status"] == JobStatus.QUEUED.value
     assert by_id[second_id]["status"] == JobStatus.SUCCEEDED.value

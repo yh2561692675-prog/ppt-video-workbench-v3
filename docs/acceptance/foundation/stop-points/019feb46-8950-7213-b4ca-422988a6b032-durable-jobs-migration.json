@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "window_id": "019feb46-8950-7213-b4ca-422988a6b032",
+  "task_name": "Durable execution and jobs migration with render recovery minimal slice",
+  "mode": "idle",
+  "repository": {
+    "path": "source-root",
+    "branch": "recovery/root-snapshot-20260810",
+    "head": "9bca5e97c3d11718a604eb3f2344d19a723de700",
+    "status_manifest_sha256": "aff32150aeee65c7b870e8d752cf35b1f5e6050f8111cad742da1a48e28022e5"
+  },
+  "owned_paths": [
+    "apps/api/src/workbench/domain/enums.py",
+    "apps/api/src/workbench/domain/models.py",
+    "apps/api/src/workbench/storage/workspace_db.py",
+    "apps/api/src/workbench/storage/migrations.py",
+    "apps/api/src/workbench/jobs/contracts.py",
+    "apps/api/src/workbench/jobs/leases.py",
+    "apps/api/src/workbench/jobs/registry.py",
+    "apps/api/src/workbench/jobs/repository.py",
+    "apps/api/src/workbench/jobs/execution.py",
+    "apps/api/src/workbench/jobs/worker.py",
+    "apps/api/src/workbench/video/render_job.py",
+    "tests/unit/jobs/test_durable_execution.py",
+    "tests/unit/jobs/test_worker.py",
+    "tests/unit/storage/test_workspace_migrations.py"
+  ],
+  "shared_paths_touched": [
+    "apps/api/src/workbench/domain/enums.py",
+    "apps/api/src/workbench/domain/models.py",
+    "apps/api/src/workbench/storage/workspace_db.py",
+    "apps/api/src/workbench/storage/migrations.py",
+    "apps/api/src/workbench/jobs/repository.py",
+    "apps/api/src/workbench/jobs/execution.py",
+    "apps/api/src/workbench/jobs/worker.py",
+    "apps/api/src/workbench/video/render_job.py"
+  ],
+  "completed": [
+    "Added durable job types for preview, asset, proxy, waveform, subtitle translation, quality and export work",
+    "Added schema v3 tables for attempts, checkpoints, publications, resource leases and workers",
+    "Added v1/v2 to v3 migration path with priority and current attempt fields",
+    "Claim now creates a generation-bound durable attempt and records worker/runtime identity",
+    "Persistent execution context mirrors checkpoints into the database",
+    "Added idempotent publication reservation and publish state",
+    "Added worker capability and resource lease lifecycle service",
+    "Added explicit job executor registry and multi-type round-robin Worker",
+    "Updated render recovery context to preserve the actual JobType",
+    "Repaired migration compatibility and added targeted durable execution tests"
+  ],
+  "evidence": {
+    "job_migration_recovery_tests": "31 passed",
+    "render_job_and_crash_recovery_tests": "18 passed",
+    "ruff": "All targeted checks passed",
+    "mypy": "Success: no issues found in 14 source files",
+    "diff_check": "No whitespace errors",
+    "known_warning": "Pytest cache writes remain denied by existing workspace permissions"
+  },
+  "remaining": [
+    "Do not begin derived media or content-addressed cache implementation",
+    "Do not begin authoritative preview Worker implementation",
+    "Do not begin incremental invalidation, migration adapter, Web workflow, scheduler, real media or Windows phases",
+    "Main integration must review schema v3 and shared path ownership before further writes",
+    "Full G1 fault-injection and publication/file reconciliation remains for the main durable-jobs continuation"
+  ],
+  "will_write_again": false,
+  "safe_resume": "Read this stop point and the shared foundation checkpoint first; resume only when the main recovery task explicitly opens the next durable-jobs continuation. Do not start the next project from this stop point."
+}

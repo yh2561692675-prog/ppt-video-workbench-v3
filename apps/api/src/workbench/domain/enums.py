@@ -30,3 +30,32 @@ class JobType(StrEnum):
     RENDER_PAGE = "render_page"
     EXPORT_PACKAGE = "export_package"
     PRESENTER_SYNC = "presenter_sync"
+    RENDER_PREVIEW = "render_preview"
+    DERIVE_ASSET = "derive_asset"
+    BUILD_PROXY = "build_proxy"
+    BUILD_WAVEFORM = "build_waveform"
+    TRANSLATE_SUBTITLES = "translate_subtitles"
+    QUALITY_SCAN = "quality_scan"
+    RENDER_EXPORT = "render_export"
+
+
+class AttemptStatus(StrEnum):
+    CLAIMED = "claimed"
+    RUNNING = "running"
+    PAUSED = "paused"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    EXPIRED = "expired"
+
+
+class LeaseStatus(StrEnum):
+    ACTIVE = "active"
+    RELEASED = "released"
+    EXPIRED = "expired"
+
+
+class WorkerStatus(StrEnum):
+    ACTIVE = "active"
+    DRAINING = "draining"
+    OFFLINE = "offline"

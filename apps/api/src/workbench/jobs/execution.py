@@ -88,6 +88,7 @@ class PersistentRenderExecutionContext:
         project_dir: Path,
         repository: JobRepository,
         input_fingerprint: str | None,
+        job_type: JobType = JobType.EXPORT_PACKAGE,
         checkpoint_store: CheckpointStore | None = None,
     ) -> None:
         self.job_id = job_id
@@ -98,7 +99,7 @@ class PersistentRenderExecutionContext:
         self._job_context = JobContext(
             job_id,
             self.project_dir,
-            JobType.EXPORT_PACKAGE,
+            job_type,
             checkpoint_store=self.store,
         )
         restored = self.store.latest(job_id)
@@ -127,7 +128,11 @@ class PersistentRenderExecutionContext:
         }
         if payload:
             data.update(payload)
-        self._job_context.checkpoint(progress, data, artifacts)
+        checkpoint = self._job_context.checkpoint(progress, data, artifacts)
+        self.repository.record_checkpoint(
+            self.job_id,
+            checkpoint.model_dump(mode="json"),
+        )
         self.repository.update_progress(
             self.job_id,
             progress,

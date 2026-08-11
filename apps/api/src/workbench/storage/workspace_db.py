@@ -62,10 +62,84 @@ jobs = Table(
     Column("message", String(500), nullable=False, server_default=""),
     Column("error_code", String(96), nullable=True),
     Column("revision", Integer, nullable=False, server_default="1"),
+    Column("priority", Integer, nullable=False, server_default="0"),
+    Column("current_attempt_id", String(36), nullable=True),
     Column("heartbeat_at", String(40), nullable=True),
     Column("started_at", String(40), nullable=True),
     Column("finished_at", String(40), nullable=True),
     UniqueConstraint("project_id", "cache_key", name="uq_jobs_project_cache_key"),
+)
+
+job_attempts = Table(
+    "job_attempts",
+    metadata,
+    Column("id", String(36), primary_key=True),
+    Column("job_id", String(36), nullable=False),
+    Column("generation", Integer, nullable=False),
+    Column("status", String(20), nullable=False),
+    Column("worker_id", String(120), nullable=True),
+    Column("runtime_fingerprint", String(128), nullable=True),
+    Column("started_at", String(40), nullable=False),
+    Column("heartbeat_at", String(40), nullable=True),
+    Column("finished_at", String(40), nullable=True),
+    Column("exit_code", Integer, nullable=True),
+    Column("error_code", String(96), nullable=True),
+    Column("checkpoint_sequence", Integer, nullable=True),
+    Column("revision", Integer, nullable=False, server_default="1"),
+    UniqueConstraint("job_id", "generation", name="uq_job_attempt_generation"),
+)
+
+job_checkpoints = Table(
+    "job_checkpoints",
+    metadata,
+    Column("job_id", String(36), primary_key=True),
+    Column("attempt_id", String(36), nullable=False),
+    Column("sequence", Integer, primary_key=True),
+    Column("checkpoint_json", Text, nullable=False),
+    Column("checkpoint_hash", String(64), nullable=False),
+    Column("created_at", String(40), nullable=False),
+)
+
+artifact_publications = Table(
+    "artifact_publications",
+    metadata,
+    Column("publication_key", String(128), primary_key=True),
+    Column("job_id", String(36), nullable=False),
+    Column("attempt_id", String(36), nullable=False),
+    Column("state", String(20), nullable=False),
+    Column("manifest_json", Text, nullable=False),
+    Column("manifest_hash", String(64), nullable=False),
+    Column("published_at", String(40), nullable=True),
+    Column("revision", Integer, nullable=False, server_default="1"),
+)
+
+resource_leases = Table(
+    "resource_leases",
+    metadata,
+    Column("id", String(36), primary_key=True),
+    Column("job_id", String(36), nullable=False),
+    Column("attempt_id", String(36), nullable=False),
+    Column("worker_id", String(120), nullable=False),
+    Column("generation", Integer, nullable=False),
+    Column("cpu_cores", Integer, nullable=False, server_default="0"),
+    Column("memory_mb", Integer, nullable=False, server_default="0"),
+    Column("gpu_slots", Integer, nullable=False, server_default="0"),
+    Column("disk_mb", Integer, nullable=False, server_default="0"),
+    Column("status", String(20), nullable=False),
+    Column("heartbeat_at", String(40), nullable=False),
+    Column("expires_at", String(40), nullable=False),
+    Column("revision", Integer, nullable=False, server_default="1"),
+)
+
+workers = Table(
+    "workers",
+    metadata,
+    Column("id", String(120), primary_key=True),
+    Column("status", String(20), nullable=False),
+    Column("runtime_fingerprint", String(128), nullable=False),
+    Column("capabilities_json", Text, nullable=False),
+    Column("heartbeat_at", String(40), nullable=False),
+    Column("revision", Integer, nullable=False, server_default="1"),
 )
 
 peripheral_projection_inbox = Table(
@@ -104,12 +178,17 @@ class WorkspaceDatabase:
         with self.engine.begin() as connection:
             version = connection.execute(select(schema_meta.c.version)).scalar_one_or_none()
             if version is None:
-                connection.execute(insert(schema_meta).values(version=2))
+                connection.execute(insert(schema_meta).values(version=3))
             elif version == 1:
-                from .migrations import migrate_v1_to_v2
+                from .migrations import migrate_v1_to_v2, migrate_v2_to_v3
 
                 migrate_v1_to_v2(connection)
-            elif version != 2:
+                migrate_v2_to_v3(connection)
+            elif version == 2:
+                from .migrations import migrate_v2_to_v3
+
+                migrate_v2_to_v3(connection)
+            elif version != 3:
                 from .migrations import WorkspaceMigrationError
 
                 raise WorkspaceMigrationError(f"unsupported workspace schema version: {version}")
