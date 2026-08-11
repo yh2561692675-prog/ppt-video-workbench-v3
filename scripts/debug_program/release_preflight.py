@@ -4,12 +4,27 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
 
 from .models import load_and_validate, validate_candidate_manifest
+
+
+def resolve_iscc() -> Path | None:
+    """Resolve ISCC exactly like build-release.ps1, including user-local install."""
+
+    configured = shutil.which("ISCC.exe")
+    if configured:
+        return Path(configured).resolve()
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        fallback = Path(local_app_data) / "Programs" / "Inno Setup 6" / "ISCC.exe"
+        if fallback.is_file():
+            return fallback.resolve()
+    return None
 
 
 def _probe(path: Path | None, *arguments: str) -> dict[str, Any]:
@@ -30,26 +45,37 @@ def _probe(path: Path | None, *arguments: str) -> dict[str, Any]:
     }
 
 
-def run_preflight(repo_root: Path, candidate: Path) -> tuple[dict[str, Any], int]:
+def run_preflight(
+    repo_root: Path, candidate: Path, *, phase: str = "release-inputs"
+) -> tuple[dict[str, Any], int]:
+    if phase not in {"tools", "release-inputs"}:
+        raise ValueError("phase must be tools or release-inputs")
     repo_root = repo_root.resolve()
     manifest = load_and_validate(candidate, validate_candidate_manifest, candidate.parent)
     reasons: list[str] = []
-    required_files = (
-        "runtime-assets/node/node.exe",
-        "runtime-assets/ffmpeg/ffmpeg.exe",
-        "runtime-assets/ffmpeg/ffprobe.exe",
-        "runtime-assets/remotion/node_modules/@remotion/cli/remotion-cli.js",
-        "runtime-assets/remotion/src/index.ts",
+    source_files = (
         "scripts/build-release.ps1",
         "scripts/build_runtime_manifest.py",
         "scripts/release_artifacts.py",
         "installer/workbench.iss",
     )
+    runtime_files = (
+        "runtime-assets/node/node.exe",
+        "runtime-assets/ffmpeg/ffmpeg.exe",
+        "runtime-assets/ffmpeg/ffprobe.exe",
+        "runtime-assets/remotion/node_modules/@remotion/cli/remotion-cli.js",
+        "runtime-assets/remotion/src/index.ts",
+    )
+    required_files = source_files + (runtime_files if phase == "release-inputs" else ())
     missing = [relative for relative in required_files if not (repo_root / relative).is_file()]
     if missing:
         reasons.append("missing release inputs: " + ", ".join(missing))
-    if shutil.which("ISCC.exe") is None:
+    iscc_path = resolve_iscc()
+    if iscc_path is None:
         reasons.append("ISCC.exe is unavailable; installer cannot be generated")
+    iscc_probe = _probe(iscc_path, "/?")
+    if iscc_path is not None and "Inno Setup" not in str(iscc_probe.get("identity", "")):
+        reasons.append("ISCC.exe identity probe failed")
     historical = repo_root / "release/ppt-video-workbench-setup.exe"
     if historical.is_file():
         reasons.append("historical installer exists; reuse is forbidden")
@@ -57,7 +83,6 @@ def run_preflight(repo_root: Path, candidate: Path) -> tuple[dict[str, Any], int
     unavailable_tools = [name for name, path in tools.items() if path is None]
     if unavailable_tools:
         reasons.append("missing tools: " + ", ".join(unavailable_tools))
-    iscc_path = shutil.which("ISCC.exe")
     remotion_path = repo_root / "runtime-assets/remotion/node_modules/@remotion/cli/remotion-cli.js"
     launcher_path = repo_root / "dist/release/launcher/workbench-launcher.exe"
     payload = {
@@ -66,13 +91,14 @@ def run_preflight(repo_root: Path, candidate: Path) -> tuple[dict[str, Any], int
         "source_commit": manifest["source"]["commit"],
         "status": "passed" if not reasons else "blocked",
         "required_files": list(required_files),
+        "phase": phase,
         "missing": missing,
         "tools": tools,
         "identity_probes": {
             "node": _probe(Path(tools["node"]) if tools["node"] else None, "--version"),
             "ffmpeg": _probe(Path(tools["ffmpeg"]) if tools["ffmpeg"] else None, "-version"),
             "ffprobe": _probe(Path(tools["ffprobe"]) if tools["ffprobe"] else None, "-version"),
-            "iscc": _probe(Path(iscc_path) if iscc_path else None, "/?"),
+            "iscc": iscc_probe,
             "remotion": {
                 "available": remotion_path.is_file(),
                 "path": "runtime-assets/remotion/node_modules/@remotion/cli/remotion-cli.js",
@@ -92,8 +118,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     parser.add_argument("--candidate", type=Path, required=True)
+    parser.add_argument(
+        "--phase", choices=("tools", "release-inputs"), default="release-inputs"
+    )
     args = parser.parse_args()
-    payload, exit_code = run_preflight(args.repo_root, args.candidate)
+    payload, exit_code = run_preflight(args.repo_root, args.candidate, phase=args.phase)
     print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
     return exit_code
 

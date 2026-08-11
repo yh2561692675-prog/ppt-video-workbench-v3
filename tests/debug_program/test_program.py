@@ -20,6 +20,7 @@ from scripts.debug_program.models import (
     validate_signoff,
 )
 from scripts.debug_program.registry import list_scenarios
+from scripts.debug_program.release_preflight import resolve_iscc
 from scripts.debug_program.runner import (
     CommandSpec,
     execute_command,
@@ -322,6 +323,18 @@ def test_run_ids_are_unique_within_one_second() -> None:
     assert "_" not in first
 
 
+def test_release_preflight_resolves_user_local_iscc(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    local_app_data = tmp_path / "LocalAppData"
+    iscc = local_app_data / "Programs" / "Inno Setup 6" / "ISCC.exe"
+    iscc.parent.mkdir(parents=True)
+    iscc.write_bytes(b"stub")
+    monkeypatch.setenv("LOCALAPPDATA", str(local_app_data))
+    monkeypatch.setattr("scripts.debug_program.release_preflight.shutil.which", lambda _: None)
+    assert resolve_iscc() == iscc.resolve()
+
+
 def test_generated_run_id_is_accepted_by_verdict_validator(tmp_path: Path) -> None:
     run_id = new_run_id("v1-rc-abc1234-20260811T193000Z", "DP20_FULL")
     result = tmp_path / "result.json"
@@ -347,13 +360,15 @@ def test_generated_run_id_is_accepted_by_verdict_validator(tmp_path: Path) -> No
 def test_full_automation_plan_is_explicit_and_sequential(tmp_path: Path) -> None:
     plan = full_automation_plan(tmp_path)
     names = [item.name for item in plan]
-    assert names[:5] == [
-        "release-preflight",
+    assert names[:6] == [
+        "release-tool-preflight",
+        "prepare-runtime",
+        "release-input-preflight",
         "release-build",
         "python-full-tests",
         "python-ruff",
-        "python-mypy",
     ]
+    assert "python-mypy" in names
     assert "root-lint" in names
     assert "root-tests" in names
     assert "export-contracts-check" in names

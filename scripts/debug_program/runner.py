@@ -279,19 +279,46 @@ def full_automation_plan(
     ) -> CommandSpec:
         return CommandSpec(name, tuple(argv), repo_root, env or {}, timeout_seconds)
 
+    tool_preflight_command = [
+        python,
+        "-m",
+        "scripts.debug_program.release_preflight",
+        "--repo-root",
+        str(repo_root),
+        "--phase",
+        "tools",
+    ]
     release_command = [
         python,
         "-m",
         "scripts.debug_program.release_preflight",
         "--repo-root",
         str(repo_root),
+        "--phase",
+        "release-inputs",
     ]
     if candidate is not None:
+        tool_preflight_command.extend(("--candidate", str(candidate)))
         release_command.extend(("--candidate", str(candidate)))
     release_root = repo_root / "test-results" / "debug-program" / "release-payload"
     installer_root = repo_root / "test-results" / "debug-program" / "release-artifacts"
     return (
-        spec("release-preflight", release_command, 300, python_env),
+        spec("release-tool-preflight", tool_preflight_command, 300, python_env),
+        spec(
+            "prepare-runtime",
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(repo_root / "scripts" / "prepare-runtime.ps1"),
+                "-Output",
+                "runtime-assets",
+            ],
+            7200,
+        ),
+        spec("release-input-preflight", release_command, 300, python_env),
         spec(
             "release-build",
             [
