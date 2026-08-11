@@ -12,7 +12,7 @@ $acceptance = Join-Path $repoRoot "tests\release\windows-acceptance.ps1"
 $buildTag = "$(Get-Date -Format 'yyyyMMdd-HHmmss')-$([Guid]::NewGuid().ToString('N').Substring(0, 8))"
 $buildOutput = "dist/release-v4-$buildTag"
 $installerOutputDirectory = Join-Path $repoRoot "release\release-p01-$buildTag"
-$installer = Join-Path $installerOutputDirectory "ppt-video-workbench-setup.exe"
+$artifactManifest = Join-Path $installerOutputDirectory "release-artifacts.json"
 
 foreach ($required in @($prepareRuntime, $buildRelease, $acceptance)) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
@@ -44,12 +44,12 @@ if ($LASTEXITCODE -ne 0) {
 if ($LASTEXITCODE -ne 0) {
     throw "Windows installer rebuild failed with exit code $LASTEXITCODE."
 }
-if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
-    throw "Windows installer rebuild did not produce: $installer"
+if (-not (Test-Path -LiteralPath $artifactManifest -PathType Leaf)) {
+    throw "Windows installer rebuild did not produce artifact manifest: $artifactManifest"
 }
 
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $acceptance `
-    -InstallerPath $installer `
+    -ArtifactManifest $artifactManifest `
     -WorkspaceRoot $WorkspaceRoot `
     -StartupTimeoutSeconds $StartupTimeoutSeconds
 exit $LASTEXITCODE
