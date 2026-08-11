@@ -1,0 +1,108 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects-program",
+  "wave": "W1",
+  "gate": "G1_INTEGRATION_READY",
+  "status": "passed",
+  "recorded_at": "2026-08-11T21:15:39+08:00",
+  "branch": "codex/program-integration-v1",
+  "source_commit": "e78ee1a98a66574d32493f49687c7326d00dfd0b",
+  "foundation_source_commit": "5a071cb95d9af8f91c978abac75d3df77a0910ab",
+  "integration_order": [
+    {
+      "line": "A Core Workbench",
+      "source_head": "f73faf64bcc877fc6fd13684d4225be5d7d620aa",
+      "evidence_head": "17fe50b8303e495e758026edcff837d48d3bb1fd",
+      "integrated_source": "9a82c03",
+      "integrated_evidence": "7af3757"
+    },
+    {
+      "line": "B Render and Release",
+      "source_head": "57f4286c114021cb2f64ec4ed94c9f649f491eb9",
+      "evidence_head": "172d3c6042e21e56de1d2d8f845bf09d436cd275",
+      "integrated_source": "135e43a",
+      "integrated_evidence": "6c0b9e1"
+    },
+    {
+      "line": "C Platform and Ecosystem",
+      "source_head": "7896de035dd8e244c666f3d4ed6282184ec3327f",
+      "evidence_head": "e7a1d226acb0e0d12eba344570a5219a77ed7c82",
+      "integrated_source_range": "819dbd2..7035467",
+      "integrated_evidence": "a1184fb"
+    }
+  ],
+  "verification": {
+    "python_full": {
+      "command": "pytest -q",
+      "result": "882 passed, 2 existing Pydantic warnings"
+    },
+    "ruff": {
+      "command": "ruff check .",
+      "result": "passed"
+    },
+    "mypy": {
+      "command": "mypy with repository strict configuration",
+      "result": "337 source files passed"
+    },
+    "web": {
+      "tests": "46 files and 87 tests passed",
+      "typecheck": "passed",
+      "production_build": "170 modules built; size advisory only"
+    },
+    "remotion": {
+      "tests": "12 files and 32 tests passed",
+      "typecheck": "passed"
+    },
+    "p2_contract_package": {
+      "strict_typescript": "passed",
+      "cloud_client_operations": 44,
+      "generated_client_drift": 0
+    },
+    "schema_and_openapi": {
+      "core_openapi_regenerated": true,
+      "project_schema_drift": 0,
+      "cloud_openapi_client_drift": 0,
+      "contract_catalog_drift_tests": "passed"
+    },
+    "migration_and_fallback": {
+      "command": "pytest project V2 migration and workspace migration suites",
+      "result": "11 passed",
+      "covered": [
+        "reentrant legacy migration",
+        "interrupted migration cleanup and resume",
+        "rollback preserving legacy source",
+        "blocking damaged legacy input before writes",
+        "invalid V2 fallback only for nonexclusive projects",
+        "monotonic idempotent workspace migration"
+      ]
+    }
+  },
+  "integration_finding": {
+    "initial_result": "880 passed and 1 failed",
+    "root_cause": "A13 hashed raw schema bytes; mixed LF and CRLF in the source worktree made the fingerprint checkout-dependent.",
+    "resolution": "Schema fingerprints now use canonical JSON; the catalog and P2 compatibility envelope use the new semantic contract-set hash.",
+    "migration": "0008_core_contract_canonical_fingerprint updates existing remote job envelopes without rewriting migration 0007.",
+    "final_contract_set_sha256": "de55cc1090e49b0ab4d7fb6375b4509cb878d5888e8bef54fd00407a34fbebf6",
+    "focused_regression": "24 contract, Cloud and migration tests passed"
+  },
+  "feature_defaults": {
+    "render_release_extensions": "disabled unless explicitly enabled",
+    "p2_provider_platform_sync_cloud": "all flags false by default",
+    "v1_local_workflow": "unchanged default"
+  },
+  "worktree": {
+    "path": "F:/ppt-video-workbench-v3/.worktrees/program-integration-v1",
+    "tracked_status_after_source_commit": "clean",
+    "dependency_resolution": "ignored read-only junctions to the locked root Python and Node installations"
+  },
+  "scope_boundary": {
+    "not_claimed": [
+      "DP20-DP25 clean release candidate automation",
+      "paid provider execution",
+      "production cloud authorization or infrastructure",
+      "new Windows RC freeze or code signing",
+      "W2-W4 capability and platform gates"
+    ]
+  },
+  "next_task": "DP20-DP25 clean candidate, full automation and DG1 evidence"
+}
