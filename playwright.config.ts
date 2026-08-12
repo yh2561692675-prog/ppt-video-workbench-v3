@@ -9,6 +9,12 @@ const collectCiEvidence = Boolean(process.env.CI || process.env.PLAYWRIGHT_CI_EV
 const useExternalServers =
   process.env.PLAYWRIGHT_EXTERNAL_SERVERS === '1' ||
   (process.platform === 'win32' && !process.env.CI);
+const servicePath =
+  process.platform === 'win32'
+    ? [`C:\\Program Files\\LibreOffice\\program`, process.env.PATH]
+        .filter((value): value is string => Boolean(value))
+        .join(path.delimiter)
+    : process.env.PATH;
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -57,9 +63,10 @@ export default defineConfig({
             // UTF-8, including when the browser flow emits Chinese fixture data.
             PYTHONUTF8: '1',
             PYTHONIOENCODING: 'utf-8',
-            // Exercise the same self-contained renderer layout required by the
-            // Windows launcher; never fall back to a global pnpm/Remotion tool.
-            WORKBENCH_RUNTIME_ROOT: path.resolve('runtime-assets'),
+            // CI installs LibreOffice globally. Chocolatey's program directory
+            // is not propagated to later Windows steps, so pass it explicitly
+            // to the API process that renders PPTX previews.
+            PATH: servicePath,
             WORKBENCH_WORKSPACE: path.resolve('tests/.e2e-workspace'),
             WORKBENCH_E2E_SYNTHETIC_MODE: 'true',
             WORKBENCH_DG2_RENDER_DELAY_SECONDS: process.env.DG2_RENDER_DELAY_SECONDS ?? '1',
