@@ -3,7 +3,7 @@ name = "ppt-video-workbench"
 version = "0.1.1"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-  "fastapi>=0.139.2,<1",
+  "fastapi>=0.141.1,<1",
   "ppt-video-workbench-api",
   "pydantic>=2.11,<3",
   "sqlalchemy>=2.0,<3",
@@ -14,9 +14,9 @@ dependencies = [
 dev = [
   "httpx>=0.28,<1",
   "mypy>=1.17,<2",
-  "pytest>=9.0.3,<10",
+  "pytest>=9.1.1,<10",
   "pytest-asyncio>=1.1,<2",
-  "ruff>=0.12,<1",
+  "ruff>=0.16.2,<1",
 ]
 
 [tool.pytest.ini_options]
