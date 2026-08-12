@@ -1,11 +1,8 @@
 param(
-    [Parameter(Mandatory = $true)]
+    [string]$Config,
     [string]$Candidate,
-    [Parameter(Mandatory = $true)]
     [string]$Ffmpeg,
-    [Parameter(Mandatory = $true)]
     [string]$Ffprobe,
-    [Parameter(Mandatory = $true)]
     [string]$Uv,
     [int]$DurationSeconds = 7200,
     [int]$MinimumCycles = 100,
@@ -17,6 +14,26 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+if ($Config) {
+    $configPath = Resolve-Path -LiteralPath $Config
+    $scheduledConfig = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+    $Candidate = [string]$scheduledConfig.candidate
+    $Ffmpeg = [string]$scheduledConfig.ffmpeg
+    $Ffprobe = [string]$scheduledConfig.ffprobe
+    $Uv = [string]$scheduledConfig.uv
+    $DurationSeconds = [int]$scheduledConfig.duration_seconds
+    $MinimumCycles = [int]$scheduledConfig.minimum_cycles
+    $CycleIntervalSeconds = [int]$scheduledConfig.cycle_interval_seconds
+    $PageCount = [int]$scheduledConfig.page_count
+    $RecoveryEvery = [int]$scheduledConfig.recovery_every
+    $CancellationEvery = [int]$scheduledConfig.cancellation_every
+    $LedgerSegmentBytes = [int]$scheduledConfig.ledger_segment_bytes
+}
+foreach ($requiredValue in @($Candidate, $Ffmpeg, $Ffprobe, $Uv)) {
+    if ([string]::IsNullOrWhiteSpace($requiredValue)) {
+        throw 'Candidate, Ffmpeg, Ffprobe, and Uv are required (directly or through -Config).'
+    }
+}
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
