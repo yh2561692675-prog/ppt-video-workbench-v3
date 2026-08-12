@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects-program",
+  "wave": "W1",
+  "task": "DP42_S8_CACHE",
+  "status": "PASS",
+  "generated_at": "2026-08-13T01:27:16Z",
+  "branch": "codex/program-integration-v1",
+  "source": {
+    "commit": "3995a0666c8d3713e3a8d0923c213932c9d22236",
+    "worktree": "F:/ppt-video-workbench-v3/.worktrees/program-integration-v1"
+  },
+  "candidate": {
+    "id": "v1-rc-3995a0666c8d-20260812T172636Z",
+    "manifest_sha256": "484a97ecb25e1b64fab3e61be53a8171079f09d10ccc40571ee0c29898bf1796",
+    "valid": true
+  },
+  "fixture": {
+    "id": "DG2-S8-synthetic-v1",
+    "contract_sha256": "f667d825952a3984ed52e6684c62887a58141399f0191a73e52184fe1b8c04a4",
+    "page_count": 8
+  },
+  "cycle": {
+    "cold": {
+      "cache_hits": 0,
+      "cache_misses": 8,
+      "duration_ms": 1341,
+      "page_graph_hash": "bba88d290d7fcf5b49f747e6460fbf0b8ab66f1f8835185f10f9918ea06beb9b"
+    },
+    "warm": {
+      "cache_hits": 8,
+      "cache_misses": 0,
+      "duration_ms": 27,
+      "page_graph_hash": "bba88d290d7fcf5b49f747e6460fbf0b8ab66f1f8835185f10f9918ea06beb9b"
+    },
+    "selective_invalidation": {
+      "cache_hits": 7,
+      "cache_misses": 1,
+      "duration_ms": 169,
+      "page_graph_hash": "41380d94f32a0123707f064866556334e216b40024625d66f04f3f5675a1ef78",
+      "changed_page_order": 4,
+      "unchanged_page_artifacts_preserved": [1, 2, 3, 5, 6, 7, 8]
+    }
+  },
+  "evidence": {
+    "path": "test-results/performance-cache/v1-rc-3995a0666c8d-20260812T172636Z/cache-s8-20260813T012716Z-c55bae44/cache-acceptance-v1.json",
+    "sha256": "2a9995feb4ce157b50f35779a297e676962bbac52dcb26df81ecd632f58a8f9b",
+    "output_policy": "candidate-specific and non-overwriteable; no unknown cache directory is deleted"
+  },
+  "verification": [
+    "8 cache and render-service tests passed.",
+    "Ruff passed.",
+    "mypy --strict passed for DP42 module and CLI.",
+    "Cold/warm/selective evidence parsed and cross-checked for graph and artifact consistency."
+  ],
+  "scope_boundary": {
+    "completed": "S8 page-cache cold, warm and one-page selective-invalidation acceptance",
+    "not_claimed": [
+      "final MP4 or production-package acceptance",
+      "S50 project performance",
+      "multi-aspect/export pressure",
+      "long-duration soak"
+    ],
+    "next": "DP43 S50 large-project acceptance"
+  },
+  "rollback": "Evidence is isolated under ignored test-results; no production cache or feature flag changed.",
+  "safe_resume": "Use a new clean candidate for every later cache cycle; do not merge this S8 result into S50 or export-pressure claims.",
+  "will_write_again": false
+}
