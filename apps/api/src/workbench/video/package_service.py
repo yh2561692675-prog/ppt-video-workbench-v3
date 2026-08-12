@@ -140,6 +140,56 @@ def build_page_mux_command(
     ]
 
 
+def build_final_concat_command(
+    ffmpeg: str,
+    concat_file: Path,
+    output: Path,
+    *,
+    duration_ms: int,
+    fps: int,
+) -> list[str]:
+    """Join page segments while preserving the frozen constant frame rate.
+
+    Page muxing produces H.264/AAC fragments.  Stream-copying those fragments
+    through the concat demuxer lets AAC packet padding alter the video stream
+    time base (for example 48000/1001 after two nominal 24fps pages).  The
+    final delivery must be CFR, so perform the one required final video/audio
+    encode at the project profile instead of copying the concatenated streams.
+    """
+
+    return [
+        ffmpeg,
+        "-y",
+        "-loglevel",
+        "error",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(concat_file),
+        "-t",
+        f"{duration_ms / 1_000:.3f}",
+        "-map",
+        "0:v:0",
+        "-map",
+        "0:a:0",
+        "-vf",
+        f"fps={fps},format=yuv420p",
+        "-r",
+        str(fps),
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "128k",
+        str(output),
+    ]
+
+
 class VideoExportService:
     def __init__(
         self,
@@ -288,23 +338,13 @@ class VideoExportService:
         )
         execution.checkpoint(stage="muxing", progress=0.70, message="开始合成视频")
         self._run_ffmpeg(
-            [
+            build_final_concat_command(
                 self.ffmpeg,
-                "-y",
-                "-loglevel",
-                "error",
-                "-f",
-                "concat",
-                "-safe",
-                "0",
-                "-i",
-                str(concat_file),
-                "-t",
-                f"{props.duration_ms / 1_000:.3f}",
-                "-c",
-                "copy",
-                str(final_mp4),
-            ],
+                concat_file,
+                final_mp4,
+                duration_ms=props.duration_ms,
+                fps=props.fps,
+            ),
             segments_dir,
             execution,
         )

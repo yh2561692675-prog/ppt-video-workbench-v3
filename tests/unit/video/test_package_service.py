@@ -8,6 +8,7 @@ from workbench.video.package_service import (
     VideoExportError,
     VideoExportService,
     _probe_fps,
+    build_final_concat_command,
     build_package_manifest,
     build_page_mux_command,
     validate_media_probe,
@@ -43,6 +44,22 @@ def test_ai_page_mux_does_not_seek_page_audio(tmp_path: Path) -> None:
     )
 
     assert "-ss" not in command
+
+
+def test_final_concat_reencodes_to_the_frozen_constant_frame_rate(tmp_path: Path) -> None:
+    command = build_final_concat_command(
+        "ffmpeg",
+        tmp_path / "concat.txt",
+        tmp_path / "final.mp4",
+        duration_ms=2_000,
+        fps=24,
+    )
+
+    assert "copy" not in command
+    assert command[command.index("-vf") + 1] == "fps=24,format=yuv420p"
+    assert command[command.index("-r") + 1] == "24"
+    assert command[command.index("-c:v") + 1] == "libx264"
+    assert command[command.index("-c:a") + 1] == "aac"
 
 
 def test_package_manifest_contains_sha256_and_size_for_required_artifacts(tmp_path: Path) -> None:
