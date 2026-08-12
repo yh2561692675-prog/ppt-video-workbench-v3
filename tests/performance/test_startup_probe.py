@@ -66,7 +66,8 @@ def test_startup_probe_records_successful_health_stage(tmp_path: Path) -> None:
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     events = [json.loads(line) for line in events_path.read_text(encoding="utf-8").splitlines()]
     assert summary["sample_count"] >= 2
-    assert summary["roots"] == {"api": summary["roots"]["api"], "probe": summary["roots"]["probe"]}
+    assert summary["roots"] == {"api": summary["roots"]["api"]}
     assert "launcher" not in summary["roots"]
+    assert "probe" not in summary["roots"]
     assert [event["event"] for event in summary["stage_events"]] == ["started", "finished"]
     assert events[-1]["type"] == "session_finished"

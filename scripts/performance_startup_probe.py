@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 import time
 import urllib.error
@@ -57,11 +56,12 @@ def main(argv: list[str] | None = None) -> int:
     process = subprocess.Popen(command, cwd=args.cwd.resolve())
     sampler = PerformanceSampler(
         args.output,
-        # This helper is not the packaged desktop launcher.  Name it
-        # ``probe`` so evidence cannot mistake its resource usage for that
-        # product component; production launcher runs can supply a real
-        # launcher root through the lower-level sampler.
-        {"probe": os.getpid(), "api": process.pid},
+        # The helper itself is not a product component and must not become a
+        # root: it is the API process' parent, so including it would attribute
+        # all API descendants to an artificial ``probe`` component. Production
+        # launcher runs can supply their real launcher root via the lower-level
+        # sampler.
+        {"api": process.pid},
         temporary_root=args.temporary_root,
         interval_seconds=args.interval,
     )
