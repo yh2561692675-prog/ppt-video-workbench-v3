@@ -11,7 +11,12 @@ version.
 
 - Configure the npm ecosystem at `/`, the pnpm workspace root.
 - Group `remotion` and `@remotion/*` so the renderer and CLI move together.
-- Keep Python (`uv`) and GitHub Actions updates as separate weekly queues.
+- Group routine minor and patch updates while keeping major upgrades individually
+  reviewable.
+- Group GitHub Actions updates as one workflow-maintenance change.
+- Scan monthly and cap each ecosystem at three open pull requests so the queue
+  stays reviewable for a small maintainer team.
+- Keep Python (`uv`), npm, and GitHub Actions as separate queues.
 - Require the same protected cross-platform checks and human review as any other
   pull request; dependency PRs are never auto-merged.
 
@@ -21,3 +26,5 @@ version.
 - A failed or incomplete dependency PR cannot enter the protected default branch.
 - Runtime, test-tool, and workflow dependencies remain reviewable as separate
   maintenance concerns.
+- Security updates remain enabled independently of the routine version-update
+  schedule.
