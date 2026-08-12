@@ -16,7 +16,7 @@ dev = [
   "mypy>=1.17,<2",
   "pytest>=9.0.3,<10",
   "pytest-asyncio>=1.1,<2",
-  "ruff>=0.12,<1",
+  "ruff>=0.16.2,<1",
 ]
 
 [tool.pytest.ini_options]
