@@ -47,10 +47,11 @@ def test_cloud_openapi_documents_every_runtime_route(tmp_path: Path) -> None:
 
     app = create_cloud_app(tmp_path / "control.db", tmp_path / "objects")
     runtime_routes = {
-        (re.sub(r"\{[^}]+\}", "{}", route.path.removeprefix("/v1")), method.lower())
-        for route in app.routes
-        if getattr(route, "methods", None) and route.path.startswith("/v1/")
-        for method in route.methods & {"GET", "POST", "PUT", "PATCH", "DELETE"}
+        (re.sub(r"\{[^}]+\}", "{}", path.removeprefix("/v1")), method)
+        for path, operations in app.openapi()["paths"].items()
+        if path.startswith("/v1/")
+        for method in operations
+        if method in {"get", "post", "put", "patch", "delete"}
     }
     normalized_documented_routes = {
         (re.sub(r"\{[^}]+\}", "{}", path), method)
