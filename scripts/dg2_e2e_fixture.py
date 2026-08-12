@@ -140,14 +140,15 @@ def _normalise_zip(path: Path) -> None:
         with zipfile.ZipFile(path, "r") as source, zipfile.ZipFile(
             canonical,
             "w",
-            compression=zipfile.ZIP_DEFLATED,
-            compresslevel=9,
+            compression=zipfile.ZIP_STORED,
         ) as target:
             for name in sorted(source.namelist()):
                 info = zipfile.ZipInfo(filename=name, date_time=(1980, 1, 1, 0, 0, 0))
-                info.compress_type = zipfile.ZIP_DEFLATED
+                # Stored entries avoid zlib implementation differences between
+                # Windows and Linux changing the reviewed fixture hashes.
+                info.compress_type = zipfile.ZIP_STORED
                 info.external_attr = 0o600 << 16
-                target.writestr(info, source.read(name), compress_type=zipfile.ZIP_DEFLATED)
+                target.writestr(info, source.read(name), compress_type=zipfile.ZIP_STORED)
         shutil.copy2(canonical, path)
 
 

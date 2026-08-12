@@ -99,6 +99,7 @@ def test_save_retries_a_transient_windows_sharing_violation(
         real_replace(source, destination)
 
     monkeypatch.setattr(os, "replace", fail_then_replace)
+    monkeypatch.setattr("workbench.storage.manifest_store._IS_WINDOWS", True)
     monkeypatch.setattr("workbench.storage.manifest_store.sleep", lambda _: None)
 
     store.save(project_dir, make_manifest("重试成功"))
@@ -121,7 +122,7 @@ def test_non_windows_permission_error_without_winerror_is_not_retried(
         raise PermissionError(13, "permission denied")
 
     monkeypatch.setattr(os, "replace", fail_replace)
-    monkeypatch.setattr("workbench.storage.manifest_store.os.name", "posix")
+    monkeypatch.setattr("workbench.storage.manifest_store._IS_WINDOWS", False)
 
     with pytest.raises(PermissionError, match="permission denied"):
         ManifestStore._replace_with_retry(source, destination)

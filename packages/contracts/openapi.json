@@ -4675,6 +4675,114 @@
         "title": "Envelope[Transcript]",
         "type": "object"
       },
+      "Envelope_Union_ProductionTimeline__NoneType__": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProductionTimeline"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[Union[ProductionTimeline, NoneType]]",
+        "type": "object"
+      },
+      "Envelope_Union_QualityJobRecord__NoneType__": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QualityJobRecord"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[Union[QualityJobRecord, NoneType]]",
+        "type": "object"
+      },
+      "Envelope_Union_RenderGraphV2__NoneType__": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RenderGraphV2"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[Union[RenderGraphV2, NoneType]]",
+        "type": "object"
+      },
       "Envelope_Union_UpdateCandidate__NoneType__": {
         "additionalProperties": false,
         "properties": {
@@ -19655,7 +19763,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Envelope_QualityJobRecord_"
+                  "$ref": "#/components/schemas/Envelope_Union_QualityJobRecord__NoneType__"
                 }
               }
             },
@@ -19775,7 +19883,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Envelope_RenderGraphV2_"
+                  "$ref": "#/components/schemas/Envelope_Union_RenderGraphV2__NoneType__"
                 }
               }
             },
@@ -19815,7 +19923,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Envelope_RenderGraphV2_"
+                  "$ref": "#/components/schemas/Envelope_Union_RenderGraphV2__NoneType__"
                 }
               }
             },
@@ -21015,7 +21123,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Envelope_ProductionTimeline_"
+                  "$ref": "#/components/schemas/Envelope_Union_ProductionTimeline__NoneType__"
                 }
               }
             },

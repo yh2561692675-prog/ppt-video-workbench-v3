@@ -14,6 +14,7 @@ from workbench.domain.models import ProjectManifest
 
 _REPLACE_RETRY_COUNT = 5
 _REPLACE_RETRY_DELAY_SECONDS = 0.05
+_IS_WINDOWS = os.name == "nt"
 
 
 class ManifestStore:
@@ -58,7 +59,7 @@ class ManifestStore:
                 return
             except PermissionError as error:
                 winerror = getattr(error, "winerror", None)
-                is_retryable = os.name == "nt" and winerror in {5, 32}
+                is_retryable = _IS_WINDOWS and winerror in {5, 32}
                 if not is_retryable or attempt == _REPLACE_RETRY_COUNT - 1:
                     raise
                 sleep(_REPLACE_RETRY_DELAY_SECONDS * (attempt + 1))
