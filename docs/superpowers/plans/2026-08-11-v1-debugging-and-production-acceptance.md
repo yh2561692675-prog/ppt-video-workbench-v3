@@ -280,54 +280,54 @@ python -m scripts.debug_program verdict --run <path>
 
 **Owner:** A。
 
-- [ ] 项目生命周期。
-- [ ] 本地音频完整链。
-- [ ] Presenter fake/local boundary。
-- [ ] HeyGen fake boundary 和真实场景的授权分离。
-- [ ] 刷新恢复、任务中心、预览、预检和最终导出。
-- [ ] 对现有三个 real E2E skip 建立明确去向，不留下无期限注释占位。
+- [x] 项目生命周期。
+- [x] 本地音频完整链。
+- [x] Presenter fake/local boundary。
+- [x] HeyGen fake boundary 和真实场景的授权分离。
+- [x] 刷新恢复、任务中心、预览、预检和最终导出。
+- [x] 对现有三个 real E2E skip 建立明确去向，不留下无期限注释占位。
 
 ## DP31：建立 S1 与 S8 fixture
 
-- [ ] S1：2 页快速 smoke。
-- [ ] S8：8 页 PPTX+DOCX、本地 WAV、字幕、效果和制作包。
-- [ ] 固定来源、授权、页数、时长、hash 和预期输出。
-- [ ] 使用合成或已授权内容，不把私人材料提交仓库。
-- [ ] 建立 fixture validator。
+- [x] S1：2 页快速 smoke。
+- [x] S8：8 页 PPTX+DOCX、本地 WAV、字幕、效果和制作包。
+- [x] 固定来源、授权、页数、时长、hash 和预期输出。
+- [x] 使用合成或已授权内容，不把私人材料提交仓库。
+- [x] 建立 fixture validator。
 
 ## DP32：实现本地音频 E2E
 
-- [ ] Web 创建项目并上传材料。
-- [ ] 解析、匹配、旁白确认、本地 WAV、分页、字幕和预检。
-- [ ] authoritative preview 从 0 播放至 ended。
-- [ ] 创建异步渲染任务、刷新页面并恢复 job ID。
-- [ ] 验证 MP4、SRT、制作包和 manifest。
+- [x] Web 创建项目并上传材料。
+- [x] 解析、匹配、旁白确认、本地 WAV、分页、字幕和预检。
+- [x] authoritative preview 从 0 播放至 ended。
+- [x] 创建异步渲染任务、刷新页面并恢复 job ID。
+- [x] 验证 MP4、SRT、制作包和 manifest。
 
 **注意：** 不复制当前 Windows 窗口的 4 页临时验收；等待其停点后使用正式 S8 候选重新执行。
 
 ## DP33：刷新、多标签页和重复操作
 
-- [ ] 渲染期间刷新和关闭重开。
-- [ ] 双标签页编辑冲突和 CAS 提示。
-- [ ] 连续点击创建任务只产生一个活动任务。
-- [ ] pause/resume/cancel/retry 的 UI 与服务状态一致。
+- [x] 渲染期间刷新和关闭重开。
+- [x] 双标签页编辑冲突和 CAS 提示。
+- [x] 连续点击创建任务只产生一个活动任务。
+- [x] pause/resume/cancel/retry 的 UI 与服务状态一致。
 - [ ] 网络短断和 API 重启后状态可恢复。
 
 ## DP34：Playwright 失败证据
 
-- [ ] 保存 trace、screenshot、video、console 和 network errors。
-- [ ] 失败页面标记 candidate/run/scenario。
-- [ ] 浏览器 profile 与其他 run 隔离。
-- [ ] 测试后无 Vite/API/browser 残留。
-- [ ] CI 与本地使用相同场景定义。
+- [x] 保存 trace、screenshot、video、console 和 network errors。
+- [x] 失败页面标记 candidate/run/scenario。
+- [x] 浏览器 profile 与其他 run 隔离。
+- [x] 测试后无 Vite/API/browser 残留。
+- [x] CI 与本地使用相同场景定义。
 
 ## Gate DG2：LOCAL_E2E_GREEN
 
-- [ ] S1/S8 项目生命周期和本地音频 E2E 首轮通过。
-- [ ] refresh/multi-tab/duplicate action 通过。
-- [ ] Playwright 纳入 CI，失败证据完整。
-- [ ] 无未解释 real-flow skip。
-- [ ] 生成 `dg2-local-e2e-green.json`。
+- [x] S1/S8 项目生命周期和本地音频 E2E 首轮通过。
+- [x] refresh/multi-tab/duplicate action 通过。
+- [x] Playwright 纳入 CI，失败证据完整。
+- [x] 无未解释 real-flow skip。
+- [x] 生成 `dg2-local-e2e-green.json`。
 
 # Phase 4：性能、压力和长稳
 

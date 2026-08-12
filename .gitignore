@@ -9,6 +9,7 @@ coverage/
 .ruff_cache/
 test-results/
 playwright-report/
+/playwright-report-dg2/
 *.db
 *.db-shm
 *.db-wal

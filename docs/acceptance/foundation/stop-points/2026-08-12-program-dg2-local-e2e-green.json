@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects-program",
+  "wave": "W1",
+  "gate": "DG2_LOCAL_E2E_GREEN",
+  "status": "PASS",
+  "generated_at": "2026-08-12T14:46:31Z",
+  "branch": "codex/program-integration-v1",
+  "source": {
+    "commit": "b3a037c7137e8184fb8b2475d844140a53547e1b",
+    "subject": "feat(acceptance): complete DG2 local browser workflows",
+    "worktree": "F:/ppt-video-workbench-v3/.worktrees/program-integration-v1",
+    "status_after_source_commit": "clean"
+  },
+  "scope": {
+    "fixture_mode": "WORKBENCH_E2E_SYNTHETIC_MODE=true",
+    "fixture_contract": "fixtures/dg2/fixture-contract-v1.json",
+    "fixture_generator": "scripts/dg2_e2e_fixture.py",
+    "fixture_privacy": "only generated, synthetic PPTX/DOCX/WAV media; generated files remain ignored",
+    "browser": "Microsoft Edge via Playwright channel=msedge",
+    "service_lifecycle": "the Windows run starts API and Vite as explicit child processes and stops both exact PIDs in finally; CI retains Playwright-owned isolated services",
+    "provider_boundary": "synthetic adapters are enabled only by the explicit E2E environment flag; real provider, Presenter and HeyGen flows remain disabled without their separately documented authorization flags"
+  },
+  "scenarios": {
+    "S1": {
+      "description": "two-page local-audio smoke through project creation, import, parse/match, narration confirmation, WAV alignment, subtitles, timeline conflict, authoritative preview, preflight, async render, refresh/recovery and production package",
+      "result": "passed",
+      "duration_seconds": 71.038,
+      "browser_context": "test-results/playwright/dg2-local-audio-S1-browser-22b3a-uditable-production-package/dg2-browser-context.json",
+      "trace": {
+        "path": "test-results/playwright/dg2-local-audio-S1-browser-22b3a-uditable-production-package/trace.zip",
+        "sha256": "21b9410376f15187ede2397106156f28538118d20c01b2794ac4553f73ecac03"
+      },
+      "video": {
+        "path": "test-results/playwright/dg2-local-audio-S1-browser-22b3a-uditable-production-package/video.webm",
+        "sha256": "f7ec444e4e00a2581998e6366c9c2980ad86a1ab4d22904b13d22de7166fa4cb"
+      },
+      "console_errors": [],
+      "unexpected_network_failures": []
+    },
+    "S8": {
+      "description": "eight-page local-audio production package through the same browser workflow, including cancellation/retry, pause/resume, duplicate submit de-duplication and final artifacts",
+      "result": "passed",
+      "duration_seconds": 46.457,
+      "browser_context": "test-results/playwright/dg2-local-audio-S8-browser-f52f9-uditable-production-package/dg2-browser-context.json",
+      "trace": {
+        "path": "test-results/playwright/dg2-local-audio-S8-browser-f52f9-uditable-production-package/trace.zip",
+        "sha256": "4da6a75ae36db0b0ba125a4f995851fcadc0eb1efebf5116667adfb9a180d846"
+      },
+      "video": {
+        "path": "test-results/playwright/dg2-local-audio-S8-browser-f52f9-uditable-production-package/video.webm",
+        "sha256": "e88f9e47a8f377671f90c7c595174ff2218991b72beddfd81c401b1ea2c598a2"
+      },
+      "console_errors": [],
+      "unexpected_network_failures": []
+    }
+  },
+  "browser_evidence": {
+    "junit": {
+      "path": "test-results/dg2-final-junit.xml",
+      "sha256": "5a3207efb12840b0131cd3d493a1d06d11288dfbb7cfebe854a8f799ec89f3fc",
+      "summary": "2 tests, 0 failures, 0 skipped, 0 errors"
+    },
+    "html_report": {
+      "path": "playwright-report-dg2/index.html",
+      "sha256": "585ea0e937acc95cf5b51f1cfc4b77bd655c0e784da254e27908fca31c313056"
+    },
+    "failure_context": "each scenario writes candidate, run, scenario, console errors and network failures to dg2-browser-context.json; successful scenarios have empty error collections"
+  },
+  "verification": {
+    "browser_boundary_and_lifecycle": "3 passed: real-flow finite-boundary policy, project close/reopen lifecycle, async render reload and pause/resume",
+    "browser_s1_s8": "2 passed in 2.2m against controlled local API/Vite services",
+    "python_focused": "48 passed: fixture generation, timeline/graph/quality/recovery routes, storage/job/rendering units",
+    "python_static": "Ruff passed; mypy passed for 12 changed API/rendering/E2E source targets",
+    "web_static": "TypeScript noEmit passed; authoritative preview and preview workspace components: 6 passed",
+    "diff_hygiene": "git diff --check passed before source commit",
+    "ci_definition": "GitHub Actions CI executes pnpm e2e and uploads test-results/playwright-report evidence on Ubuntu and Windows; the same Playwright scenario definitions are used locally and in CI"
+  },
+  "gate_decision": {
+    "s1_s8_lifecycle_and_local_audio": "PASS",
+    "refresh_multitab_duplicate_actions": "PASS",
+    "playwright_ci_and_failure_evidence": "PASS",
+    "unexplained_real_flow_skips": "PASS: the three privileged real flows have finite authorization, environment flag and next-gate destinations in tests/e2e/real-flow-policy.ts",
+    "remaining_fault_coverage": "network-disconnect and API-process-restart browser fault injection is deliberately retained for DG5 fault-recovery depth; it is not an unbounded skip and does not invalidate the DG2 local workflow gate"
+  },
+  "residual_risks": [
+    "The S1/S8 evidence uses explicit synthetic adapters and generated media; no real Provider, Presenter or HeyGen credentials were invoked.",
+    "Local Windows runs use explicit service cleanup because the console launcher can retain media-worker child handles; CI keeps Playwright-owned isolated service startup.",
+    "Signed Windows RC, manual audiovisual review, real service cost controls, S50 scale and long soak remain later gates."
+  ],
+  "next_gate": "DG3_PERFORMANCE_ACCEPTED"
+}
