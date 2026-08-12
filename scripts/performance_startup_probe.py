@@ -57,7 +57,11 @@ def main(argv: list[str] | None = None) -> int:
     process = subprocess.Popen(command, cwd=args.cwd.resolve())
     sampler = PerformanceSampler(
         args.output,
-        {"launcher": os.getpid(), "api": process.pid},
+        # This helper is not the packaged desktop launcher.  Name it
+        # ``probe`` so evidence cannot mistake its resource usage for that
+        # product component; production launcher runs can supply a real
+        # launcher root through the lower-level sampler.
+        {"probe": os.getpid(), "api": process.pid},
         temporary_root=args.temporary_root,
         interval_seconds=args.interval,
     )
