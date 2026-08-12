@@ -388,6 +388,7 @@ def full_automation_plan(
     candidate: Path | None = None,
     *,
     release_output_root: str,
+    external_ci_evidence: Path | None = None,
 ) -> tuple[CommandSpec, ...]:
     """DP20-DP24 command plan; execution remains sequential and fail-closed."""
 
@@ -438,6 +439,19 @@ def full_automation_plan(
     if candidate is not None:
         tool_preflight_command.extend(("--candidate", str(candidate)))
         release_command.extend(("--candidate", str(candidate)))
+    ci_preflight_command = [
+        python,
+        "-m",
+        "scripts.debug_program.ci_preflight",
+        "--repo-root",
+        str(repo_root),
+    ]
+    if candidate is not None:
+        ci_preflight_command.extend(("--candidate", str(candidate)))
+    if external_ci_evidence is not None:
+        ci_preflight_command.extend(
+            ("--external-evidence", str(external_ci_evidence.resolve()))
+        )
     safe_release_root = _safe_release_output(repo_root, release_output_root)
     if safe_release_root == "test-results/debug-program":
         raise ValueError("release output root must be run-specific")
@@ -519,14 +533,7 @@ def full_automation_plan(
         ),
         spec(
             "ci-wiring-check",
-            [
-                python,
-                "-m",
-                "scripts.debug_program.ci_preflight",
-                "--repo-root",
-                str(repo_root),
-            ]
-            + (["--candidate", str(candidate)] if candidate is not None else []),
+            ci_preflight_command,
             300,
             python_env,
             blocked_exit_codes=(2,),

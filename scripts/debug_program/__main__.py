@@ -49,6 +49,11 @@ def _parser() -> argparse.ArgumentParser:
         "--evidence-root", type=Path, default=Path("test-results/debug-program")
     )
     automation.add_argument("--repo-root", type=Path, default=Path("."))
+    automation.add_argument(
+        "--external-ci-evidence",
+        type=Path,
+        help="validated Windows/Ubuntu CI evidence required by dp20-full",
+    )
     candidate_build = commands.add_parser("build-candidate")
     candidate_build.add_argument("--repo-root", type=Path, default=Path("."))
     candidate_build.add_argument(
@@ -130,6 +135,7 @@ def main(argv: list[str] | None = None) -> int:
                     args.repo_root.resolve(),
                     args.candidate.resolve(),
                     release_output_root=release_root,
+                    external_ci_evidence=args.external_ci_evidence,
                 )
             )
             verdict = run_plan(

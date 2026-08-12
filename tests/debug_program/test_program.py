@@ -563,11 +563,13 @@ def test_generated_run_id_is_accepted_by_verdict_validator(tmp_path: Path) -> No
 
 
 def test_full_automation_plan_is_explicit_and_sequential(tmp_path: Path) -> None:
+    external_evidence = tmp_path / "external-ci-evidence.json"
     plan = full_automation_plan(
         tmp_path,
         release_output_root=release_output_root(
             tmp_path, "v1-rc-abc1234-20260811T193000Z", "run-plan-001"
         ),
+        external_ci_evidence=external_evidence,
     )
     names = [item.name for item in plan]
     assert names[:6] == [
@@ -586,5 +588,10 @@ def test_full_automation_plan_is_explicit_and_sequential(tmp_path: Path) -> None
     assert "export-contracts-check" in names
     assert "cloud-client-check" in names
     assert "ci-wiring-check" in names
+    ci_wiring = next(item for item in plan if item.name == "ci-wiring-check")
+    assert ci_wiring.argv[-2:] == (
+        "--external-evidence",
+        str(external_evidence.resolve()),
+    )
     assert "contract-migration-regression" in names
     assert all(item.argv and item.argv[0] != "cmd.exe" for item in plan)
