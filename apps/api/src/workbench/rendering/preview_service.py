@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 from collections.abc import Callable
 from fractions import Fraction
+from functools import partial
 from pathlib import Path
 from uuid import UUID
 
@@ -87,11 +88,13 @@ class AuthoritativePreviewService:
         executor: PreviewExecutor | None = None,
         artifact_probe: PreviewProbe | None = None,
         cache: PersistentCacheRepository | None = None,
+        ffmpeg: str = "ffmpeg",
+        ffprobe: str = "ffprobe",
     ) -> None:
         self.projects = projects
         self.repository = repository or projects.jobs
-        self.executor = executor or self._default_executor
-        self.artifact_probe = artifact_probe or probe_media
+        self.executor = executor or partial(self._default_executor, ffmpeg=ffmpeg)
+        self.artifact_probe = artifact_probe or partial(probe_media, ffprobe=ffprobe)
         self.cache = cache or PersistentCacheRepository(
             projects.database, projects.workspace_root
         )
@@ -276,13 +279,15 @@ class AuthoritativePreviewService:
             return None
         return result
 
-    @staticmethod
     def _default_executor(
+        self,
         graph: RenderGraphV2,
         output_dir: Path,
         context: PersistentRenderExecutionContext,
+        *,
+        ffmpeg: str,
     ) -> Path:
-        result = RenderGraphExportPipeline(context.project_dir).export(
+        result = RenderGraphExportPipeline(context.project_dir, ffmpeg=ffmpeg).export(
             graph,
             output_dir,
             context=context,

@@ -18,6 +18,7 @@ __pycache__/
 .env
 workspace-data/
 tests/.e2e-workspace/
+tests/.e2e-fixtures/
 
 # Local recovery, build, cache, and diagnostic artifacts. Evidence intended for
 # review is kept under docs/acceptance rather than staged from these locations.

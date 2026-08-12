@@ -1,5 +1,6 @@
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -62,6 +63,48 @@ def test_corrupt_primary_recovers_from_backup(tmp_path: Path) -> None:
 
     assert recovered.name == "备份版本"
     assert json.loads((project_dir / "project.json").read_text("utf-8"))["name"] == "备份版本"
+
+
+def test_concurrent_saves_are_serialized_per_project(tmp_path: Path) -> None:
+    project_dir = tmp_path / "项目一_20260803_1630"
+    project_dir.mkdir()
+    store = ManifestStore(tmp_path)
+    names = [f"并发保存 {index}" for index in range(12)]
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = [executor.submit(store.save, project_dir, make_manifest(name)) for name in names]
+        for future in futures:
+            future.result()
+
+    assert store.load(project_dir).name in names
+    assert not list(project_dir.glob(".project.json.*.tmp"))
+
+
+def test_save_retries_a_transient_windows_sharing_violation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project_dir = tmp_path / "项目一_20260803_1630"
+    project_dir.mkdir()
+    store = ManifestStore(tmp_path)
+    store.save(project_dir, make_manifest("原始名称"))
+    real_replace = os.replace
+    attempts = 0
+
+    def fail_then_replace(source: str | Path, destination: str | Path) -> None:
+        nonlocal attempts
+        is_main_replace = Path(destination).name == "project.json"
+        if is_main_replace and attempts < 2:
+            attempts += 1
+            raise PermissionError(13, "sharing violation", None, 32)
+        real_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", fail_then_replace)
+    monkeypatch.setattr("workbench.storage.manifest_store.sleep", lambda _: None)
+
+    store.save(project_dir, make_manifest("重试成功"))
+
+    assert attempts == 2
+    assert store.load(project_dir).name == "重试成功"
 
 
 def test_file_hash_is_stable_and_content_sensitive(tmp_path: Path) -> None:

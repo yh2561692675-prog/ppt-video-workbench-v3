@@ -117,7 +117,10 @@ class RenderJobService:
             )
             audit = "video_render_job_cancel_requested"
         elif action == "retry":
-            return self.retry(job_id)
+            submission = self.retry(job_id)
+            if submission.created and self.worker is not None:
+                self.worker.wake()
+            return submission
         else:
             raise ValueError(f"unsupported action: {action}")
         self._audit(project_id, audit, {"job_id": str(job_id)})

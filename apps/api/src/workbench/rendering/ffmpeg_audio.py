@@ -64,7 +64,10 @@ class AudioFilterCompiler:
             left = max(0.0, min(2.0, 1 - clip.pan))
             right = max(0.0, min(2.0, 1 + clip.pan))
             filters.append(f"pan=stereo|c0={left:.4f}*c0|c1={right:.4f}*c1")
-        filters.append(f"adelay={delay_ms}:all=1")
+        # The bundled Windows FFmpeg build does not expose the newer `all`
+        # option.  Give both output channels an explicit delay instead so the
+        # command is portable across the packaged and developer runtimes.
+        filters.append(f"adelay={delay_ms}|{delay_ms}")
         return f"[{index}:a]" + ",".join(filters) + f"[a{index}]"
 
 

@@ -1242,7 +1242,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(input),
     }),
-  latestQualityJob: (id: string) => request<QualityJobRecord>(`/api/projects/${id}/quality/latest`),
+  latestQualityJob: (id: string) => request<QualityJobRecord | null>(`/api/projects/${id}/quality/latest`),
   retryQualityJob: (id: string, jobId: string) =>
     request<QualityJobRecord>(`/api/projects/${id}/quality/jobs/${jobId}/retry`, {
       method: 'POST',
@@ -1252,7 +1252,8 @@ export const api = {
       `/api/projects/${id}/quality/jobs/${jobId}/issues/${issueId}/actions`,
       { method: 'POST', body: JSON.stringify({ action }) },
     ),
-  getTimeline: (id: string) => request<ProductionTimelineRecord>(`/api/projects/${id}/timeline`),
+  getTimeline: (id: string) =>
+    request<ProductionTimelineRecord | null>(`/api/projects/${id}/timeline`),
   timelineCommand: (id: string, command: Record<string, unknown>) =>
     request<ProductionTimelineRecord>(`/api/projects/${id}/timeline/commands`, {
       method: 'POST',

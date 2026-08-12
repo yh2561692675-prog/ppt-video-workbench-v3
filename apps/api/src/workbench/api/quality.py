@@ -45,12 +45,14 @@ def create_quality_router(service: QualityJobService) -> APIRouter:
         except KeyError as error:
             raise HTTPException(status_code=404, detail="quality job not found") from error
 
-    @router.get("/latest", response_model=Envelope[QualityJobRecord])
-    def latest(project_id: UUID) -> Envelope[QualityJobRecord]:
+    @router.get("/latest", response_model=Envelope[QualityJobRecord | None])
+    def latest(project_id: UUID) -> Envelope[QualityJobRecord | None]:
         try:
             return envelope(service.latest(project_id))
-        except KeyError as error:
-            raise HTTPException(status_code=404, detail="quality report not found") from error
+        except KeyError:
+            # Quality analysis is opt-in after a render.  Its absence is a
+            # normal project state, not a failed request to surface in the UI.
+            return envelope(None)
 
     @router.get("/evidence/{evidence_path:path}", response_model=None)
     def evidence(project_id: UUID, evidence_path: str) -> FileResponse:

@@ -38,6 +38,16 @@ class FakeProjects:
         return project
 
 
+class FakeWorker:
+    enabled = True
+
+    def __init__(self) -> None:
+        self.wake_count = 0
+
+    def wake(self) -> None:
+        self.wake_count += 1
+
+
 def _repo(tmp_path: Path) -> JobRepository:
     database = WorkspaceDatabase(tmp_path / "workspace.db")
     database.initialize()
@@ -81,6 +91,24 @@ def test_handler_maps_known_failure_and_persists_safe_code(tmp_path: Path) -> No
     assert failed.status is JobStatus.FAILED
     assert failed.error_code == "render_page_failed"
     assert "credential=value" not in (failed.error or "")
+
+
+def test_retry_wakes_worker_only_when_a_new_job_is_created(tmp_path: Path) -> None:
+    project_id = uuid4()
+    repository = _repo(tmp_path)
+    service = RenderJobService(
+        FakeProjects(tmp_path), FakePreview(), object(), repository=repository
+    )
+    worker = FakeWorker()
+    service.worker = worker
+    original = service.submit(project_id).job
+    repository.request_cancel(original.id)
+    repository.cancel(original.id)
+
+    retried = service.act(project_id, original.id, "retry")
+
+    assert retried.created is True
+    assert worker.wake_count == 1
 
 
 def test_succeeded_job_is_reused_only_after_published_artifacts_verify(tmp_path: Path) -> None:

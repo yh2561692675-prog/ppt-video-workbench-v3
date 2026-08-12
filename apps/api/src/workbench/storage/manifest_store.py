@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 import shutil
 from pathlib import Path
+from threading import RLock
+from time import sleep
 from uuid import uuid4
 
 from pydantic import ValidationError
@@ -10,10 +12,15 @@ from pydantic import ValidationError
 from workbench.domain.errors import ManifestRecoveryError, ProjectPathViolation
 from workbench.domain.models import ProjectManifest
 
+_REPLACE_RETRY_COUNT = 5
+_REPLACE_RETRY_DELAY_SECONDS = 0.05
+
 
 class ManifestStore:
     def __init__(self, workspace_root: Path) -> None:
         self.workspace_root = workspace_root.resolve()
+        self._save_locks: dict[Path, _ProjectSaveLock] = {}
+        self._save_locks_guard = _ProjectSaveLock()
 
     def load(self, project_dir: Path) -> ProjectManifest:
         safe_dir = self._safe_project_dir(project_dir)
@@ -21,21 +28,39 @@ class ManifestStore:
 
     def save(self, project_dir: Path, manifest: ProjectManifest) -> None:
         safe_dir = self._safe_project_dir(project_dir)
-        manifest_path = safe_dir / "project.json"
-        backup_path = safe_dir / "project.json.bak"
-        temp_path = safe_dir / f".project.json.{uuid4().hex}.tmp"
-        backup_temp = safe_dir / f".project.json.bak.{uuid4().hex}.tmp"
+        with self._lock_for(safe_dir):
+            manifest_path = safe_dir / "project.json"
+            backup_path = safe_dir / "project.json.bak"
+            temp_path = safe_dir / f".project.json.{uuid4().hex}.tmp"
+            backup_temp = safe_dir / f".project.json.bak.{uuid4().hex}.tmp"
 
-        self._write_synced(temp_path, manifest.model_dump_json(indent=2))
-        try:
-            if manifest_path.exists():
-                self._copy_synced(manifest_path, backup_temp)
-                os.replace(backup_temp, backup_path)
-            os.replace(temp_path, manifest_path)
-            self._sync_directory(safe_dir)
-        finally:
-            temp_path.unlink(missing_ok=True)
-            backup_temp.unlink(missing_ok=True)
+            self._write_synced(temp_path, manifest.model_dump_json(indent=2))
+            try:
+                if manifest_path.exists():
+                    self._copy_synced(manifest_path, backup_temp)
+                    self._replace_with_retry(backup_temp, backup_path)
+                self._replace_with_retry(temp_path, manifest_path)
+                self._sync_directory(safe_dir)
+            finally:
+                temp_path.unlink(missing_ok=True)
+                backup_temp.unlink(missing_ok=True)
+
+    def _lock_for(self, safe_dir: Path) -> _ProjectSaveLock:
+        with self._save_locks_guard:
+            return self._save_locks.setdefault(safe_dir, _ProjectSaveLock())
+
+    @staticmethod
+    def _replace_with_retry(source: Path, destination: Path) -> None:
+        """Retry only transient Windows sharing violations during an atomic replace."""
+        for attempt in range(_REPLACE_RETRY_COUNT):
+            try:
+                os.replace(source, destination)
+                return
+            except PermissionError as error:
+                is_retryable = os.name == "nt" and error.winerror in {5, 32}
+                if not is_retryable or attempt == _REPLACE_RETRY_COUNT - 1:
+                    raise
+                sleep(_REPLACE_RETRY_DELAY_SECONDS * (attempt + 1))
 
     def recover(self, project_dir: Path) -> ProjectManifest:
         safe_dir = self._safe_project_dir(project_dir)
@@ -94,3 +119,17 @@ class ManifestStore:
             os.fsync(descriptor)
         finally:
             os.close(descriptor)
+
+
+class _ProjectSaveLock:
+    """A process-local critical section for one project's manifest transaction."""
+
+    def __init__(self) -> None:
+        self._lock = RLock()
+
+    def __enter__(self) -> _ProjectSaveLock:
+        self._lock.acquire()
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self._lock.release()

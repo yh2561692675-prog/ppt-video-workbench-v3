@@ -43,6 +43,33 @@ def test_asset_resolver_uses_authoritative_revision_hash(tmp_path: Path) -> None
     assert resolved.mime_type == "image/png"
 
 
+def test_asset_resolver_reuses_a_verified_content_addressed_source_alias(tmp_path: Path) -> None:
+    project_id = uuid4()
+    first = tmp_path / "audio" / "page-001.wav"
+    second = tmp_path / "audio" / "page-002.wav"
+    first.parent.mkdir()
+    first.write_bytes(b"identical narration")
+    second.write_bytes(b"identical narration")
+    record = AssetRecord(
+        project_id=project_id,
+        kind=AssetKind.AUDIO,
+        content_hash=hashlib.sha256(b"identical narration").hexdigest(),
+        relative_object_path="workspace-data/assets/audio.wav",
+        original_name="audio/page-001.wav",
+        mime_type="audio/wav",
+        size_bytes=len(b"identical narration"),
+        license=LicenseRecord(status=LicenseStatus.CONFIRMED),
+    )
+
+    resolved = AssetResolver(tmp_path, [record], project_id=project_id).resolve(
+        "audio/page-002.wav", kind="narration"
+    )
+
+    assert resolved.asset_id == record.asset_id
+    assert resolved.source_ref == "audio/page-002.wav"
+    assert resolved.license_status == LicenseStatus.CONFIRMED.value
+
+
 def test_asset_resolver_rejects_cross_project_records(tmp_path: Path) -> None:
     with pytest.raises(AssetResolutionError, match="another project"):
         AssetResolver(tmp_path, [_record(uuid4(), "0" * 64)], project_id=uuid4())

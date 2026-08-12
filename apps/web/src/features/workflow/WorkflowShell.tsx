@@ -56,35 +56,35 @@ export function WorkflowShell() {
   const videoPreflightQuery = useQuery({
     queryKey: ['video-preflight', projectId],
     queryFn: () => api.videoPreflight(projectId),
-    enabled: Boolean(projectId) && (projectQuery.data?.current_step ?? 0) >= 6,
+    enabled: Boolean(projectId) && projectQuery.data?.current_step === 6,
   });
   const preflightQuery = useQuery({
     queryKey: ['preflight', projectId],
     queryFn: () => api.getPreflight(projectId),
-    enabled: Boolean(projectId) && (projectQuery.data?.current_step ?? 0) >= 6,
+    enabled: Boolean(projectId) && projectQuery.data?.current_step === 6,
   });
   const timelineQuery = useQuery({
     queryKey: ['production-timeline', projectId],
     queryFn: () => api.getTimeline(projectId),
-    enabled: Boolean(projectId) && (projectQuery.data?.current_step ?? 0) >= 6,
+    enabled: Boolean(projectId) && projectQuery.data?.current_step === 6,
     retry: false,
   });
   const timelineRevisionsQuery = useQuery({
     queryKey: ['production-timeline-revisions', projectId],
     queryFn: () => api.timelineRevisions(projectId),
-    enabled: Boolean(projectId) && (projectQuery.data?.current_step ?? 0) >= 6,
+    enabled: Boolean(projectId) && projectQuery.data?.current_step === 6,
     retry: false,
   });
   const renderGraphQuery = useQuery({
     queryKey: ['render-graph-v2', projectId],
     queryFn: () => api.getRenderGraphV2(projectId),
-    enabled: Boolean(projectId) && (projectQuery.data?.current_step ?? 0) >= 6,
+    enabled: Boolean(projectId) && projectQuery.data?.current_step === 6,
     retry: false,
   });
   const subtitleWorkbenchQuery = useQuery({
     queryKey: ['subtitle-workbench', projectId],
     queryFn: () => api.getSubtitleWorkbench(projectId),
-    enabled: Boolean(projectId) && (projectQuery.data?.current_step ?? 0) >= 6,
+    enabled: Boolean(projectId) && projectQuery.data?.current_step === 6,
     retry: false,
   });
   const continuityQuery = useQuery({
@@ -147,14 +147,13 @@ export function WorkflowShell() {
     onSuccess: accept,
   });
   const createRenderJobMutation = useMutation({
-    mutationFn: () => api.createRenderJob(projectId),
-    onSuccess: () => navigate(`/projects/${projectId}/step/7`),
-  }) as unknown as {
-    mutate: () => void;
-    isPending: boolean;
-    isError: boolean;
-    data: { job: { id: string } };
-  };
+    mutationFn: async () => {
+      const updatedProject = await api.setStep(projectId, 7);
+      const submission = await api.createRenderJob(projectId);
+      return { ...submission, project: updatedProject };
+    },
+    onSuccess: (result) => accept(result.project),
+  });
   const videoPreflightMutation = useMutation({
     mutationFn: (settings: { reduced_motion: boolean }) => api.videoPreflight(projectId, settings),
     onSuccess: (result) => {

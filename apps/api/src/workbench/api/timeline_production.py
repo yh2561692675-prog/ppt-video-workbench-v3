@@ -133,6 +133,8 @@ class TimelineWorkspaceService:
         return sorted(self._editor(project_id)._history)
 
     def _editor(self, project_id: UUID) -> TimelineEditor:
+        if project_id not in self._editors:
+            self._load(project_id)
         try:
             return self._editors[project_id]
         except KeyError as error:
@@ -195,15 +197,25 @@ class TimelineWorkspaceService:
 def create_timeline_router(
     service: TimelineWorkspaceService,
     preview_jobs: AuthoritativePreviewService | None = None,
+    compile_v2_with_context: Callable[[UUID, int | None], RenderGraphV2] | None = None,
 ) -> APIRouter:
     router = APIRouter(prefix="/api/projects/{project_id}")
 
-    @router.get("/timeline", response_model=Envelope[ProductionTimeline])
-    def get_timeline(project_id: UUID) -> Envelope[ProductionTimeline]:
+    def compile_v2_for_route(
+        project_id: UUID, expected_revision: int | None = None
+    ) -> RenderGraphV2:
+        if compile_v2_with_context is not None:
+            return compile_v2_with_context(project_id, expected_revision)
+        return service.compile_v2(project_id, expected_revision=expected_revision)
+
+    @router.get("/timeline", response_model=Envelope[ProductionTimeline | None])
+    def get_timeline(project_id: UUID) -> Envelope[ProductionTimeline | None]:
         try:
             return envelope(service.get(project_id))
-        except KeyError as error:
-            raise HTTPException(status_code=404, detail="timeline not found") from error
+        except KeyError:
+            # Reaching the production step precedes the first timeline
+            # initialization. This lifecycle state is an empty resource.
+            return envelope(None)
 
     @router.post(
         "/timeline/initialize", response_model=Envelope[ProductionTimeline], status_code=201
@@ -223,6 +235,11 @@ def create_timeline_router(
             raise HTTPException(
                 status_code=409, detail={"code": error.code, "message": str(error)}
             ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "invalid_timeline", "message": str(error)},
+            ) from error
 
     @router.post("/timeline/commands:batch", response_model=Envelope[ProductionTimeline])
     def batch_command(
@@ -235,6 +252,11 @@ def create_timeline_router(
         except TimelineError as error:
             raise HTTPException(
                 status_code=409, detail={"code": error.code, "message": str(error)}
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "invalid_timeline", "message": str(error)},
             ) from error
 
     @router.post("/timeline/compile", response_model=Envelope[RenderGraph])
@@ -249,7 +271,7 @@ def create_timeline_router(
         project_id: UUID, expected_revision: int | None = None
     ) -> Envelope[RenderGraphV2]:
         try:
-            return envelope(service.compile_v2(project_id, expected_revision=expected_revision))
+            return envelope(compile_v2_for_route(project_id, expected_revision))
         except KeyError as error:
             raise HTTPException(status_code=404, detail="timeline not found") from error
         except TimelineError as error:
@@ -261,8 +283,8 @@ def create_timeline_router(
     def revisions(project_id: UUID) -> Envelope[list[int]]:
         try:
             return envelope(service.revisions(project_id))
-        except KeyError as error:
-            raise HTTPException(status_code=404, detail="timeline not found") from error
+        except KeyError:
+            return envelope([])
 
     @router.post(
         "/timeline/revisions/{revision}/restore", response_model=Envelope[ProductionTimeline]
@@ -286,8 +308,8 @@ def create_timeline_router(
         except KeyError as error:
             raise HTTPException(status_code=404, detail="render graph not compiled") from error
 
-    @router.get("/render-graph-v2", response_model=Envelope[RenderGraphV2])
-    def render_graph_v2(project_id: UUID) -> Envelope[RenderGraphV2]:
+    @router.get("/render-graph-v2", response_model=Envelope[RenderGraphV2 | None])
+    def render_graph_v2(project_id: UUID) -> Envelope[RenderGraphV2 | None]:
         try:
             graph = service._graphs_v2.get(project_id)
             if graph is None and service.root is not None:
@@ -295,17 +317,17 @@ def create_timeline_router(
                     project_id
                 )
             if graph is None:
-                raise KeyError(project_id)
+                return envelope(None)
             return envelope(graph)
-        except KeyError as error:
-            raise HTTPException(status_code=404, detail="RenderGraph V2 未编译") from error
+        except RenderSnapshotError:
+            return envelope(None)
 
     @router.post("/render-graphs:compile", response_model=Envelope[RenderGraphV2])
     def compile_render_graph(
         project_id: UUID, expected_revision: int | None = None
     ) -> Envelope[RenderGraphV2]:
         try:
-            return envelope(service.compile_v2(project_id, expected_revision=expected_revision))
+            return envelope(compile_v2_for_route(project_id, expected_revision))
         except KeyError as error:
             raise HTTPException(status_code=404, detail="timeline not found") from error
         except TimelineError as error:
@@ -313,8 +335,8 @@ def create_timeline_router(
                 status_code=409, detail={"code": error.code, "message": str(error)}
             ) from error
 
-    @router.get("/render-graphs/current", response_model=Envelope[RenderGraphV2])
-    def current_render_graph(project_id: UUID) -> Envelope[RenderGraphV2]:
+    @router.get("/render-graphs/current", response_model=Envelope[RenderGraphV2 | None])
+    def current_render_graph(project_id: UUID) -> Envelope[RenderGraphV2 | None]:
         try:
             graph = service._graphs_v2.get(project_id)
             if graph is None and service.root is not None:
@@ -324,8 +346,11 @@ def create_timeline_router(
             if graph is None:
                 raise KeyError(project_id)
             return envelope(graph)
-        except (KeyError, RenderSnapshotError) as error:
-            raise HTTPException(status_code=404, detail="RenderGraph V2 not found") from error
+        except (KeyError, RenderSnapshotError):
+            # A graph is optional until the timeline has been compiled.  Treat
+            # that expected lifecycle state as an empty resource rather than a
+            # failed browser request (and reserve 404 for unknown concrete IDs).
+            return envelope(None)
 
     @router.get("/render-graphs/{graph_id}", response_model=Envelope[RenderGraphV2])
     def get_render_graph(project_id: UUID, graph_id: UUID) -> Envelope[RenderGraphV2]:

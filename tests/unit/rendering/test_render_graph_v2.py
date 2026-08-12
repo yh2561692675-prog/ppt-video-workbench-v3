@@ -152,6 +152,26 @@ def test_compiler_is_deterministic_and_compiles_transition_audio_and_subtitles(
     )
 
 
+def test_graph_identity_changes_when_an_immutable_input_changes(tmp_path: Path) -> None:
+    timeline, _, _ = _timeline()
+    compiler = RenderGraphCompiler()
+
+    first = compiler.compile(
+        timeline,
+        project_root=tmp_path,
+        source_revisions={"asset_catalog": "first"},
+    )
+    second = compiler.compile(
+        timeline,
+        project_root=tmp_path,
+        source_revisions={"asset_catalog": "second"},
+    )
+
+    assert first.timeline_revision == second.timeline_revision
+    assert first.graph_id != second.graph_id
+    assert first.graph_hash != second.graph_hash
+
+
 def test_snapshot_store_and_preflight_block_missing_or_expired_assets(tmp_path: Path) -> None:
     timeline, _, _ = _timeline()
     (tmp_path / "media").mkdir()

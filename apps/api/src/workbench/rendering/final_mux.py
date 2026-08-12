@@ -47,5 +47,9 @@ def build_final_mux_command(
                 f"language={track.language}",
             ]
         )
-    command.extend(["-shortest", str(output)])
+    # Subtitle tracks may end before the video/audio programme.  `-shortest`
+    # considers every mapped input, so it would silently truncate a valid
+    # preview to the last subtitle cue.  Video and master audio have already
+    # been trimmed to the graph duration by their respective pipeline stages.
+    command.append(str(output))
     return command

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from workbench.domain.enums import JobStatus, JobType
 from workbench.jobs.execution import PersistentRenderExecutionContext
@@ -146,4 +146,43 @@ def test_preview_service_reuses_valid_cache_and_rebuilds_corruption(tmp_path: Pa
     assert claimed is not None
     service.handle(claimed)
     assert executions == 2
+    projects.close()
+
+
+def test_preview_service_uses_configured_runtime_tools_by_default(
+    tmp_path: Path, monkeypatch
+) -> None:
+    projects = ProjectService(tmp_path)
+    project = projects.create("preview runtime")
+    graph = _graph(project.id)
+    context = PersistentRenderExecutionContext(
+        job_id=uuid4(),
+        project_dir=tmp_path / project.project_dir,
+        repository=projects.jobs,
+        input_fingerprint="fixture",
+        job_type=JobType.RENDER_PREVIEW,
+    )
+    captured: dict[str, object] = {}
+
+    class Pipeline:
+        def __init__(self, project_root: Path, *, ffmpeg: str) -> None:
+            captured["project_root"] = project_root
+            captured["ffmpeg"] = ffmpeg
+
+        def export(self, *_args, **_kwargs):
+            return type("Result", (), {"video_path": tmp_path / "preview.mp4"})()
+
+    from workbench.rendering import preview_service
+
+    monkeypatch.setattr(preview_service, "RenderGraphExportPipeline", Pipeline)
+    service = AuthoritativePreviewService(
+        projects,
+        ffmpeg="C:/runtime/ffmpeg.exe",
+        ffprobe="C:/runtime/ffprobe.exe",
+    )
+
+    service.executor(graph, tmp_path, context)
+
+    assert captured["ffmpeg"] == "C:/runtime/ffmpeg.exe"
+    assert captured["project_root"] == context.project_dir
     projects.close()

@@ -58,7 +58,7 @@ def test_audio_filter_compiler_preserves_timeline_delay_and_gain(tmp_path: Path)
     spec = AudioFilterCompiler().compile(_graph(), tmp_path)
     assert spec.input_paths == ((tmp_path / "audio" / "narration.wav").resolve(),)
     assert "atrim=start=0.100000:duration=2.000000" in spec.filter_complex
-    assert "adelay=500:all=1" in spec.filter_complex
+    assert "adelay=500|500" in spec.filter_complex
     assert "volume=-3.0000dB" in spec.filter_complex
     command = build_audio_render_command("ffmpeg", spec, tmp_path / "master.wav")
     assert "-filter_complex" in command
@@ -81,6 +81,7 @@ def test_subtitle_packager_generates_srt_vtt_ass_and_mux_maps_soft_tracks(tmp_pa
     )
     assert command.count("-map") == 3
     assert "language=zh-CN" in command
+    assert "-shortest" not in command
 
 
 def test_subtitle_none_mode_writes_no_files(tmp_path: Path) -> None:

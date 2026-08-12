@@ -118,7 +118,10 @@ class RenderGraphCompiler:
             nodes, transitions, subtitle_plan, resolved_assets, timeline
         )
         graph = RenderGraphV2(
-            graph_id=uuid5(namespace, f"render-graph-v2:{timeline.revision}"),
+            # The identity is replaced below with a fingerprint of the whole
+            # immutable input graph.  A fixed placeholder avoids coupling a
+            # snapshot directory to only the editable timeline revision.
+            graph_id=UUID(int=0),
             project_id=timeline.project_id,
             timeline_revision=timeline.revision,
             timeline_hash=timeline.content_hash or sha256_json(timeline.model_dump(mode="json")),
@@ -146,6 +149,12 @@ class RenderGraphCompiler:
             affected_ranges=ranges,
             graph_hash="0" * 64,
             created_at=datetime.now(UTC),
+        )
+        identity = sha256_json(
+            graph.model_dump(mode="json", exclude={"graph_id", "graph_hash", "created_at"})
+        )
+        graph = graph.model_copy(
+            update={"graph_id": uuid5(namespace, f"render-graph-v2:{identity}")}
         )
         payload = graph.model_dump(mode="json", exclude={"graph_hash", "created_at"})
         return graph.model_copy(update={"graph_hash": sha256_json(payload)})

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from workbench.api.timeline_production import TimelineWorkspaceService, create_timeline_router
+from workbench.assets.models import AssetKind, AssetRecord, LicenseRecord, LicenseStatus
 from workbench.main import create_app
 from workbench.timeline.production import ClipKind, ProductionTimeline, TimelineTrack
 
@@ -114,3 +115,51 @@ def test_authoritative_preview_job_route_freezes_graph_snapshot(
     assert submitted.status_code == 202
     assert submitted.json()["data"]["job_type"] == "render_preview"
     assert submitted.json()["data"]["payload"]["plan"]["graph_hash"] == graph["graph_hash"]
+
+
+def test_compile_v2_route_delegates_to_the_authoritative_context_compiler() -> None:
+    project_id = uuid4()
+    timeline = ProductionTimeline(
+        project_id=project_id,
+        duration_us=1_000_000,
+        tracks=[TimelineTrack(kind=ClipKind.SLIDE, name="Slides", order=0)],
+    )
+    service = TimelineWorkspaceService()
+    calls: list[tuple[UUID, int | None]] = []
+
+    def compile_with_context(request_project_id, expected_revision):
+        calls.append((request_project_id, expected_revision))
+        return service.compile_v2(
+            request_project_id,
+            expected_revision=expected_revision,
+            assets=[
+                AssetRecord(
+                    project_id=project_id,
+                    kind=AssetKind.IMAGE,
+                    content_hash="a" * 64,
+                    relative_object_path="page.png",
+                    original_name="page.png",
+                    mime_type="image/png",
+                    size_bytes=1,
+                    license=LicenseRecord(status=LicenseStatus.CONFIRMED),
+                )
+            ],
+        )
+
+    app = FastAPI()
+    app.include_router(
+        create_timeline_router(service, compile_v2_with_context=compile_with_context)
+    )
+
+    with TestClient(app) as client:
+        initialized = client.post(
+            f"/api/projects/{project_id}/timeline/initialize",
+            json=timeline.model_dump(mode="json"),
+        )
+        assert initialized.status_code == 201
+        compiled = client.post(
+            f"/api/projects/{project_id}/timeline/compile-v2?expected_revision=1"
+        )
+
+    assert compiled.status_code == 200
+    assert calls == [(project_id, 1)]

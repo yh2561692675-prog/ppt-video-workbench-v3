@@ -61,14 +61,16 @@ class AssetResolver:
         if mode is not None:
             resolution_mode = mode
         lookup_ref = source_ref.replace("\\", "/")
+        source_path = self._safe_path(source_ref)
         record = (
             self.by_id.get(asset_id)
             if asset_id is not None
             else self.by_ref.get(lookup_ref) or self.by_ref.get(source_ref)
         )
+        if record is None and asset_id is None:
+            record = self._record_for_matching_source(source_path, kind)
         if record is None:
             return self._resolve_legacy(source_ref, kind)
-        source_path = self._safe_path(source_ref)
         record_path = self._safe_path(record.relative_object_path)
         authoritative_path = source_path if source_path and source_path.is_file() else record_path
         proxy_record = self._select_proxy(record, resolution_mode)
@@ -112,6 +114,30 @@ class AssetResolver:
             license_status=record.license.status.value,
             license_expires_at=record.license.expires_at,
             license_snapshot=record.license,
+        )
+
+    def _record_for_matching_source(
+        self, source_path: Path | None, kind: str
+    ) -> AssetRecord | None:
+        """Resolve a content-addressed alias only after proving byte identity.
+
+        Import deduplication intentionally stores one record for equal bytes.  A
+        project can nevertheless refer to those bytes from several safe paths
+        (for example, identical per-page narration WAV files).  Reusing the
+        catalog record is safe only when the candidate source still hashes to
+        the catalog object and has the requested kind.
+        """
+        if source_path is None or not source_path.is_file():
+            return None
+        source_hash = sha256_file(source_path)
+        asset_kind = _asset_kind_for_source_kind(kind)
+        return next(
+            (
+                candidate
+                for candidate in self.records
+                if candidate.kind is asset_kind and candidate.content_hash == source_hash
+            ),
+            None,
         )
 
     def _resolve_legacy(self, source_ref: str, kind: str) -> ResolvedAsset:
@@ -202,6 +228,8 @@ class AssetResolver:
             [executable, "-v", "error", "-show_streams", "-show_format", "-of", "json", str(path)],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=self._probe_timeout_s,
             check=False,
         )
@@ -235,6 +263,16 @@ def _discover_ffprobe() -> str | None:
         return str(RuntimeLayout.from_environment().require_renderer().ffprobe_executable)
     except Exception:
         return shutil.which("ffprobe")
+
+
+def _asset_kind_for_source_kind(kind: str) -> AssetKind:
+    """Map timeline audio buses to their catalog asset kind."""
+    if kind in {"narration", "music", "sfx", "presenter"}:
+        return AssetKind.AUDIO
+    try:
+        return AssetKind(kind)
+    except ValueError:
+        return AssetKind.DOCUMENT
 
 
 def _coerce_probe(value: MediaProbeMetadata | Mapping[str, Any]) -> MediaProbeMetadata:

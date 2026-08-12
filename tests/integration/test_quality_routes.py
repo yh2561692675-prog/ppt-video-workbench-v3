@@ -45,6 +45,10 @@ def test_quality_routes_submit_latest_and_block_path_escape(tmp_path: Path) -> N
     )
 
     with TestClient(app) as client:
+        no_report_yet = client.get(f"/api/projects/{project_id}/quality/latest")
+        assert no_report_yet.status_code == 200
+        assert no_report_yet.json()["data"] is None
+
         response = client.post(
             f"/api/projects/{project_id}/quality/jobs",
             json={"video_path": "video.mp4", "expected_duration_ms": 2_000},

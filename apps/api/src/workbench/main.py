@@ -70,6 +70,11 @@ from workbench.diagnostics.center import (
 from workbench.diagnostics.package import DiagnosticPackager
 from workbench.diagnostics.probes import build_default_probes, create_heygen_health_probe
 from workbench.domain.enums import JobType
+from workbench.e2e.synthetic import (
+    SyntheticTranscriptionBackend,
+    SyntheticVideoRenderer,
+    synthetic_e2e_enabled,
+)
 from workbench.effects.service import EffectService
 from workbench.environment.detector import EnvironmentDetector
 from workbench.exports.presets import ExportPresetService
@@ -262,6 +267,17 @@ def create_app(
         configured_speech_synthesizer = BrokerSpeechSynthesizer(
             provider_broker, artifact_store, tenant_id=provider_tenant_id
         )
+    # The checked-in DG2 Playwright contract uses only generated media.  Keep
+    # its adapters behind an explicit environment switch so normal development,
+    # packaged builds and real-provider acceptance cannot silently use them.
+    if synthetic_e2e_enabled():
+        # DG2 must exercise the local-audio and render paths with deterministic
+        # generated fixtures.  P2's opt-in provider composition may have
+        # supplied adapters above, but it must not make this explicitly
+        # synthetic acceptance accidentally download a real ASR model or call a
+        # real rendering provider.
+        configured_transcription_backend = SyntheticTranscriptionBackend()
+        configured_video_renderer = SyntheticVideoRenderer()
     try:
         configured_diagnostic_center = (
             diagnostic_center_factory(configured_diagnostic_root)
@@ -367,7 +383,11 @@ def create_app(
         configured_root,
         project_dir_resolver=lambda project_id: service.get(project_id).project_dir,
     )
-    authoritative_preview_service = AuthoritativePreviewService(service)
+    authoritative_preview_service = AuthoritativePreviewService(
+        service,
+        ffmpeg=(str(renderer_runtime.ffmpeg_executable) if renderer_runtime else "ffmpeg"),
+        ffprobe=(str(renderer_runtime.ffprobe_executable) if renderer_runtime else "ffprobe"),
+    )
     app.state.fidelity_job_service = fidelity_job_service
     app.state.timeline_workspace_service = timeline_workspace_service
     app.state.authoritative_preview_service = authoritative_preview_service
@@ -421,13 +441,19 @@ def create_app(
             ],
         )
 
-    def render_graph_provider(project_id: UUID) -> RenderGraphV2:
+    def compile_render_graph_with_context(
+        project_id: UUID, expected_revision: int | None = None
+    ) -> RenderGraphV2:
         return timeline_workspace_service.compile_v2(
             project_id,
+            expected_revision=expected_revision,
             continuity=continuity_service.get(project_id),
             subtitles=subtitle_workbench_service.get(project_id),
             assets=asset_registry_service.list_assets(project_id),
         )
+
+    def render_graph_provider(project_id: UUID) -> RenderGraphV2:
+        return compile_render_graph_with_context(project_id)
 
     def render_graph_exporter(
         project_id: UUID,
@@ -576,7 +602,11 @@ def create_app(
     app.include_router(create_scheduler_router(batch_scheduler_service))
     app.include_router(create_fidelity_router(fidelity_job_service))
     app.include_router(
-        create_timeline_router(timeline_workspace_service, authoritative_preview_service)
+        create_timeline_router(
+            timeline_workspace_service,
+            authoritative_preview_service,
+            compile_render_graph_with_context,
+        )
     )
     app.include_router(create_preflight_router(preflight_service, video_export_service))
     app.include_router(create_sources_router(ImportService(service)))

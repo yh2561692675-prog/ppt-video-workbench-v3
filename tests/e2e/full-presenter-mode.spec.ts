@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import type { PresenterSource, PresenterTimeline } from '../../apps/web/src/features/presenter/api';
+import { realFlowEnabled, realFlowSkipReason } from './real-flow-policy';
 
 type MockProject = {
   schema_version: number;
@@ -199,9 +200,6 @@ test('presenter browser workflow keeps the locked timeline hash across refresh',
 });
 
 test('real presenter full chain produces the RC1 evidence package', async () => {
-  test.skip(
-    !process.env.PRESENTER_RUN_REAL_E2E,
-    'requires the private Windows presenter fixtures, RC installer, FFmpeg, ASR model and operator review',
-  );
-  // Execute tests/acceptance/presenter-mode-plan.md on the target Windows RC machine.
+  test.skip(!realFlowEnabled('presenter-windows-rc'), realFlowSkipReason('presenter-windows-rc'));
+  // Execute only on the authorized target Windows RC machine.
 });

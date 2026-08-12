@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { realFlowEnabled, realFlowSkipReason } from './real-flow-policy';
+
 const apiBaseUrl = 'http://127.0.0.1:8765';
 
 test('local audio acceptance entrypoint preserves the audio gate', async ({ request }) => {
@@ -17,9 +19,6 @@ test('local audio acceptance entrypoint preserves the audio gate', async ({ requ
 });
 
 test('real local audio full chain produces the signed RC1 package', async () => {
-  test.skip(
-    !process.env.M8_RUN_REAL_E2E,
-    'requires Windows RC, real 6–8 page audio fixture, FFmpeg and manual audiovisual review',
-  );
-  // The real-project steps are executed by the Windows RC1 acceptance plan.
+  test.skip(!realFlowEnabled('local-audio-windows-rc'), realFlowSkipReason('local-audio-windows-rc'));
+  // The real-project steps are performed only by the named, authorized RC gate.
 });
