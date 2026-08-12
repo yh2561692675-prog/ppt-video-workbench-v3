@@ -772,7 +772,7 @@ wheels = [
 
 [[package]]
 name = "ppt-video-workbench"
-version = "0.1.0"
+version = "0.1.1"
 source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },
@@ -811,7 +811,7 @@ dev = [
 
 [[package]]
 name = "ppt-video-workbench-api"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "apps/api" }
 dependencies = [
     { name = "cryptography" },
@@ -865,7 +865,7 @@ provides-extras = ["ocr", "platform"]
 
 [[package]]
 name = "ppt-video-workbench-peripheral-platform"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "peripheral-platform" }
 dependencies = [
     { name = "fastapi" },

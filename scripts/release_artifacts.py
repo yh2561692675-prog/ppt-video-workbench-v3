@@ -71,7 +71,7 @@ def build_manifest(
     installer: Path,
     payload_manifest: Path,
     candidate_id: str | None = None,
-    version: str = "0.1.0",
+    version: str = "0.1.1",
 ) -> dict[str, Any]:
     root = repository_root.resolve()
     if not installer.is_file():
@@ -172,7 +172,7 @@ def main() -> int:
     parser.add_argument("--installer", type=Path)
     parser.add_argument("--payload-manifest", type=Path)
     parser.add_argument("--candidate-id")
-    parser.add_argument("--version", default="0.1.0")
+    parser.add_argument("--version", default="0.1.1")
     args = parser.parse_args()
     try:
         if args.verify is not None:

@@ -13,7 +13,7 @@ from .local import LocalPlatformServices
 def create_platform_services(
     base_dir: Path,
     *,
-    app_version: str = "0.1.0",
+    app_version: str = "0.1.1",
     platform_override: Literal["windows", "macos", "linux"] | None = None,
 ) -> LocalPlatformServices:
     platform_name: Literal["windows", "macos", "linux"]

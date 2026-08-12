@@ -9,10 +9,18 @@ SCRIPT = Path(__file__).parents[2] / "scripts" / "validate-release.py"
 
 
 def _write_project(root: Path, *, version: str = "0.1.0", notes: bool = True) -> None:
-    for path in (root / "pyproject.toml", root / "apps/api/pyproject.toml"):
+    for path in (
+        root / "pyproject.toml",
+        root / "apps/api/pyproject.toml",
+        root / "peripheral-platform/pyproject.toml",
+    ):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(f'[project]\nname = "fixture"\nversion = "{version}"\n', encoding="utf-8")
-    for path in (root / "package.json", root / "apps/web/package.json"):
+    for path in (
+        root / "package.json",
+        root / "apps/web/package.json",
+        root / "remotion/package.json",
+    ):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps({"version": version}), encoding="utf-8")
     if notes:
@@ -50,6 +58,22 @@ def test_release_validation_rejects_version_drift(tmp_path: Path) -> None:
 
     assert result.returncode != 0
     assert "apps/web/package.json=0.2.0" in result.stderr
+
+
+def test_release_validation_checks_every_workspace_version(tmp_path: Path) -> None:
+    _write_project(tmp_path)
+    (tmp_path / "peripheral-platform/pyproject.toml").write_text(
+        '[project]\nname = "fixture"\nversion = "0.2.0"\n', encoding="utf-8"
+    )
+    (tmp_path / "remotion/package.json").write_text(
+        json.dumps({"version": "0.2.0"}), encoding="utf-8"
+    )
+
+    result = _run(tmp_path)
+
+    assert result.returncode != 0
+    assert "peripheral-platform/pyproject.toml=0.2.0" in result.stderr
+    assert "remotion/package.json=0.2.0" in result.stderr
 
 
 def test_release_validation_rejects_missing_notes(tmp_path: Path) -> None:

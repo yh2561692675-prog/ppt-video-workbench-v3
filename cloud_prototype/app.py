@@ -2455,7 +2455,7 @@ def create_cloud_app(
         db_path or Path("cloud-prototype/data/control-plane.db"),
         object_root or Path("cloud-prototype/data/objects"),
     )
-    app = FastAPI(title="PPT Video Workbench Cloud Prototype", version="0.1.0")
+    app = FastAPI(title="PPT Video Workbench Cloud Prototype", version="0.1.1")
     app.state.cloud_repository = repository
     app.state.cloud_auth = CloudAuthConfig(auth_mode, oidc_issuer, oidc_audience)
     app.state.cloud_production_evidence = production_evidence or CloudProductionEvidence()

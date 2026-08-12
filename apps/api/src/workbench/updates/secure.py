@@ -129,7 +129,7 @@ class SecureUpdateClient:
         trusted_root: TrustedRoot,
         verifier: SignatureVerifier | None = None,
         transport: HttpTransport | None = None,
-        current_version: str = "0.1.0",
+        current_version: str = "0.1.1",
         now: Callable[[], datetime] | None = None,
         max_package_bytes: int = 2 * 1024 * 1024 * 1024,
     ) -> None:

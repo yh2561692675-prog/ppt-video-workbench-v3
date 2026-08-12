@@ -108,7 +108,7 @@ class P2Composition:
         cls,
         workspace_root: Path,
         *,
-        app_version: str = "0.1.0",
+        app_version: str = "0.1.1",
         flags: P2FeatureFlags | None = None,
         provider_handlers: dict[str, BuiltinHandler] | None = None,
     ) -> P2Composition:

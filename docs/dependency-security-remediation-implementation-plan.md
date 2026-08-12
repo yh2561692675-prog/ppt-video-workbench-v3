@@ -7,6 +7,6 @@
 - [x] Limit the Remotion compatibility change to the static unit-test asset boundary.
 - [x] Merge the synchronized Remotion upgrade after all protected checks pass.
 - [x] Upgrade Vitest and regenerate the root pnpm lockfile.
-- [ ] Remediate direct high-severity JavaScript and Python dependencies.
-- [ ] Recount alerts and link the final evidence from the tracking Issue.
-- [ ] Prepare a later patch release without changing `v0.1.0`.
+- [x] Remediate direct high-severity JavaScript and Python dependencies.
+- [x] Recount alerts and link the final evidence from the tracking Issue.
+- [x] Prepare a later patch release without changing `v0.1.0`.
