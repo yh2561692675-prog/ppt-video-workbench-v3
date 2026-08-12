@@ -26,13 +26,17 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ffmpeg libreoffice fonts-noto-cjk-extra
       - if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          choco install ffmpeg libreoffice-fresh -y --no-progress
-          "C:\Program Files\LibreOffice\program" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        run: choco install ffmpeg libreoffice-fresh -y --no-progress
       - run: uv sync --frozen
       - run: uv run ruff check .
       - run: uv run mypy apps/api/src
-      - run: uv run pytest
+      - if: runner.os != 'Windows'
+        run: uv run pytest
+      - if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:PATH = "C:\Program Files\LibreOffice\program;$env:PATH"
+          uv run pytest
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm check
