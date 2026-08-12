@@ -10,6 +10,7 @@
 - [x] Add release-note categories and a guarded manual release workflow.
 - [x] Add automated validation for package-version alignment and release notes.
 - [x] Validate formatting, focused Python checks, and release guard behavior locally.
+- [x] Remove duplicate branch/PR CI runs and align workflows with the actual default branch.
 - [ ] Open a PR linked to the tracking Issue and record the review evidence.
 - [ ] Wait for required CI, then squash-merge the PR.
 - [ ] Publish and verify the first honest `0.1.x` source prerelease.

@@ -2,7 +2,11 @@ name: CI
 
 on:
   push:
+    branches: [codex/program-integration-v1]
   pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   quality:
