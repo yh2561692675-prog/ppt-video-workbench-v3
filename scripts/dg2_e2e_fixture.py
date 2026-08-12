@@ -158,7 +158,7 @@ def _manifest(profile: str, folder: Path, page_count: int) -> dict[str, object]:
         path = folder / name
         if not path.is_file():
             raise FixtureValidationError(f"{profile} is missing {name}")
-        files[name] = {"sha256": _sha256(path), "size": path.stat().st_size}
+        files[name] = {"sha256": _content_sha256(path), "size": path.stat().st_size}
     with wave.open(str(folder / "local-narration.wav"), "rb") as handle:
         audio = {
             "sample_rate": handle.getframerate(),
@@ -207,6 +207,23 @@ def _sha256(path: Path) -> str:
     with path.open("rb") as source:
         for chunk in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _content_sha256(path: Path) -> str:
+    """Hash OOXML package contents independently of platform-specific ZIP bytes."""
+
+    if path.suffix.lower() not in {".docx", ".pptx"}:
+        return _sha256(path)
+    digest = hashlib.sha256()
+    with zipfile.ZipFile(path, "r") as package:
+        for name in sorted(package.namelist()):
+            name_bytes = name.encode("utf-8")
+            content = package.read(name)
+            digest.update(struct.pack("<I", len(name_bytes)))
+            digest.update(name_bytes)
+            digest.update(struct.pack("<Q", len(content)))
+            digest.update(content)
     return digest.hexdigest()
 
 

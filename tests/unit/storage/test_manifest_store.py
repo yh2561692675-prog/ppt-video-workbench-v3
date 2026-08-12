@@ -95,7 +95,9 @@ def test_save_retries_a_transient_windows_sharing_violation(
         is_main_replace = Path(destination).name == "project.json"
         if is_main_replace and attempts < 2:
             attempts += 1
-            raise PermissionError(13, "sharing violation", None, 32)
+            error = PermissionError(13, "sharing violation")
+            error.winerror = 32  # type: ignore[attr-defined]
+            raise error
         real_replace(source, destination)
 
     monkeypatch.setattr(os, "replace", fail_then_replace)

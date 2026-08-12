@@ -7,8 +7,8 @@
       "narrations": ["合成第1页旁白", "合成第2页旁白"],
       "audio": {"sample_rate": 16000, "channels": 1, "duration_ms": 1500},
       "files": {
-        "outline.docx": {"sha256": "544f3b6411ae0367d9f5f18fb4eca0d1bce5163a26bdd83f5ee66c3b86b2d7fe", "size": 828501},
-        "deck.pptx": {"sha256": "efab770efe4488f54ff2eb141b19f10538028a7e1aaf8686807dc59dc93fd3c3", "size": 102743},
+        "outline.docx": {"sha256": "c4f7599ad76af39ce2e7e560c7345bd1de9a0e015ee6e9eb69deed170b81f046", "size": 828501},
+        "deck.pptx": {"sha256": "d4d5d0a2a5f11897cf7a639d28745225562e1f4738b81615d80fc30a39f61dfa", "size": 102743},
         "local-narration.wav": {"sha256": "05ea04a8772317b13b9fb3ddb3d35f274820f4466394f0197e03ed3f35d4f8d0", "size": 48044}
       },
       "expected_outputs": ["08_输出/最终视频.mp4", "08_输出/制作包/字幕.srt", "08_输出/制作包/制作包清单.json"]
@@ -19,8 +19,8 @@
       "narrations": ["合成第1页旁白", "合成第2页旁白", "合成第3页旁白", "合成第4页旁白", "合成第5页旁白", "合成第6页旁白", "合成第7页旁白", "合成第8页旁白"],
       "audio": {"sample_rate": 16000, "channels": 1, "duration_ms": 6000},
       "files": {
-        "outline.docx": {"sha256": "b0964a4e68de2f06668c6f3e9034ceb7dc9c39efdc20eaa89c5c5942dac57d27", "size": 829347},
-        "deck.pptx": {"sha256": "8374194523724a461ea3fa5bc2038ae591cf9eaf191559d1e0bbfa8b60719cbb", "size": 114165},
+        "outline.docx": {"sha256": "9091b6872f94eaa9c3e7a9cbfb3a1f7124d4c6a4b9a8ddfc4da2c475cca32224", "size": 829347},
+        "deck.pptx": {"sha256": "d3264eec37298aac8be1408714c3b27d6cbf8aec0a1e5a12138686bfef2c70a5", "size": 114165},
         "local-narration.wav": {"sha256": "04f85243002bcadaebffb7cddb56491a4c4e3efe47c10a850a211b1ff4cef91f", "size": 192044}
       },
       "expected_outputs": ["08_输出/最终视频.mp4", "08_输出/制作包/字幕.srt", "08_输出/制作包/制作包清单.json"]
