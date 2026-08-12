@@ -43,16 +43,27 @@ def publish_render_outputs(
     latest_path = output_root / "latest.json"
 
     temp_package = output_root / f".{package_target.name}.tmp"
-    if temp_package.exists():
-        shutil.rmtree(temp_package)
-    shutil.copytree(staged_package, temp_package)
-    os.replace(temp_package, package_target)
+    try:
+        if temp_package.exists():
+            shutil.rmtree(temp_package)
+        shutil.copytree(staged_package, temp_package)
+        os.replace(temp_package, package_target)
+    except BaseException:
+        # A failed or cancelled package publication must not leave a directory
+        # which looks like a partially published delivery package.
+        if temp_package.exists():
+            shutil.rmtree(temp_package)
+        raise
 
     # Prepare and publish the versioned package before touching the stable MP4.
     # A package-copy failure must leave the previous successful video intact.
     temp_mp4 = output_root / f".{final_name}.{run_id}.tmp"
-    shutil.copy2(staged_mp4, temp_mp4)
-    os.replace(temp_mp4, stable_mp4)
+    try:
+        shutil.copy2(staged_mp4, temp_mp4)
+        os.replace(temp_mp4, stable_mp4)
+    except BaseException:
+        temp_mp4.unlink(missing_ok=True)
+        raise
 
     latest_payload = {
         "mp4_relative_path": stable_mp4.relative_to(output_root).as_posix(),
@@ -60,11 +71,15 @@ def publish_render_outputs(
         "run_id": run_id,
     }
     temp_latest = output_root / f".latest.{run_id}.tmp"
-    temp_latest.write_text(
-        json.dumps(latest_payload, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    os.replace(temp_latest, latest_path)
+    try:
+        temp_latest.write_text(
+            json.dumps(latest_payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        os.replace(temp_latest, latest_path)
+    except BaseException:
+        temp_latest.unlink(missing_ok=True)
+        raise
     return PublishedRenderOutputs(
         mp4_path=stable_mp4,
         package_path=package_target,

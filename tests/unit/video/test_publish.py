@@ -110,3 +110,37 @@ def test_package_copy_failure_keeps_previous_successful_mp4(
 
     assert stable_mp4.read_bytes() == b"previous"
     assert not (output_root / "latest.json").exists()
+
+
+def test_package_publish_failure_cleans_the_temporary_package_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output_root = tmp_path / "08_output"
+    output_root.mkdir()
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    (staging / "final.mp4").write_bytes(b"new")
+    package = staging / "package"
+    package.mkdir()
+    (package / "file.txt").write_text("new", encoding="utf-8")
+
+    original_replace = publish_module.os.replace
+
+    def fail_package_cutover(source: str | Path, target: str | Path) -> None:
+        if Path(source).name == ".package-job-failed.tmp":
+            raise OSError("simulated package cutover failure")
+        original_replace(source, target)
+
+    monkeypatch.setattr(publish_module.os, "replace", fail_package_cutover)
+
+    with pytest.raises(OSError, match="package cutover failure"):
+        publish_render_outputs(
+            staging_root=staging,
+            output_root=output_root,
+            run_id="job-failed",
+            final_name="final.mp4",
+            package_name="package",
+        )
+
+    assert not (output_root / ".package-job-failed.tmp").exists()
+    assert not (output_root / "package-job-failed").exists()
