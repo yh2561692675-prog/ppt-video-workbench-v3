@@ -5,6 +5,8 @@ param(
     [string]$Ffmpeg,
     [Parameter(Mandatory = $true)]
     [string]$Ffprobe,
+    [Parameter(Mandatory = $true)]
+    [string]$Uv,
     [int]$DurationSeconds = 7200,
     [int]$MinimumCycles = 100,
     [int]$CycleIntervalSeconds = 15,
@@ -41,7 +43,7 @@ $completedPath = "$logPrefix.completed.json"
 $previousErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = 'Continue'
 try {
-    & uv run python scripts/performance_soak_acceptance.py `
+    & $Uv run python scripts/performance_soak_acceptance.py `
         --candidate $Candidate `
         --repo-root . `
         --output-root test-results/soak `
