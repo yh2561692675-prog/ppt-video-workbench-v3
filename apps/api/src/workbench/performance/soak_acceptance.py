@@ -43,7 +43,11 @@ from workbench.video.models import ProjectVideoProps
 from workbench.video.package_service import VideoExportResult
 
 _SCHEMA_VERSION = "1.0"
-_DEFAULT_PAGE_DURATION_MS = 300
+# The V1 concat path copies page streams.  A 300ms page is not an integral
+# number of 24fps frames and produces a fractional final stream timebase after
+# concat.  Use one-second fixture pages so this soak validates the qualified
+# CFR delivery path instead of relying on a lossy rate rounding policy.
+_DEFAULT_PAGE_DURATION_MS = 1_000
 _WINDOWS_ACCEPTANCE_PATH_LIMIT = 240
 _DEFAULT_LEDGER_SEGMENT_BYTES = 256 * 1024
 

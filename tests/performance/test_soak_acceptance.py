@@ -4,6 +4,7 @@ import json
 
 import pytest
 from workbench.performance.soak_acceptance import (
+    _DEFAULT_PAGE_DURATION_MS,
     _candidate_run_root,
     _cycle_mode,
     _require_windows_path_budget,
@@ -11,6 +12,10 @@ from workbench.performance.soak_acceptance import (
     _temporary_file_count,
     _validate_options,
 )
+
+
+def test_soak_fixture_page_duration_is_integral_at_the_qualified_24fps_rate() -> None:
+    assert _DEFAULT_PAGE_DURATION_MS * 24 % 1_000 == 0
 
 
 def test_soak_cycle_modes_prioritize_cancel_retry_then_recovery() -> None:
