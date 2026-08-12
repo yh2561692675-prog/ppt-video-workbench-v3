@@ -132,6 +132,7 @@ def test_package_publish_failure_cleans_the_temporary_package_directory(
         original_replace(source, target)
 
     monkeypatch.setattr(publish_module.os, "replace", fail_package_cutover)
+    monkeypatch.setattr(publish_module.time, "sleep", lambda _delay: None)
 
     with pytest.raises(OSError, match="package cutover failure"):
         publish_render_outputs(
@@ -144,3 +145,43 @@ def test_package_publish_failure_cleans_the_temporary_package_directory(
 
     assert not (output_root / ".package-job-failed.tmp").exists()
     assert not (output_root / "package-job-failed").exists()
+
+
+def test_publish_retries_a_transient_windows_directory_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output_root = tmp_path / "08_output"
+    output_root.mkdir()
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    (staging / "final.mp4").write_bytes(b"new")
+    package = staging / "package"
+    package.mkdir()
+    (package / "file.txt").write_text("new", encoding="utf-8")
+
+    original_replace = publish_module.os.replace
+    attempts = 0
+    observed_delays: list[float] = []
+
+    def transient_package_lock(source: str | Path, target: str | Path) -> None:
+        nonlocal attempts
+        if Path(source).name == ".package-job-retry.tmp":
+            attempts += 1
+            if attempts < 3:
+                raise PermissionError("simulated transient directory lock")
+        original_replace(source, target)
+
+    monkeypatch.setattr(publish_module.os, "replace", transient_package_lock)
+    monkeypatch.setattr(publish_module.time, "sleep", observed_delays.append)
+
+    published = publish_render_outputs(
+        staging_root=staging,
+        output_root=output_root,
+        run_id="job-retry",
+        final_name="final.mp4",
+        package_name="package",
+    )
+
+    assert attempts == 3
+    assert observed_delays == [0.05, 0.1]
+    assert published.package_path.is_dir()

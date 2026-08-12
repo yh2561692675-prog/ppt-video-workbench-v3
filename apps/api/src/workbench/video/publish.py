@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -47,7 +48,7 @@ def publish_render_outputs(
         if temp_package.exists():
             shutil.rmtree(temp_package)
         shutil.copytree(staged_package, temp_package)
-        os.replace(temp_package, package_target)
+        _replace_with_retry(temp_package, package_target)
     except BaseException:
         # A failed or cancelled package publication must not leave a directory
         # which looks like a partially published delivery package.
@@ -60,7 +61,7 @@ def publish_render_outputs(
     temp_mp4 = output_root / f".{final_name}.{run_id}.tmp"
     try:
         shutil.copy2(staged_mp4, temp_mp4)
-        os.replace(temp_mp4, stable_mp4)
+        _replace_with_retry(temp_mp4, stable_mp4)
     except BaseException:
         temp_mp4.unlink(missing_ok=True)
         raise
@@ -76,7 +77,7 @@ def publish_render_outputs(
             json.dumps(latest_payload, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
-        os.replace(temp_latest, latest_path)
+        _replace_with_retry(temp_latest, latest_path)
     except BaseException:
         temp_latest.unlink(missing_ok=True)
         raise
@@ -92,3 +93,26 @@ def _child_path(root: Path, name: str) -> Path:
     if target != root and root not in target.parents:
         raise ValueError(f"path escapes root: {name}")
     return target
+
+
+def _replace_with_retry(
+    source: Path,
+    target: Path,
+    *,
+    attempts: int = 8,
+    initial_delay_seconds: float = 0.05,
+) -> None:
+    """Retry a bounded Windows atomic cutover when a transient lock races it."""
+
+    if attempts < 1:
+        raise ValueError("attempts must be at least one")
+    delay = initial_delay_seconds
+    for attempt in range(1, attempts + 1):
+        try:
+            os.replace(source, target)
+            return
+        except PermissionError:
+            if attempt == attempts:
+                raise
+            time.sleep(delay)
+            delay = min(delay * 2, 0.8)
