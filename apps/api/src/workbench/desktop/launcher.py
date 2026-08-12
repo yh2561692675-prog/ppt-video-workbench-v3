@@ -24,6 +24,17 @@ MUTEX_ALREADY_EXISTS = 183
 _LOCAL_MUTEX_HELD = False
 
 
+def _windows_windll() -> Any:
+    """Return ctypes' Windows DLL loader behind an explicit platform boundary."""
+
+    if os.name != "nt":
+        raise RuntimeError("windows_api_unavailable")
+    import ctypes
+
+    ctypes_module: Any = ctypes
+    return ctypes_module.windll
+
+
 @dataclass(frozen=True)
 class InstanceState:
     version: str
@@ -47,13 +58,12 @@ class LauncherMutex:
                 raise ReleaseSlotError("launcher_start_in_progress")
             _LOCAL_MUTEX_HELD = True
             return self
-        import ctypes
-
-        self.handle = ctypes.windll.kernel32.CreateMutexW(None, False, self.name)
+        kernel32 = _windows_windll().kernel32
+        self.handle = kernel32.CreateMutexW(None, False, self.name)
         if not self.handle:
             raise ReleaseSlotError("launcher_mutex_create_failed")
-        if ctypes.windll.kernel32.GetLastError() == MUTEX_ALREADY_EXISTS:
-            ctypes.windll.kernel32.CloseHandle(self.handle)
+        if kernel32.GetLastError() == MUTEX_ALREADY_EXISTS:
+            kernel32.CloseHandle(self.handle)
             self.handle = None
             raise ReleaseSlotError("launcher_start_in_progress")
         return self
@@ -61,10 +71,9 @@ class LauncherMutex:
     def __exit__(self, *_: object) -> None:
         global _LOCAL_MUTEX_HELD
         if self.handle is not None:
-            import ctypes
-
-            ctypes.windll.kernel32.ReleaseMutex(self.handle)
-            ctypes.windll.kernel32.CloseHandle(self.handle)
+            kernel32 = _windows_windll().kernel32
+            kernel32.ReleaseMutex(self.handle)
+            kernel32.CloseHandle(self.handle)
         _LOCAL_MUTEX_HELD = False
 
 
@@ -136,9 +145,7 @@ def _show_failure(message: str) -> None:
     if os.name != "nt":
         return
     with suppress(Exception):
-        import ctypes
-
-        ctypes.windll.user32.MessageBoxW(None, message, "PPT Video Workbench", 0x10)
+        _windows_windll().user32.MessageBoxW(None, message, "PPT Video Workbench", 0x10)
 
 
 def _terminate(process: subprocess.Popen[bytes]) -> None:
@@ -297,14 +304,12 @@ def _terminate_process(pid: int, *, wait: bool) -> None:
 
 def _terminate_windows_process(pid: int, *, wait: bool) -> None:
     """Use Win32 process handles because ``os.kill(SIGTERM)`` is unreliable here."""
-    import ctypes
-
     process_terminate = 0x0001
     synchronize = 0x00100000
     wait_object_0 = 0x00000000
     wait_timeout = 0x00000102
     error_invalid_parameter = 87
-    kernel32 = ctypes.windll.kernel32
+    kernel32 = _windows_windll().kernel32
     handle = kernel32.OpenProcess(process_terminate | synchronize, False, pid)
     if not handle:
         error = kernel32.GetLastError()

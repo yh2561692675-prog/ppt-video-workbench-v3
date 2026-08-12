@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import importlib
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any, cast
 
 import fitz  # type: ignore[import-untyped]
 from PIL import Image
@@ -56,7 +58,9 @@ def ensure_fonts_available(required_fonts: set[str]) -> None:
 def _windows_font_labels() -> set[str]:
     """Return font family labels registered for the Windows machine and user."""
 
-    import winreg
+    if sys.platform != "win32":
+        return set()
+    winreg = cast(Any, importlib.import_module("winreg"))
 
     labels: set[str] = set()
     keys = (
