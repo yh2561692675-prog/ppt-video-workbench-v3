@@ -5,7 +5,14 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from pathlib import Path
+
+if __package__ in {None, ""}:
+    # ``python scripts/performance_budget.py`` is the documented Windows
+    # operator entry point.  Add the repository root so sibling ``scripts``
+    # modules resolve exactly as they do for ``python -m``.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from workbench.performance.budget import (
     CandidateBindingV1,

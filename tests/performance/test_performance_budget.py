@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -155,3 +157,15 @@ def test_budget_write_is_non_overwriting_and_contract_rejects_mismatched_review(
     invalid["status"] = "approved"
     with pytest.raises(ValueError, match="must match"):
         PerformanceBudgetV1.model_validate(invalid)
+
+
+def test_budget_cli_is_directly_runnable_from_repository_root() -> None:
+    result = subprocess.run(
+        [sys.executable, "scripts/performance_budget.py", "--help"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "Create or freeze" in result.stdout
