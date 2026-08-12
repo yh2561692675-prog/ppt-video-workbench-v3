@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects-program",
+  "wave": "W1",
+  "task": "DP44_EXPORT_ASPECT_AND_FRAME_RATE_PRESSURE",
+  "status": "PASS",
+  "generated_at": "2026-08-13T03:25:00Z",
+  "branch": "codex/program-integration-v1",
+  "source": {
+    "commit": "7454d21a610148128ca278fc68054584e2c6ce70",
+    "worktree": "F:/ppt-video-workbench-v3/.worktrees/program-integration-v1"
+  },
+  "candidate": {
+    "id": "v1-rc-7454d21a6101-20260812T191907Z",
+    "manifest_sha256": "05064d8ecb370617c94e6a91ba1a25062c6dcd5f583235314e176cb7bbecfd07",
+    "valid": true
+  },
+  "page_export_matrix": {
+    "evidence_path": "test-results/export-matrix/c-05064d8ecb37/r-matrix-20260813T032054Z-1a16dffb/output-matrix-acceptance-v1.json",
+    "evidence_sha256": "3e224b95ec7fb3a97a91d547c7563ed466b91064634872aa73b095b4b5a28904",
+    "executed_profiles": [
+      {"canvas": "1280x720", "aspect": "16:9", "fps": 24},
+      {"canvas": "1280x720", "aspect": "16:9", "fps": 25},
+      {"canvas": "1920x1080", "aspect": "16:9", "fps": 30},
+      {"canvas": "1080x1920", "aspect": "9:16", "fps": 60},
+      {"canvas": "1080x1080", "aspect": "1:1", "fps": 30}
+    ],
+    "verification": "Every row used VideoExportService, actual FFmpeg mux, final media probe, frozen render config and SRT package artifact."
+  },
+  "render_graph_media_matrix": {
+    "evidence_path": "test-results/render-graph-matrix/c-05064d8ecb37/r-graph-20260813T031911Z-e7a98d42/render-graph-matrix-acceptance-v1.json",
+    "evidence_sha256": "9fafa70915dcd4204651bd63ed88706ea8cfd71be8a4d022a4459e9aba354f6e",
+    "runtime": "packaged Node, Remotion, Microsoft Edge, FFmpeg and FFprobe",
+    "features": [
+      "dissolve transition between overlapping image nodes",
+      "timed text overlay",
+      "word-timed burn-in subtitle",
+      "ASS/SRT/VTT package and mov_text soft subtitle track",
+      "two-clip FFmpeg audio mix"
+    ],
+    "final_streams": ["h264 video", "aac audio", "mov_text subtitle"],
+    "visual_differentials": {
+      "burn_in_and_overlay_at_0_5s": 5224884,
+      "transition_at_1_0s": 674675
+    }
+  },
+  "admission_controls": {
+    "four_k": "BLOCKED_UNTIL_FEATURE_AND_LAUNCHER_HARDWARE_CAPABILITY",
+    "gif": "BLOCKED_BEFORE_V1_QUEUE_WITH_export_container_not_supported",
+    "unsupported_canvas_or_fps": "BLOCKED_BEFORE_QUEUE"
+  },
+  "verification": [
+    "Candidate validation passed before both media executions.",
+    "Ruff and mypy --strict passed for 10 related Python source files.",
+    "53 related Python export, rendering, RenderGraph, API and performance tests passed.",
+    "7 Remotion Vitest checks, TypeScript no-emit and Prettier checks passed.",
+    "Windows long-path reproduction confirmed a 262-character FFmpeg temporary output fails; the short candidate-manifest runtime root prevents that failure while evidence retains full candidate identity."
+  ],
+  "scope_boundary": {
+    "completed": "720p/1080p aspect and frame-rate pressure plus real RenderGraph subtitle, overlay, transition and audio mix media output",
+    "not_claimed": [
+      "4K hardware admission or execution",
+      "GIF executable renderer",
+      "real external Provider",
+      "signed release",
+      "long-duration soak"
+    ],
+    "next": "DP45 long-duration soak, recovery and resource-curve acceptance"
+  },
+  "rollback": "All DP44 media runs remain candidate-specific ignored test-results. No user project, external provider or runtime feature flag was changed.",
+  "safe_resume": "Preserve both DP44 JSON/hash pairs. Start DP45 from a new clean candidate and a new non-overwriteable evidence root.",
+  "will_write_again": false
+}
