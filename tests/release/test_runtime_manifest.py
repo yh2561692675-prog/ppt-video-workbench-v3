@@ -143,7 +143,7 @@ def test_runtime_manifest_allows_risk_alert_css_identifiers(tmp_path: Path) -> N
 
 def test_runtime_manifest_rejects_long_openai_style_key(tmp_path: Path) -> None:
     release, artifact, license_file = _bundle(tmp_path)
-    artifact.write_text("sk-1234567890abcdefghijklmnop", encoding="utf-8")
+    artifact.write_text("sk-" + "1234567890abcdefghijklmnop", encoding="utf-8")
     manifest = build_runtime_manifest(
         release,
         artifact_paths=[(artifact, "python-runtime")],
