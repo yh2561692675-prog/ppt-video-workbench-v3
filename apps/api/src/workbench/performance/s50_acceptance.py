@@ -34,6 +34,8 @@ _SCHEMA_VERSION = "1.0"
 _PAGE_COUNT = 50
 _PAGE_DURATION_MS = 300
 _INTERRUPT_AFTER_PAGE = 10
+_PROJECT_NAME = "s"
+_WINDOWS_ACCEPTANCE_PATH_LIMIT = 240
 
 
 class ControlledInterruption(BaseException):
@@ -244,8 +246,9 @@ def execute_s50_acceptance(
     run_root = run_root.resolve()
     if run_root.exists():
         raise FileExistsError(f"S50 run root already exists: {run_root}")
+    _require_windows_path_budget(run_root)
     run_root.mkdir(parents=True)
-    workspace = run_root / "workspace"
+    workspace = run_root / "w"
     # ProjectService intentionally does not create an arbitrary configured
     # workspace. This acceptance owns its candidate-specific directory, so it
     # must create that exact directory before asking the product store to
@@ -368,7 +371,7 @@ def run_s50_acceptance(
     _require_test_results_child(repo_root, output_root)
     candidate_id, source_commit = _candidate_identity(candidate)
     manifest_sha256 = sha256_file(candidate_manifest_path)
-    run_id = f"s50-{time.strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
+    run_id = f"r-{time.strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
     # The full candidate ID remains in signed evidence.  Windows project
     # manifests also create an atomic temporary filename, so nesting the full
     # candidate ID here can exceed MAX_PATH before a render begins. A manifest
@@ -442,7 +445,7 @@ def _create_s50_fixture(projects: Any, run_root: Path) -> S50Fixture:
     del run_root
     # Keep the generated ProjectService directory short. Its atomic manifest
     # writer appends a UUID temporary filename during every checkpoint update.
-    project = projects.create("s50")
+    project = projects.create(_PROJECT_NAME)
     project_root = (projects.workspace_root / project.project_dir).resolve()
     pages: list[PageRecord] = []
     extractions: list[PageExtraction] = []
@@ -627,9 +630,30 @@ def _candidate_run_root(output_root: Path, manifest_sha256: str, run_id: str) ->
         character not in "0123456789abcdef" for character in manifest_sha256
     ):
         raise ValueError("candidate manifest SHA-256 must be a lowercase 64-character digest")
-    if not run_id.startswith("s50-"):
+    if not run_id.startswith("r-"):
         raise ValueError("S50 run ID is invalid")
-    return output_root / f"candidate-{manifest_sha256[:12]}" / run_id
+    return output_root / f"c-{manifest_sha256[:12]}" / run_id
+
+
+def _require_windows_path_budget(run_root: Path) -> None:
+    """Reject an S50 evidence layout that cannot publish the deepest package file."""
+
+    projected = (
+        run_root
+        / "w"
+        / "s_20260813_0102"
+        / "08_输出"
+        / ".render-jobs"
+        / ("0" * 8 + "-" + "0" * 4 + "-" + "0" * 4 + "-" + "0" * 4 + "-" + "0" * 12)
+        / "制作包"
+        / "Remotion工程"
+        / "ProjectVideoProps.json"
+    )
+    if os.name == "nt" and len(str(projected)) >= _WINDOWS_ACCEPTANCE_PATH_LIMIT:
+        raise ValueError(
+            "S50 acceptance output root is too deep for Windows package publication; "
+            "choose a shorter path inside test-results"
+        )
 
 
 def _require_test_results_child(repo_root: Path, output_root: Path) -> None:

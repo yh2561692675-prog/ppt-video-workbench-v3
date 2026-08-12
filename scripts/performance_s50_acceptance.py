@@ -28,7 +28,7 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--candidate", type=Path, required=True)
     parser.add_argument("--repo-root", type=Path, default=Path("."))
-    parser.add_argument("--output-root", type=Path, default=Path("test-results/performance-s50"))
+    parser.add_argument("--output-root", type=Path, default=Path("test-results/s50"))
     parser.add_argument("--ffmpeg")
     parser.add_argument("--ffprobe")
     return parser

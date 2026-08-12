@@ -6,6 +6,7 @@ import pytest
 import workbench.performance.s50_acceptance as s50_acceptance
 from workbench.performance.s50_acceptance import (
     _candidate_run_root,
+    _require_windows_path_budget,
     _temporary_file_count,
     _validate_package,
     _write_wav,
@@ -70,26 +71,36 @@ def test_s50_creates_its_owned_workspace_before_creating_app(
             ffprobe="ffprobe",
         )
 
-    assert observed == [tmp_path / "run" / "workspace"]
+    assert observed == [tmp_path / "run" / "w"]
     assert observed[0].is_dir()
 
 
 def test_candidate_run_root_is_short_and_candidate_hash_bound(tmp_path: Path) -> None:
     manifest_hash = "a" * 64
     run_root = _candidate_run_root(
-        tmp_path / "test-results" / "performance-s50",
+        Path("F:/x"),
         manifest_hash,
-        "s50-20260813T010203Z-12345678",
+        "r-20260813T010203Z-12345678",
     )
     manifest_temp = (
         run_root
-        / "workspace"
-        / "s50_20260813_0102"
+        / "w"
+        / "s_20260813_0102"
         / (".project.json." + "b" * 32 + ".tmp")
     )
 
-    assert "candidate-aaaaaaaaaaaa" in run_root.parts
-    assert len(str(manifest_temp)) < 260
+    assert "c-aaaaaaaaaaaa" in run_root.parts
+    assert len(str(manifest_temp)) < 240
+    _require_windows_path_budget(run_root)
+
+
+def test_s50_rejects_an_output_layout_that_exceeds_windows_package_path_budget(
+    tmp_path: Path,
+) -> None:
+    too_deep = tmp_path / ("x" * 260)
+
+    with pytest.raises(ValueError, match="too deep"):
+        _require_windows_path_budget(too_deep)
 
 
 def test_s50_page_audio_fixture_is_unique_per_page(tmp_path: Path) -> None:
