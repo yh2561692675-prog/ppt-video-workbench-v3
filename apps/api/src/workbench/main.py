@@ -208,7 +208,7 @@ def create_app(
             worker.stop(timeout=10.0)
         service.close()
 
-    app = FastAPI(title="PPT Video Workbench", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="PPT Video Workbench", version="0.1.1", lifespan=lifespan)
     app.state.project_service = service
     app.state.llm_profile_store = profile_store
     app.state.heygen_profile_store = heygen_profile_store

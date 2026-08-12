@@ -314,7 +314,7 @@ try {
 
     uv run --frozen python scripts/build_runtime_manifest.py `
         --release-root $stageRoot `
-        --version "0.1.0" `
+        --version "0.1.1" `
         --api-executable (Join-Path $apiRoot "workbench.exe") `
         --web-index (Join-Path $webRoot "index.html") `
         --runtime-root $runtimeRoot `
@@ -353,7 +353,7 @@ try {
         throw "Inno Setup did not create the installer: $installerPath"
     }
     $artifactManifestPath = Join-Path $installerOutputRoot "release-artifacts.json"
-    uv run --frozen python $releaseArtifactsScript --repository-root $repoRoot --output $artifactManifestPath --installer $installerPath --payload-manifest (Join-Path $stageRoot "runtime-manifest.json") --version "0.1.0"
+    uv run --frozen python $releaseArtifactsScript --repository-root $repoRoot --output $artifactManifestPath --installer $installerPath --payload-manifest (Join-Path $stageRoot "runtime-manifest.json") --version "0.1.1"
     if ($LASTEXITCODE -ne 0) {
         throw "Release artifact manifest generation failed with exit code $LASTEXITCODE."
     }

@@ -24,8 +24,12 @@ def main() -> None:
     observed = {
         Path("pyproject.toml"): _toml_version(Path("pyproject.toml")),
         Path("apps/api/pyproject.toml"): _toml_version(Path("apps/api/pyproject.toml")),
+        Path("peripheral-platform/pyproject.toml"): _toml_version(
+            Path("peripheral-platform/pyproject.toml")
+        ),
         Path("package.json"): _json_version(Path("package.json")),
         Path("apps/web/package.json"): _json_version(Path("apps/web/package.json")),
+        Path("remotion/package.json"): _json_version(Path("remotion/package.json")),
     }
     mismatches = {
         path.as_posix(): version for path, version in observed.items() if version != expected
