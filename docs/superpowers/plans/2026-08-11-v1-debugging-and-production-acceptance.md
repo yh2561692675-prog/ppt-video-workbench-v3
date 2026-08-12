@@ -343,10 +343,10 @@ python -m scripts.debug_program verdict --run <path>
 
 ## DP41：冻结性能预算 schema
 
-- [ ] 定义主机 profile、fixture、冷/热缓存和并发度。
-- [ ] 定义启动、导入、预检、预览、渲染、合成和制作包指标。
-- [ ] 定义 OOM、磁盘、孤儿进程和回退阈值。
-- [ ] 首个 clean candidate 只生成 baseline，不用旧恢复结果代替。
+- [x] 定义主机 profile、fixture、冷/热缓存和并发度。
+- [x] 定义启动、导入、预检、预览、渲染、合成和制作包指标。
+- [x] 定义 OOM、磁盘、孤儿进程和回退阈值。
+- [x] 首个 clean candidate 只生成 baseline，不用旧恢复结果代替。
 - [ ] 工程负责人审核后冻结 `performance-budget-v1.json`。
 
 ## DP42：执行 S8 冷/热缓存
