@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
-from workbench.e2e.synthetic import SyntheticVideoRenderer
+from workbench.e2e.synthetic import (
+    SyntheticAuthoritativePreviewExecutor,
+    SyntheticVideoRenderer,
+)
+from workbench.rendering.hashing import sha256_json
+from workbench.rendering.models import GraphCanvas, RenderGraphV2
 
 from scripts.dg2_e2e_fixture import (
     CONTRACT_PATH,
@@ -64,3 +71,40 @@ def test_synthetic_render_delay_is_explicitly_scoped_and_validated(
     monkeypatch.setenv("WORKBENCH_DG2_RENDER_DELAY_SECONDS", "invalid")
     with pytest.raises(ValueError, match="must be numeric"):
         SyntheticVideoRenderer()
+
+
+def test_synthetic_authoritative_preview_uses_graph_media_contract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    draft = RenderGraphV2(
+        project_id=uuid4(),
+        timeline_revision=1,
+        duration_us=1_500_000,
+        canvas=GraphCanvas(width=1280, height=720, fps_num=30, fps_den=1),
+        graph_hash="0" * 64,
+    )
+    graph = draft.model_copy(
+        update={
+            "graph_hash": sha256_json(
+                draft.model_dump(mode="json", exclude={"graph_hash", "created_at"})
+            )
+        }
+    )
+    observed: list[str] = []
+
+    def run(command: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+        observed.extend(command)
+        Path(command[-1]).write_bytes(b"synthetic-preview")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", run)
+    output = SyntheticAuthoritativePreviewExecutor("fixture-ffmpeg")(
+        graph, tmp_path / "preview"
+    )
+
+    assert output.read_bytes() == b"synthetic-preview"
+    assert observed[0] == "fixture-ffmpeg"
+    assert "color=c=black:s=1280x720:r=30/1:d=1.500000" in observed
+    assert "anullsrc=r=48000:cl=stereo" in observed
+    assert "libx264" in observed
+    assert "aac" in observed

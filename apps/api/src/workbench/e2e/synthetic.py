@@ -16,6 +16,7 @@ from pathlib import Path
 from time import sleep
 
 from workbench.audio.models import RecognizedSegment, RecognizedWord
+from workbench.rendering.models import RenderGraphV2
 from workbench.video.models import ProjectVideoProps, VideoPageProps
 
 _DIGITS = "零一二三四五六七八九"
@@ -110,6 +111,68 @@ class SyntheticVideoRenderer:
         )
         if completed.returncode != 0 or not output.is_file() or output.stat().st_size == 0:
             raise RuntimeError("synthetic DG2 renderer failed to create an H.264 page clip")
+
+
+class SyntheticAuthoritativePreviewExecutor:
+    """Create a deterministic preview without the packaged Remotion runtime.
+
+    The DG2 browser contract validates the authoritative-preview lifecycle,
+    cache, publication and media-probe paths.  Its source material is generated
+    in CI, so a solid-color H.264/AAC artifact is sufficient while still
+    exercising real FFmpeg and ffprobe processes.
+    """
+
+    def __init__(self, ffmpeg: str | None = None) -> None:
+        self.ffmpeg = ffmpeg or shutil.which("ffmpeg") or "ffmpeg"
+
+    def __call__(
+        self,
+        graph: RenderGraphV2,
+        output_dir: Path,
+        _: object | None = None,
+    ) -> Path:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output = output_dir / "preview.mp4"
+        fps = f"{graph.canvas.fps_num}/{graph.canvas.fps_den}"
+        duration = f"{graph.duration_us / 1_000_000:.6f}"
+        completed = subprocess.run(
+            [
+                self.ffmpeg,
+                "-y",
+                "-loglevel",
+                "error",
+                "-f",
+                "lavfi",
+                "-i",
+                (
+                    "color=c=black:"
+                    f"s={graph.canvas.width}x{graph.canvas.height}:"
+                    f"r={fps}:d={duration}"
+                ),
+                "-f",
+                "lavfi",
+                "-i",
+                "anullsrc=r=48000:cl=stereo",
+                "-t",
+                duration,
+                "-shortest",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:a",
+                "aac",
+                str(output),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if completed.returncode != 0 or not output.is_file() or output.stat().st_size == 0:
+            raise RuntimeError(
+                "synthetic DG2 authoritative preview failed to create an H.264/AAC artifact"
+            )
+        return output
 
 
 def _chinese_number(value: int) -> str:
