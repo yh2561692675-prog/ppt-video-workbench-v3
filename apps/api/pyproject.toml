@@ -22,7 +22,7 @@ ppt-video-workbench-peripheral-platform = { workspace = true }
 
 [project.optional-dependencies]
 ocr = [
-    "numpy>=2,<3",
+    "numpy>=2.5.2,<3",
     "paddleocr>=3.2,<4",
     "paddlepaddle>=3.2,<4",
 ]
