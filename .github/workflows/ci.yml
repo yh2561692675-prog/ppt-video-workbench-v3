@@ -26,7 +26,9 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ffmpeg libreoffice fonts-noto-cjk-extra
       - if: runner.os == 'Windows'
         shell: pwsh
-        run: choco install ffmpeg libreoffice-fresh -y --no-progress
+        run: |
+          choco install ffmpeg libreoffice-fresh -y --no-progress
+          "C:\Program Files\LibreOffice\program" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - run: uv sync --frozen
       - run: uv run ruff check .
       - run: uv run mypy apps/api/src
