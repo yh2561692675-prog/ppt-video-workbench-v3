@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Literal
 from uuid import UUID, uuid4
 
@@ -37,6 +37,19 @@ class RetryPolicy(StrEnum):
 
 class QualityModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+
+def _is_unsafe_relative_path(value: str) -> bool:
+    """Reject absolute and parent paths in both supported path syntaxes."""
+
+    windows_path = PureWindowsPath(value)
+    posix_path = PurePosixPath(value)
+    return (
+        windows_path.is_absolute()
+        or posix_path.is_absolute()
+        or ".." in windows_path.parts
+        or ".." in posix_path.parts
+    )
 
 
 class PageSpan(QualityModel):
@@ -152,8 +165,7 @@ class EvidenceRef(QualityModel):
 
     @model_validator(mode="after")
     def validate_relative_path(self) -> EvidenceRef:
-        path = Path(self.relative_path)
-        if path.is_absolute() or ".." in path.parts:
+        if _is_unsafe_relative_path(self.relative_path):
             raise ValueError("证据路径必须位于项目相对目录内")
         if self.start_ms is not None and self.end_ms is not None and self.end_ms <= self.start_ms:
             raise ValueError("证据结束时间必须晚于开始时间")
@@ -201,10 +213,8 @@ class QualityReport(QualityModel):
 
     @model_validator(mode="after")
     def validate_report_path(self) -> QualityReport:
-        if self.report_path is not None:
-            path = Path(self.report_path)
-            if path.is_absolute() or ".." in path.parts:
-                raise ValueError("质量报告路径必须为项目相对路径")
+        if self.report_path is not None and _is_unsafe_relative_path(self.report_path):
+            raise ValueError("质量报告路径必须为项目相对路径")
         return self
 
 

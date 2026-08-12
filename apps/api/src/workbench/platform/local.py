@@ -399,7 +399,7 @@ class LocalPlatformServices:
                 CapabilityStateV1(
                     capability_id="credentials",
                     status="misconfigured",
-                    detail=f"{self.credentials.backend.name} binding is not installed",
+                    detail="native OS credential binding is not installed",
                 )
             ]
         if not tools[0].available or not tools[1].available:

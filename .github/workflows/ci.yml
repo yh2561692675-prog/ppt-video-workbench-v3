@@ -7,6 +7,7 @@ on:
 jobs:
   quality:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
@@ -21,6 +22,11 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: '11.7.0'
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg libreoffice
+      - if: runner.os == 'Windows'
+        shell: pwsh
+        run: choco install ffmpeg libreoffice-fresh -y --no-progress
       - run: uv sync --frozen
       - run: uv run ruff check .
       - run: uv run mypy apps/api/src

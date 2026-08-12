@@ -4,6 +4,7 @@ import base64
 import hashlib
 import os
 import subprocess
+import sys
 import wave
 from datetime import UTC, datetime
 from pathlib import Path
@@ -268,7 +269,7 @@ def test_s1_module_entrypoint_produces_contract(tmp_path: Path, module: str, job
     environment["PYTHONPATH"] = os.pathsep.join(("apps/api/src", "peripheral-platform/src"))
     completed = subprocess.run(
         [
-            str(Path(".venv/Scripts/python.exe")),
+            sys.executable,
             "-m",
             f"workbench.business_modules.{module}",
             "--request",

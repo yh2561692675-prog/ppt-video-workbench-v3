@@ -10,7 +10,7 @@ import subprocess
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 from .evidence import EvidenceWriter, sha256_file, utc_now
@@ -23,7 +23,14 @@ def _safe_release_output(repo_root: Path, relative: str) -> str:
     """Allow release outputs only below the debug evidence root."""
 
     value = Path(relative)
-    if value.is_absolute() or value.drive or value.root or ".." in value.parts:
+    windows_value = PureWindowsPath(relative)
+    posix_value = PurePosixPath(relative)
+    if (
+        windows_value.is_absolute()
+        or posix_value.is_absolute()
+        or ".." in windows_value.parts
+        or ".." in posix_value.parts
+    ):
         raise ValueError("release output must be a relative path without traversal")
     allowed_root = (repo_root / "test-results" / "debug-program").resolve()
     resolved = (repo_root / value).resolve()
