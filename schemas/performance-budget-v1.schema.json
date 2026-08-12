@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/performance-budget-v1.schema.json",
+  "title": "PerformanceBudgetV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "candidate",
+    "host_profile",
+    "workload",
+    "baseline",
+    "thresholds",
+    "review"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "status": { "enum": ["proposed", "approved"] },
+    "candidate": { "$ref": "#/$defs/candidate" },
+    "host_profile": { "$ref": "#/$defs/hostProfile" },
+    "workload": { "$ref": "#/$defs/workload" },
+    "baseline": { "$ref": "#/$defs/baseline" },
+    "thresholds": { "$ref": "#/$defs/thresholds" },
+    "review": { "$ref": "#/$defs/review" }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "size_bytes", "sha256"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate_id", "source_commit", "manifest_sha256"],
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^v1-rc-[a-z0-9]+-[0-9]{8}T[0-9]{6}Z$"
+        },
+        "source_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "manifest_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "hostProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_id",
+        "platform",
+        "python",
+        "cpu_count",
+        "gpu_probe",
+        "gpu_memory_bytes"
+      ],
+      "properties": {
+        "profile_id": { "$ref": "#/$defs/sha256" },
+        "platform": { "type": "string", "minLength": 1 },
+        "python": { "type": "string", "minLength": 1 },
+        "cpu_count": { "type": ["integer", "null"], "minimum": 1 },
+        "gpu_probe": { "type": "string", "minLength": 1 },
+        "gpu_memory_bytes": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      }
+    },
+    "workload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fixture_id", "fixture_sha256", "cache_mode", "concurrency"],
+      "properties": {
+        "fixture_id": { "type": "string", "minLength": 1 },
+        "fixture_sha256": { "$ref": "#/$defs/sha256" },
+        "cache_mode": {
+          "enum": ["cold", "warm", "selective_invalidation"]
+        },
+        "concurrency": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "phaseMeasurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "duration_ms", "reason"],
+      "properties": {
+        "status": { "enum": ["observed", "not_observed"] },
+        "duration_ms": { "type": ["integer", "null"], "minimum": 0 },
+        "reason": { "type": ["string", "null"] }
+      }
+    },
+    "componentPeak": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rss_bytes",
+        "cpu_percent",
+        "handle_count",
+        "thread_count",
+        "read_bytes",
+        "write_bytes",
+        "gpu_memory_bytes"
+      ],
+      "properties": {
+        "rss_bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "cpu_percent": { "type": ["number", "null"], "minimum": 0 },
+        "handle_count": { "type": ["integer", "null"], "minimum": 0 },
+        "thread_count": { "type": ["integer", "null"], "minimum": 0 },
+        "read_bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "write_bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "gpu_memory_bytes": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      }
+    },
+    "temporarySpace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_used_bytes",
+        "max_file_bytes",
+        "max_file_count",
+        "min_free_bytes"
+      ],
+      "properties": {
+        "max_used_bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "max_file_bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "max_file_count": { "type": ["integer", "null"], "minimum": 0 },
+        "min_free_bytes": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "session_id",
+        "captured_at",
+        "summary",
+        "events",
+        "phase_metrics",
+        "component_peaks",
+        "temporary_space_peaks"
+      ],
+      "properties": {
+        "session_id": { "type": "string", "minLength": 1 },
+        "captured_at": { "type": "string", "format": "date-time" },
+        "summary": { "$ref": "#/$defs/artifact" },
+        "events": { "$ref": "#/$defs/artifact" },
+        "phase_metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "startup_to_health",
+            "import",
+            "preflight",
+            "preview",
+            "page_render",
+            "mux",
+            "package"
+          ],
+          "properties": {
+            "startup_to_health": { "$ref": "#/$defs/phaseMeasurement" },
+            "import": { "$ref": "#/$defs/phaseMeasurement" },
+            "preflight": { "$ref": "#/$defs/phaseMeasurement" },
+            "preview": { "$ref": "#/$defs/phaseMeasurement" },
+            "page_render": { "$ref": "#/$defs/phaseMeasurement" },
+            "mux": { "$ref": "#/$defs/phaseMeasurement" },
+            "package": { "$ref": "#/$defs/phaseMeasurement" }
+          }
+        },
+        "component_peaks": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/componentPeak" }
+        },
+        "temporary_space_peaks": { "$ref": "#/$defs/temporarySpace" }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_phase_regression_percent",
+        "max_soak_rss_growth_percent",
+        "allow_oom",
+        "min_free_disk_bytes",
+        "max_orphan_processes",
+        "max_unpublished_temporary_files"
+      ],
+      "properties": {
+        "max_phase_regression_percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "max_soak_rss_growth_percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "allow_oom": { "const": false },
+        "min_free_disk_bytes": { "type": "integer", "minimum": 0 },
+        "max_orphan_processes": { "type": "integer", "minimum": 0 },
+        "max_unpublished_temporary_files": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reviewer", "reviewed_at"],
+      "properties": {
+        "status": { "enum": ["proposed", "approved"] },
+        "reviewer": { "type": ["string", "null"] },
+        "reviewed_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    }
+  }
+}

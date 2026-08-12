@@ -437,6 +437,17 @@ def test_candidate_rejects_untracked_checkout_and_missing_snapshot_cleans_partia
     assert not any(output.iterdir())
 
 
+def test_candidate_snapshot_includes_performance_budget_contract(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    performance_schema = source / "schemas" / "performance-budget-v1.schema.json"
+    performance_schema.parent.mkdir(parents=True)
+    performance_schema.write_text('{"schema_version":"1.0"}\n', encoding="utf-8")
+
+    expected = tuple(candidate_module.SNAPSHOT_FILES)
+    assert "schemas/performance-budget-v1.schema.json" in expected
+
+
 def test_run_ids_are_unique_within_one_second() -> None:
     first = new_run_id("v1-rc-abc1234-20260811T193000Z", "python-smoke")
     second = new_run_id("v1-rc-abc1234-20260811T193000Z", "python-smoke")

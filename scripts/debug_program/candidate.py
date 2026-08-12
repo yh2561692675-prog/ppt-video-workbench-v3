@@ -26,6 +26,7 @@ SNAPSHOT_FILES = (
     "schemas/cloud/cloud-collaboration-v1.openapi.yaml",
     "schemas/render-graph-v2.schema.json",
     "schemas/export-plan-v1.schema.json",
+    "schemas/performance-budget-v1.schema.json",
     "schemas/quality-report-v1.schema.json",
     "apps/api/src/workbench/contracts/core_compat.py",
 )
