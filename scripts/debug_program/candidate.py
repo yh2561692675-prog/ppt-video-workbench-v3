@@ -82,6 +82,13 @@ def _probe(command: str, *args: str) -> dict[str, Any]:
     return _probe_path(Path(path), command, *args)
 
 
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.resolve())
+    except OSError:
+        return str(path.absolute())
+
+
 def _probe_path(path: Path, command: str, *args: str) -> dict[str, Any]:
     try:
         result = subprocess.run(
@@ -94,12 +101,16 @@ def _probe_path(path: Path, command: str, *args: str) -> dict[str, Any]:
         )
         return {
             "available": available,
-            "path": str(path.resolve()),
+            "path": _display_path(path),
             "exit_code": result.returncode,
             "version": identity,
         }
     except (OSError, subprocess.TimeoutExpired) as exc:
-        return {"available": False, "path": str(Path(path).resolve()), "error": str(exc)}
+        # Runtime discovery is evidence, never a precondition for snapshotting
+        # a clean source candidate.  Windows may deny execution of a locally
+        # installed tool (for example ISCC under policy); retain the exact
+        # probe failure and let the later release gate block on availability.
+        return {"available": False, "path": _display_path(path), "error": str(exc)}
 
 
 def resolve_iscc_path() -> Path | None:

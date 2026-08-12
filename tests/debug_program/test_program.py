@@ -481,6 +481,22 @@ def test_candidate_runtime_probe_resolves_user_local_iscc(
     assert candidate_module.resolve_iscc_path() == iscc.resolve()
 
 
+def test_candidate_runtime_probe_records_access_denied_without_claiming_available(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    executable = tmp_path / "ISCC.exe"
+    executable.write_bytes(b"stub")
+
+    def denied(*_args: object, **_kwargs: object) -> object:
+        raise PermissionError("access denied")
+
+    monkeypatch.setattr(candidate_module.subprocess, "run", denied)
+    probe = candidate_module._probe_path(executable, "ISCC.exe", "/?")
+
+    assert probe["available"] is False
+    assert "access denied" in str(probe["error"])
+
+
 def test_release_output_rejects_escape_and_absolute_paths(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="relative path"):
         _safe_release_output(tmp_path, "../outside")
