@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects-program",
+  "wave": "W1",
+  "task": "DP41_PERFORMANCE_BUDGET",
+  "status": "IMPLEMENTED_PENDING_ENGINEERING_APPROVAL",
+  "generated_at": "2026-08-13T01:12:41Z",
+  "branch": "codex/program-integration-v1",
+  "source": {
+    "commit": "2c77d87dac93b159e734098db81e092e433fff09",
+    "worktree": "F:/ppt-video-workbench-v3/.worktrees/program-integration-v1"
+  },
+  "owned_paths": [
+    "apps/api/src/workbench/performance/budget.py",
+    "schemas/performance-budget-v1.schema.json",
+    "scripts/performance_budget.py",
+    "scripts/performance_startup_probe.py",
+    "tests/performance/test_performance_budget.py",
+    "tests/performance/test_startup_probe.py",
+    "docs/acceptance/performance-budget-dp41.md"
+  ],
+  "completed": [
+    "Versioned host, workload, phase, resource-peak and regression-threshold contract.",
+    "Fail-closed direct CLI for proposal and named-reviewer approval without output replacement.",
+    "Clean-candidate startup-to-health baseline with raw JSONL and summary evidence.",
+    "Candidate, sampler evidence and proposed budget hash bindings independently parsed and validated."
+  ],
+  "candidate": {
+    "id": "v1-rc-2c77d87dac93-20260812T171116Z",
+    "manifest_sha256": "2f70b09693c7b5361fe0c687825c6da90f863c08530c71d05ca9de18770ecec9",
+    "valid": true
+  },
+  "baseline": {
+    "workload": "DG2-S8-synthetic-v1 / cold cache / concurrency 1",
+    "host_profile_id": "0a175f8fdf20cbfcc22f0126df0b4f23482de84dce78adea4a2b5baed0764e24",
+    "startup_to_health_ms": 7790,
+    "api_peak_rss_bytes": 131293184,
+    "minimum_free_temporary_bytes": 30754254848,
+    "missing_roots": [],
+    "gpu_memory_bytes": null,
+    "gpu_policy": "not_available_without_a_vendor_specific_runtime",
+    "status": "proposed",
+    "evidence_root": "test-results/performance-candidates/v1-rc-2c77d87dac93-20260812T171116Z/performance",
+    "summary_sha256": "fa85fdd5a06840192df59a809a0c76ba7a10bbe3059010fb724dbc2e6a104816",
+    "events_sha256": "14ddaf7752df4b7b82bf6047943d1219e41e63d30499f09a7333e8afae3e0890",
+    "proposed_budget_sha256": "0589cd2550193253d8e864042ac4276340cd2d82594417c3f0e7ec6f8176acc6"
+  },
+  "verification": [
+    "33 targeted Python tests passed.",
+    "Ruff passed.",
+    "mypy --strict passed for five performance sources.",
+    "git diff --check passed.",
+    "Candidate manifest and PerformanceBudgetV1 proposal independently parsed and validated."
+  ],
+  "remaining": [
+    "A named engineering owner must independently review the same candidate and freeze performance-budget-v1.json.",
+    "DP42 cold/warm/selective cache execution.",
+    "DP43 S50, DP44 export pressure and DP45 soak evidence."
+  ],
+  "rollback": "Do not consume the proposed budget; no production feature flag or runtime behavior changed.",
+  "safe_resume": "Keep the proposal proposed until a named engineering reviewer freezes it against the same clean candidate; proceed with DP42 using separately generated evidence.",
+  "will_write_again": false
+}
