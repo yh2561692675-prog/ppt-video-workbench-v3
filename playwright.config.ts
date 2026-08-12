@@ -2,14 +2,23 @@ import path from 'node:path';
 
 import { defineConfig } from '@playwright/test';
 
+const collectCiEvidence = Boolean(process.env.CI || process.env.PLAYWRIGHT_CI_EVIDENCE);
+
 export default defineConfig({
   testDir: './tests/e2e',
   timeout: 30_000,
   fullyParallel: false,
   workers: 1,
+  reporter: collectCiEvidence
+    ? [
+        ['line'],
+        ['junit', { outputFile: 'test-results/playwright-junit.xml' }],
+        ['html', { outputFolder: 'playwright-report', open: 'never' }],
+      ]
+    : [['list']],
   use: {
     baseURL: 'http://127.0.0.1:4173',
-    trace: 'retain-on-failure',
+    trace: collectCiEvidence ? 'on' : 'retain-on-failure',
   },
   webServer: [
     {

@@ -44,3 +44,13 @@ jobs:
       - if: runner.os == 'Windows'
         shell: pwsh
         run: ./scripts/run-web-release-gate.ps1 -CandidateId ci-${{ github.sha }}
+      - name: Upload CI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-evidence-${{ runner.os }}-${{ github.run_id }}-${{ github.job }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            test-results/
+            playwright-report/
