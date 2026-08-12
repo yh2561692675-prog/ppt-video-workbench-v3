@@ -12,6 +12,7 @@
 - [x] Validate formatting, focused Python checks, and release guard behavior locally.
 - [x] Remove duplicate branch/PR CI runs and align workflows with the actual default branch.
 - [x] On Windows, use preinstalled Edge and install only Playwright's small FFmpeg trace/video helper.
+- [x] Give the Windows material-to-narration transition the same explicit 60-second E2E budget as material parsing.
 - [ ] Open a PR linked to the tracking Issue and record the review evidence.
 - [ ] Wait for required CI, then squash-merge the PR.
 - [ ] Publish and verify the first honest `0.1.x` source prerelease.
