@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects-program",
+  "wave": "W1",
+  "task": "DP40_RESOURCE_SAMPLER",
+  "status": "PASS",
+  "generated_at": "2026-08-12T15:17:49Z",
+  "branch": "codex/program-integration-v1",
+  "source": {
+    "commit": "e828077e23c367b1bc3d45f8066c61848955aa5f",
+    "worktree": "F:/ppt-video-workbench-v3/.worktrees/program-integration-v1"
+  },
+  "implementation": {
+    "module": "apps/api/src/workbench/performance/sampler.py",
+    "cli": "scripts/performance_sampler.py",
+    "operator_documentation": "docs/acceptance/performance-sampler-dp40.md",
+    "output": "non-overwriteable JSONL event stream plus JSON summary",
+    "process_identity": "pid plus host process creation/start token; PID reuse creates another instance key",
+    "tree_policy": "named roots and all observed descendants retain root role plus detected component role",
+    "component_roles": ["launcher", "python", "node", "ffmpeg", "office", "other"],
+    "metrics": [
+      "RSS",
+      "CPU time and interval CPU percent",
+      "handle count",
+      "thread count",
+      "read/write bytes",
+      "temporary disk/file usage",
+      "GPU memory when a vendor-neutral probe is available"
+    ],
+    "unsupported_metric_policy": "unavailable or inaccessible metrics are null; the sampler never fabricates zero values",
+    "missing_root_policy": "missing named roots are emitted in every sample and retained in summary.roots_not_observed"
+  },
+  "platforms": {
+    "windows": "Toolhelp process/thread snapshots; GetProcessTimes, GetProcessMemoryInfo, GetProcessHandleCount and GetProcessIoCounters",
+    "linux": "/proc stat/status/io/fd inspection",
+    "gpu": "explicit null with gpu_probe explanation until a separately approved vendor runtime profile is added"
+  },
+  "verification": {
+    "unit_and_budget_tests": "5 passed: tree association, PID reuse, stage peaks, JSONL parseability, output collision, invalid interval and missing root",
+    "static": "Ruff passed; mypy strict passed for sampler, package export and CLI; git diff --check passed",
+    "windows_probe": {
+      "result": "PASS",
+      "command_shape": "performance_sampler.py --root launcher=<current PID> --root absent=999999 --interval 1 --duration 1",
+      "observed": "two samples, process-observed events, JSONL and summary parseable; real RSS/CPU/handle/thread/I/O values observed; absent root retained as missing"
+    }
+  },
+  "scope_boundary": {
+    "completed": "DP40 instrumentation foundation",
+    "next": "DP41 performance-budget schema and clean-candidate baseline",
+    "deferred": [
+      "vendor GPU telemetry profile",
+      "S8/S50 cold-hot cache execution",
+      "two-hour/eight-hour soak",
+      "performance budget approval"
+    ]
+  }
+}

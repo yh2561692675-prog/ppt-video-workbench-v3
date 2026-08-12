@@ -335,11 +335,11 @@ python -m scripts.debug_program verdict --run <path>
 
 **Owner:** B。
 
-- [ ] 采集 launcher/API/Worker/Node/FFmpeg/Office 进程树。
-- [ ] 每 1-5 秒记录 RSS、CPU、句柄、线程、GPU、磁盘读写和临时空间。
-- [ ] 记录阶段事件，能够把峰值映射到导入、预览、页面渲染和合成。
-- [ ] 进程 PID 重用或子进程变化时保持关联。
-- [ ] 输出 JSONL 和阶段摘要。
+- [x] 采集 launcher/API/Worker/Node/FFmpeg/Office 进程树。
+- [x] 每 1-5 秒记录 RSS、CPU、句柄、线程、GPU、磁盘读写和临时空间。
+- [x] 记录阶段事件，能够把峰值映射到导入、预览、页面渲染和合成。
+- [x] 进程 PID 重用或子进程变化时保持关联。
+- [x] 输出 JSONL 和阶段摘要。
 
 ## DP41：冻结性能预算 schema
 
