@@ -1,0 +1,65 @@
+name: Feature request
+description: Propose a focused improvement and explain who benefits.
+title: '[Feature]: '
+labels:
+  - enhancement
+  - status:needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing Issues and discussions before filing a proposal.
+        A strong request describes the user problem before prescribing an implementation.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Who is blocked, what are they trying to achieve, and why are current options insufficient?
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe observable behavior and a small acceptance example.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include current workarounds or smaller changes that might solve the problem.
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Primary scope
+      options:
+        - Local-first workflow
+        - Import and source parsing
+        - Narration, audio, or transcription
+        - Timeline, subtitles, or effects
+        - Preview or final rendering
+        - Web interface
+        - Packaging, installation, or updates
+        - Contributor experience or documentation
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Security, privacy, and compatibility considerations
+      description: Note external services, credentials, file formats, migrations, or backwards-compatibility impact.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission check
+      options:
+        - label: I searched for an existing proposal that covers this request.
+          required: true
+        - label: I can help test this change with synthetic or redacted data.

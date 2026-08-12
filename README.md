@@ -101,6 +101,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check.ps1
 - [更新日志](CHANGELOG.md)
 - [贡献指南](CONTRIBUTING.md)
 - [安全政策](SECURITY.md)
+- [维护者指南](docs/maintainer-guide.md)
 
 ## Contributing and license / 贡献与许可
 
