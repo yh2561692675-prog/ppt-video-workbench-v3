@@ -7,7 +7,7 @@ name = "ppt-video-workbench-peripheral-platform"
 version = "0.1.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-  "fastapi>=0.116,<0.117",
+  "fastapi>=0.139.2,<0.140",
   "pydantic>=2.11,<3",
   "uvicorn>=0.35,<0.36",
 ]
