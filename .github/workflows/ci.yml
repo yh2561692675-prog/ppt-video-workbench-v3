@@ -23,7 +23,7 @@ jobs:
         with:
           version: '11.7.0'
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg libreoffice
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg libreoffice fonts-noto-cjk-extra
       - if: runner.os == 'Windows'
         shell: pwsh
         run: choco install ffmpeg libreoffice-fresh -y --no-progress
