@@ -44,6 +44,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - if: runner.os != 'Windows'
         run: pnpm exec playwright install --with-deps chromium
+      - if: runner.os == 'Windows'
+        run: pnpm exec playwright install ffmpeg
       - run: pnpm check
       - run: pnpm e2e
       - if: runner.os == 'Windows'
