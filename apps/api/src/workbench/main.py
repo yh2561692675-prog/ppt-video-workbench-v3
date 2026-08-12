@@ -495,6 +495,7 @@ def create_app(
         graph_provider=render_graph_provider,
         graph_exporter=render_graph_exporter,
         feature_flags=render_feature_flags,
+        profile_resolver=export_preset_service.resolve_video_props,
     )
     render_job_worker = RenderJobWorker(
         service.jobs,

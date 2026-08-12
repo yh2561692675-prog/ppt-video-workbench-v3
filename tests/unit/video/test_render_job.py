@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from workbench.domain.enums import JobStatus
+from workbench.exports.presets import ExportPresetService
 from workbench.jobs.repository import JobRepository
 from workbench.storage.workspace_db import WorkspaceDatabase
 from workbench.video.errors import RenderPageFailed
@@ -69,6 +70,54 @@ def test_submit_same_input_twice_returns_one_active_job(tmp_path: Path) -> None:
     assert first.created is True
     assert second.created is False
     assert second.job.id == first.job.id
+
+
+def test_submit_freezes_requested_export_profile_before_queueing(tmp_path: Path) -> None:
+    from workbench.video.models import ProjectVideoProps, VideoPageProps
+
+    project_id = uuid4()
+    props = ProjectVideoProps(
+        project_id=project_id,
+        duration_ms=1_000,
+        template_version="job-profile-v1",
+        pages=[
+            VideoPageProps(
+                page_id=uuid4(),
+                page_order=1,
+                image_path="page.png",
+                audio_path="audio.wav",
+                start_ms=0,
+                end_ms=1_000,
+            )
+        ],
+    )
+
+    class ProfilePreview:
+        def preflight(self, _: object):
+            return type(
+                "Preflight",
+                (),
+                {
+                    "allowed": True,
+                    "props": props,
+                    "model_copy": lambda self, update: type(
+                        "EffectivePreflight", (), {"props": update["props"]}
+                    )(),
+                },
+            )()
+
+    preset_service = ExportPresetService(tmp_path, project_dir_resolver=lambda _: "project")
+    service = RenderJobService(
+        FakeProjects(tmp_path),
+        ProfilePreview(),
+        object(),
+        repository=_repo(tmp_path),
+        profile_resolver=preset_service.resolve_video_props,
+    )
+
+    submitted = service.submit(project_id, preset_id="youtube-1080p-60")
+    assert submitted.job.payload["preset_id"] == "youtube-1080p-60"
+    assert submitted.job.payload["props"]["fps"] == 60
 
 
 def test_handler_maps_known_failure_and_persists_safe_code(tmp_path: Path) -> None:

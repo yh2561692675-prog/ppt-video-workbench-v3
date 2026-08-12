@@ -15,6 +15,48 @@ def test_render_job_preflight_block_returns_conflict(tmp_path) -> None:
     assert response.status_code == 409
 
 
+def test_render_job_rejects_4k_before_enqueue_when_capability_is_not_confirmed(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setenv("WORKBENCH_ASYNC_RENDER_ENABLED", "false")
+    app = create_app(tmp_path)
+    project = app.state.project_service.create("4k admission")
+
+    def blocked_preflight(_):
+        from uuid import uuid4
+
+        from workbench.video.models import ProjectVideoProps, VideoPageProps, VideoPreflight
+
+        return VideoPreflight(
+            allowed=True,
+            props=ProjectVideoProps(
+                project_id=project.id,
+                duration_ms=1_000,
+                template_version="route-profile-v1",
+                pages=[
+                    VideoPageProps(
+                        page_id=uuid4(),
+                        page_order=1,
+                        image_path="page.png",
+                        audio_path="audio.wav",
+                        start_ms=0,
+                        end_ms=1_000,
+                    )
+                ],
+            ),
+        )
+
+    monkeypatch.setattr(app.state.render_job_service.preview, "preflight", blocked_preflight)
+    with TestClient(app) as client:
+        response = client.post(
+            f"/api/projects/{project.id}/video/render-jobs",
+            json={"preset_id": "master-4k-30"},
+        )
+    assert response.status_code == 409
+    assert "4K requires" in response.json()["error"]["message"]
+    assert not app.state.project_service.jobs.list_all()
+
+
 def test_render_job_get_supports_weak_etag(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("WORKBENCH_ASYNC_RENDER_ENABLED", "false")
     app = create_app(tmp_path)

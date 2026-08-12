@@ -7,6 +7,7 @@ from workbench.video.package_service import (
     PackageError,
     VideoExportError,
     VideoExportService,
+    _probe_fps,
     build_package_manifest,
     build_page_mux_command,
     validate_media_probe,
@@ -72,6 +73,7 @@ def test_media_probe_rejects_duration_outside_declared_tolerance() -> None:
     probe = {
         "width": 1920,
         "height": 1080,
+        "fps": 30,
         "video_codec": "h264",
         "audio_codec": "aac",
         "duration_ms": 1_250,
@@ -86,6 +88,7 @@ def test_media_probe_accepts_vertical_props_dimensions() -> None:
         {
             "width": 1080,
             "height": 1920,
+            "fps": 30,
             "video_codec": "h264",
             "audio_codec": "aac",
             "duration_ms": 1_000,
@@ -94,7 +97,14 @@ def test_media_probe_accepts_vertical_props_dimensions() -> None:
         tolerance_ms=100,
         expected_width=1080,
         expected_height=1920,
+        expected_fps=30,
     )
+
+
+def test_probe_fps_normalizes_ffprobe_rationals_and_rejects_malformed_values() -> None:
+    assert _probe_fps({"avg_frame_rate": "60000/1000"}) == 60
+    assert _probe_fps({"r_frame_rate": "25/1"}) == 25
+    assert _probe_fps({"avg_frame_rate": "0/0"}) is None
 
 
 def test_async_export_rejects_stale_input_before_rendering(tmp_path: Path) -> None:

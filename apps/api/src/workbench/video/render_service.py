@@ -58,7 +58,7 @@ class RenderedPage:
 class PillowPageRenderer:
     def render(
         self,
-        _: ProjectVideoProps,
+        props: ProjectVideoProps,
         __: VideoPageProps,
         source: Path,
         output: Path,
@@ -66,10 +66,10 @@ class PillowPageRenderer:
     ) -> None:
         with Image.open(source) as opened:
             image = opened.convert("RGB")
-            image.thumbnail((1920, 1080), Image.Resampling.LANCZOS)
-            canvas = Image.new("RGB", (1920, 1080), (7, 17, 31))
-            left = (1920 - image.width) // 2
-            top = (1080 - image.height) // 2
+            image.thumbnail((props.width, props.height), Image.Resampling.LANCZOS)
+            canvas = Image.new("RGB", (props.width, props.height), (7, 17, 31))
+            left = (props.width - image.width) // 2
+            top = (props.height - image.height) // 2
             canvas.paste(image, (left, top))
             output.parent.mkdir(parents=True, exist_ok=True)
             canvas.save(output, format="PNG", optimize=True)
@@ -256,6 +256,7 @@ class VideoRenderService:
                     "catalog_version": props.catalog_version,
                     "width": props.width,
                     "height": props.height,
+                    "fps": props.fps,
                     "subtitles": [
                         cue.model_dump(mode="json")
                         for cue in props.subtitles

@@ -33,6 +33,10 @@ class RenderJobActionRequest(BaseModel):
     expected_revision: int | None = Field(default=None, ge=1)
 
 
+class RenderJobSubmitRequest(BaseModel):
+    preset_id: str | None = Field(default=None, min_length=1, max_length=64)
+
+
 def create_video_router(
     service: VideoPreviewService,
     exporter: VideoExportService | None = None,
@@ -130,11 +134,19 @@ def create_video_router(
             ) from error
 
     @router.post("/render-jobs", status_code=202)
-    def create_render_job(project_id: UUID, response: Response) -> Envelope[dict[str, object]]:
+    def create_render_job(
+        project_id: UUID,
+        response: Response,
+        request: RenderJobSubmitRequest | None = None,
+    ) -> Envelope[dict[str, object]]:
         if render_jobs is None:
             raise HTTPException(status_code=503, detail="render worker unavailable")
         try:
-            submission = render_jobs.submit(project_id)
+            submission = (
+                render_jobs.submit(project_id, preset_id=request.preset_id)
+                if request is not None and request.preset_id is not None
+                else render_jobs.submit(project_id)
+            )
             response.status_code = 202 if submission.created else 200
             if submission.created and render_jobs.worker is not None:
                 render_jobs.worker.wake()

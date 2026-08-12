@@ -26,6 +26,7 @@ from workbench.services.project_service import ProjectService
 
 from .errors import RenderInputChanged, RenderInputStale, RenderJobFailure
 from .fingerprint import render_input_fingerprint
+from .models import ProjectVideoProps, VideoPreflight
 from .preview_service import VideoPreviewService
 from .process_runner import (
     CancellableProcessRunner,
@@ -73,6 +74,7 @@ class VideoExportResult(BaseModel):
     duration_ms: int = Field(ge=0)
     width: int = 1920
     height: int = 1080
+    fps: int = 30
     video_codec: str
     audio_codec: str
     artifact_count: int = Field(ge=1)
@@ -80,6 +82,27 @@ class VideoExportResult(BaseModel):
 
 
 MEDIA_DURATION_TOLERANCE_MS = 100
+
+
+def _with_export_profile(
+    preflight: VideoPreflight, props_override: ProjectVideoProps | None
+) -> VideoPreflight:
+    """Keep the queue-frozen output profile inside the render fingerprint.
+
+    The project preflight deliberately describes source material.  A queued
+    delivery profile is immutable job input, so it is substituted only after
+    the normal preflight has succeeded and before all fingerprint checks.
+    """
+
+    if props_override is None:
+        return preflight
+    if preflight.props is None:
+        raise VideoExportBlocked("video export profile cannot replace missing preflight props")
+    source = preflight.props.model_dump(mode="json", exclude={"width", "height", "fps"})
+    override = props_override.model_dump(mode="json", exclude={"width", "height", "fps"})
+    if source != override:
+        raise VideoExportBlocked("video export profile changed source inputs after preflight")
+    return preflight.model_copy(update={"props": props_override})
 
 
 def build_page_mux_command(
@@ -167,6 +190,7 @@ class VideoExportService:
         project_id: UUID,
         *,
         context: RenderExecutionContext | None = None,
+        props_override: ProjectVideoProps | None = None,
     ) -> VideoExportResult:
         project = self.projects.get(project_id)
         execution: RenderExecutionContext = context or InlineRenderExecutionContext()
@@ -175,7 +199,7 @@ class VideoExportService:
                 report = self.preflight_gate(project_id)
                 if not report.allowed:
                     raise VideoExportBlocked("当前项目预检尚未通过")
-            return self._export(project_id, project, execution)
+            return self._export(project_id, project, execution, props_override=props_override)
         except VideoExportBlocked:
             raise
         except (RenderCancelled, RenderPauseRequested):
@@ -196,17 +220,22 @@ class VideoExportService:
         project_id: UUID,
         project: ProjectManifest,
         context: RenderExecutionContext | None = None,
+        *,
+        props_override: ProjectVideoProps | None = None,
     ) -> VideoExportResult:
         execution: RenderExecutionContext = context or InlineRenderExecutionContext()
         preflight = self.preview.preflight(project_id)
         if not preflight.allowed or preflight.props is None:
             raise VideoExportBlocked("视频完整预检尚未通过")
+        effective_preflight = _with_export_profile(preflight, props_override)
         if (
             execution.input_fingerprint is not None
-            and render_input_fingerprint(preflight) != execution.input_fingerprint
+            and render_input_fingerprint(effective_preflight) != execution.input_fingerprint
         ):
             raise RenderInputStale("渲染输入已在任务入队后发生变化")
-        props = preflight.props
+        props = effective_preflight.props
+        if props is None:
+            raise VideoExportBlocked("video export profile is missing")
         root = (self.projects.workspace_root / project.project_dir).resolve()
         run_id = str(execution.job_id or uuid4())
         output_dir = root / "08_输出"
@@ -247,6 +276,7 @@ class VideoExportService:
                 tolerance_ms=MEDIA_DURATION_TOLERANCE_MS,
                 expected_width=props.width,
                 expected_height=props.height,
+                expected_fps=props.fps,
             )
             segments.append(segment)
 
@@ -285,6 +315,7 @@ class VideoExportService:
             tolerance_ms=max(MEDIA_DURATION_TOLERANCE_MS, 150),
             expected_width=props.width,
             expected_height=props.height,
+            expected_fps=props.fps,
         )
         measured_duration_ms = probe.get("duration_ms")
         if not isinstance(measured_duration_ms, int):
@@ -407,9 +438,11 @@ class VideoExportService:
         latest_preflight = self.preview.preflight(project_id)
         if not latest_preflight.allowed or latest_preflight.props is None:
             raise RenderInputChanged("发布前预检已失效")
+        latest_effective_preflight = _with_export_profile(latest_preflight, props_override)
         if (
             execution.input_fingerprint is not None
-            and render_input_fingerprint(latest_preflight) != execution.input_fingerprint
+            and render_input_fingerprint(latest_effective_preflight)
+            != execution.input_fingerprint
         ):
             raise RenderInputChanged("渲染期间项目输入发生变化")
         published = publish_render_outputs(
@@ -423,6 +456,9 @@ class VideoExportService:
             mp4_relative_path="08_输出/最终视频.mp4",
             package_relative_path="08_输出/制作包",
             duration_ms=measured_duration_ms,
+            width=props.width,
+            height=props.height,
+            fps=props.fps,
             video_codec="h264",
             audio_codec="aac",
             artifact_count=len(manifest.artifacts) + 1,
@@ -498,6 +534,7 @@ class VideoExportService:
         return {
             "width": video.get("width"),
             "height": video.get("height"),
+            "fps": _probe_fps(video),
             "video_codec": video.get("codec_name"),
             "audio_codec": audio.get("codec_name"),
             "duration_ms": round(float(format_data.get("duration", 0)) * 1_000),
@@ -521,14 +558,23 @@ class VideoExportService:
         output = f"{completed.stdout}\n{completed.stderr}"
         duration = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", output)
         video = re.search(r"Video:\s*([^,\s]+).*?(\d{2,5})x(\d{2,5})", output)
+        # FFmpeg prints a measured average frame rate before the nominal
+        # stream time base (for example ``29.05 fps, 30 tbr`` when container
+        # duration includes audio padding).  V1 exports are CFR, so validate
+        # the declared stream rate first and only fall back to the average
+        # when a tool omits tbr.
+        fps = re.search(r"(\d+(?:\.\d+)?)\s+tbr", output) or re.search(
+            r"(\d+(?:\.\d+)?)\s+fps", output
+        )
         audio = re.search(r"Audio:\s*([^,\s]+)", output)
-        if duration is None or video is None or audio is None:
+        if duration is None or video is None or audio is None or fps is None:
             return None
         hours, minutes, seconds = duration.groups()
         duration_ms = round((int(hours) * 3600 + int(minutes) * 60 + float(seconds)) * 1_000)
         return {
             "width": int(video.group(2)),
             "height": int(video.group(3)),
+            "fps": round(float(fps.group(1))),
             "video_codec": video.group(1),
             "audio_codec": audio.group(1),
             "duration_ms": duration_ms,
@@ -570,10 +616,12 @@ def validate_media_probe(
     tolerance_ms: int,
     expected_width: int = 1920,
     expected_height: int = 1080,
+    expected_fps: int = 30,
 ) -> None:
     expected = {
         "width": expected_width,
         "height": expected_height,
+        "fps": expected_fps,
         "video_codec": "h264",
         "audio_codec": "aac",
     }
@@ -593,3 +641,17 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _probe_fps(video: dict[str, object]) -> int | None:
+    """Normalize ffprobe's rational frame rate without accepting malformed data."""
+
+    raw = video.get("avg_frame_rate") or video.get("r_frame_rate")
+    if not isinstance(raw, str) or "/" not in raw:
+        return None
+    numerator, denominator = raw.split("/", maxsplit=1)
+    try:
+        value = int(numerator) / int(denominator)
+    except (ValueError, ZeroDivisionError):
+        return None
+    return round(value)

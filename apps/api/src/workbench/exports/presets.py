@@ -12,6 +12,9 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
 from workbench.services.project_service import ProjectService
+from workbench.video.models import ProjectVideoProps
+
+from .video_profiles import ExportProfileCapabilities, resolve_export_profile
 
 
 class ExportPresetModel(BaseModel):
@@ -59,6 +62,30 @@ class ExportPlanRequest(ExportPresetModel):
 
 
 EXPORT_PRESETS: tuple[ExportPreset, ...] = (
+    ExportPreset(
+        id="master-720p-24",
+        label="Master 720p 24fps",
+        platform="master",
+        width=1280,
+        height=720,
+        fps=24,
+        video_bitrate="6.0M",
+        audio_bitrate="160k",
+        container="mp4",
+        video_codec="libx264",
+    ),
+    ExportPreset(
+        id="master-720p-25",
+        label="Master 720p 25fps",
+        platform="master",
+        width=1280,
+        height=720,
+        fps=25,
+        video_bitrate="6.0M",
+        audio_bitrate="160k",
+        container="mp4",
+        video_codec="libx264",
+    ),
     ExportPreset(
         id="master-1080p-30",
         label="主母版 1080p 30fps",
@@ -163,6 +190,25 @@ class ExportPresetService:
 
     def presets(self) -> list[ExportPreset]:
         return list(EXPORT_PRESETS)
+
+    def resolve_video_props(
+        self,
+        props: ProjectVideoProps,
+        preset_id: str,
+        *,
+        capabilities: ExportProfileCapabilities | None = None,
+    ) -> ProjectVideoProps:
+        """Resolve a catalogue preset into props suitable for the V1 queue.
+
+        This is intentionally separate from :meth:`create_plan`: plans may
+        represent a commercial/future target, while a render job must reject
+        anything it cannot run on the local candidate before enqueueing.
+        """
+
+        preset = next((item for item in EXPORT_PRESETS if item.id == preset_id), None)
+        if preset is None:
+            raise ValueError(f"unknown export preset: {preset_id}")
+        return resolve_export_profile(props, preset, capabilities=capabilities)
 
     def create_plan(
         self, project_id: UUID, request: ExportPlanRequest, *, duration_ms: int = 0

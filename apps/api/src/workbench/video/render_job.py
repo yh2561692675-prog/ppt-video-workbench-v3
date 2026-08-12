@@ -12,6 +12,7 @@ from uuid import UUID
 from workbench.diagnostics.redaction import redact_text
 from workbench.domain.enums import JobStatus, JobType
 from workbench.domain.models import AuditEvent, JobRecord
+from workbench.exports.video_profiles import ExportProfileBlocked
 from workbench.jobs.execution import (
     PersistentRenderExecutionContext,
     RenderCancelled,
@@ -37,6 +38,7 @@ from .errors import (
     RenderPageFailed,
 )
 from .fingerprint import render_input_fingerprint
+from .models import ProjectVideoProps
 from .package_service import VideoExportBlocked, VideoExportService
 from .preview_service import VideoPreviewService
 
@@ -69,6 +71,10 @@ class RenderJobWorkerProtocol(Protocol):
     def wake(self) -> None: ...
 
 
+class ExportProfileResolver(Protocol):
+    def __call__(self, props: ProjectVideoProps, preset_id: str) -> ProjectVideoProps: ...
+
+
 class RenderJobService:
     def __init__(
         self,
@@ -81,6 +87,7 @@ class RenderJobService:
         graph_exporter: Callable[[UUID, RenderGraphV2, PersistentRenderExecutionContext], Any]
         | None = None,
         feature_flags: RenderFeatureFlags | None = None,
+        profile_resolver: ExportProfileResolver | None = None,
     ) -> None:
         self.projects = projects
         self.preview = preview
@@ -91,6 +98,7 @@ class RenderJobService:
         self.graph_provider = graph_provider
         self.graph_exporter = graph_exporter
         self.feature_flags = feature_flags or RenderFeatureFlags.from_environment()
+        self.profile_resolver = profile_resolver
 
     def act(
         self,
@@ -129,7 +137,11 @@ class RenderJobService:
         return RenderJobSubmission(updated, False)
 
     def submit(
-        self, project_id: UUID, *, idempotency_key: str | None = None
+        self,
+        project_id: UUID,
+        *,
+        idempotency_key: str | None = None,
+        preset_id: str | None = None,
     ) -> RenderJobSubmission:
         project = self.projects.get(project_id)
         if (
@@ -141,14 +153,25 @@ class RenderJobService:
         preflight = self.preview.preflight(project_id)
         if not preflight.allowed or preflight.props is None:
             raise VideoExportBlocked("video preflight is not complete")
-        fingerprint = render_input_fingerprint(preflight)
+        props = preflight.props
+        if preset_id is not None:
+            if self.profile_resolver is None:
+                raise VideoExportBlocked("export profile admission is not configured")
+            try:
+                props = self.profile_resolver(props, preset_id)
+            except ExportProfileBlocked as error:
+                raise VideoExportBlocked(str(error)) from error
+        effective_preflight = (
+            preflight.model_copy(update={"props": props}) if preset_id is not None else preflight
+        )
+        fingerprint = render_input_fingerprint(effective_preflight)
         spec = JobSpec(
             project_id=project_id,
             job_type=JobType.EXPORT_PACKAGE,
             cache_key=f"export-package:{fingerprint}",
             input_fingerprint=fingerprint,
             idempotency_key=idempotency_key,
-            payload={"props": preflight.props.model_dump(mode="json")},
+            payload={"props": props.model_dump(mode="json"), "preset_id": preset_id},
         )
         result = self.repository.enqueue_or_get(spec)
         if (
@@ -158,8 +181,12 @@ class RenderJobService:
         ):
             result = self.repository.enqueue_or_get(spec, reuse_succeeded=False)
         if result.created:
-            self._write_input_snapshot(project, result.record, preflight.props)
-            self._audit(project_id, "video_render_job_created", {"job_id": str(result.record.id)})
+            self._write_input_snapshot(project, result.record, props)
+            self._audit(
+                project_id,
+                "video_render_job_created",
+                {"job_id": str(result.record.id), "preset_id": preset_id},
+            )
         return RenderJobSubmission(result.record, result.created)
 
     def _submit_v2(
@@ -260,7 +287,26 @@ class RenderJobService:
                     raise GraphExportError("RenderGraph V2 snapshot hash changed")
                 result = self.graph_exporter(record.project_id, graph, context)
             else:
-                result = self.exporter.export(record.project_id, context=context)
+                raw_props = record.payload.get("props")
+                try:
+                    props = (
+                        ProjectVideoProps.model_validate(raw_props)
+                        if isinstance(raw_props, dict)
+                        else None
+                    )
+                except ValueError:
+                    # Jobs created before output-profile freezing have no
+                    # complete props payload.  Keep their legacy handler
+                    # semantics instead of guessing a profile at execution.
+                    props = None
+                if props is None:
+                    result = self.exporter.export(record.project_id, context=context)
+                else:
+                    result = self.exporter.export(
+                        record.project_id,
+                        context=context,
+                        props_override=props,
+                    )
         except RenderPauseRequested:
             self._audit(record.project_id, "video_render_job_paused", {"job_id": str(record.id)})
             return

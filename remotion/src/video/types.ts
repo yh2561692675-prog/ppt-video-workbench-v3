@@ -69,9 +69,9 @@ export type PresenterTimeline = {
 export type ProjectVideoProps = {
   schema_version: 1 | 2;
   project_id: string;
-  width: 1920 | 1080;
-  height: 1080 | 1920;
-  fps: 30;
+  width: number;
+  height: number;
+  fps: number;
   duration_ms: number;
   template_version: string;
   reduced_motion: boolean;
@@ -118,11 +118,10 @@ export function parseProjectVideoProps(input: unknown): ProjectVideoProps {
   for (const key of Object.keys(record)) {
     if (!allowed.has(key)) throw new Error(`未知字段: ${key}`);
   }
-  if (record.width !== 1920 && record.width !== 1080)
-    throw new Error('视频画布宽度必须为 1920 或 1080');
-  if (record.height !== 1080 && record.height !== 1920)
-    throw new Error('视频画布高度必须为 1080 或 1920');
-  if (record.fps !== 30) throw new Error('视频 FPS 必须为 30');
+  if (!isQualifiedCanvas(record.width, record.height)) {
+    throw new Error('视频画布必须是已验证的 720p/1080p 规格或 4K 16:9');
+  }
+  if (!isQualifiedFps(record.fps)) throw new Error('视频 FPS 必须是 24、25、30 或 60');
   if (!Array.isArray(record.pages) || record.pages.length === 0) {
     throw new Error('视频 Props 至少需要一个页面');
   }
@@ -153,4 +152,28 @@ export function parseProjectVideoProps(input: unknown): ProjectVideoProps {
     }
   }
   return input as ProjectVideoProps;
+}
+
+const QUALIFIED_CANVASES = new Set([
+  '1280x720',
+  '1920x1080',
+  '720x1280',
+  '1080x1920',
+  '720x720',
+  '1080x1080',
+  '3840x2160',
+]);
+
+function isQualifiedCanvas(width: unknown, height: unknown): boolean {
+  return (
+    typeof width === 'number' &&
+    Number.isInteger(width) &&
+    typeof height === 'number' &&
+    Number.isInteger(height) &&
+    QUALIFIED_CANVASES.has(`${width}x${height}`)
+  );
+}
+
+function isQualifiedFps(fps: unknown): fps is 24 | 25 | 30 | 60 {
+  return fps === 24 || fps === 25 || fps === 30 || fps === 60;
 }

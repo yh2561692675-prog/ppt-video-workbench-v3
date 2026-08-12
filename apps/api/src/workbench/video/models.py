@@ -14,6 +14,24 @@ class VideoModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+# These are the video canvases that the V1 page renderer can produce without
+# an implicit post-render scale.  Keep this list deliberately small: accepting
+# arbitrary dimensions would make a queued job look valid even though the
+# renderer and package validator have never been qualified for it.
+STANDARD_VIDEO_CANVASES = frozenset(
+    {
+        (1280, 720),
+        (1920, 1080),
+        (720, 1280),
+        (1080, 1920),
+        (720, 720),
+        (1080, 1080),
+        (3840, 2160),
+    }
+)
+STANDARD_VIDEO_FPS = frozenset({24, 25, 30, 60})
+
+
 class TextRect(VideoModel):
     x: float = Field(ge=0)
     y: float = Field(ge=0)
@@ -52,9 +70,9 @@ class VideoPageProps(VideoModel):
 class ProjectVideoProps(VideoModel):
     schema_version: Literal[1, 2] = 1
     project_id: UUID
-    width: Literal[1920, 1080] = 1920
-    height: Literal[1080, 1920] = 1080
-    fps: Literal[30] = 30
+    width: int = Field(default=1920, gt=0, le=3840)
+    height: int = Field(default=1080, gt=0, le=2160)
+    fps: int = Field(default=30, gt=0, le=60)
     duration_ms: int = Field(ge=0)
     template_version: str = Field(min_length=1)
     reduced_motion: bool = False
@@ -69,6 +87,12 @@ class ProjectVideoProps(VideoModel):
 
     @model_validator(mode="after")
     def validate_pages(self) -> ProjectVideoProps:
+        if (self.width, self.height) not in STANDARD_VIDEO_CANVASES:
+            raise ValueError(
+                "video canvas must be one of the qualified 720p/1080p profiles or 4K 16:9"
+            )
+        if self.fps not in STANDARD_VIDEO_FPS:
+            raise ValueError("video fps must be one of 24, 25, 30, or 60")
         if self.presenter_timeline is None:
             if any(
                 value is not None

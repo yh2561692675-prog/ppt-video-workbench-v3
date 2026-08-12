@@ -1,0 +1,52 @@
+from __future__ import annotations
+
+import pytest
+from workbench.performance.export_matrix import EXECUTABLE_OUTPUT_MATRIX, _profile_props
+from workbench.video.models import ProjectVideoProps, VideoPageProps
+
+
+def _props() -> ProjectVideoProps:
+    from uuid import uuid4
+
+    return ProjectVideoProps(
+        project_id=uuid4(),
+        duration_ms=1_000,
+        template_version="matrix-test-v1",
+        pages=[
+            VideoPageProps(
+                page_id=uuid4(),
+                page_order=1,
+                image_path="page.png",
+                audio_path="audio.wav",
+                start_ms=0,
+                end_ms=1_000,
+            )
+        ],
+    )
+
+
+def test_matrix_covers_all_required_aspects_resolutions_and_fps() -> None:
+    matrix = {(case.width, case.height, case.fps) for case in EXECUTABLE_OUTPUT_MATRIX}
+    assert {(1280, 720), (1920, 1080), (1080, 1920), (1080, 1080)} <= {
+        (width, height) for width, height, _ in matrix
+    }
+    assert {24, 25, 30, 60} <= {fps for _, _, fps in matrix}
+
+
+def test_matrix_profile_changes_only_delivery_geometry_and_rate() -> None:
+    base = _props()
+    profile = EXECUTABLE_OUTPUT_MATRIX[-1]
+    resolved = _profile_props(base, profile)
+    assert (resolved.width, resolved.height, resolved.fps) == (1080, 1080, 30)
+    assert resolved.model_dump(exclude={"width", "height", "fps"}) == base.model_dump(
+        exclude={"width", "height", "fps"}
+    )
+
+
+def test_matrix_run_root_must_be_new(tmp_path) -> None:
+    from workbench.performance.export_matrix import execute_output_matrix
+
+    run_root = tmp_path / "run"
+    run_root.mkdir()
+    with pytest.raises(FileExistsError):
+        execute_output_matrix(run_root, ffmpeg="ffmpeg", ffprobe="ffprobe")

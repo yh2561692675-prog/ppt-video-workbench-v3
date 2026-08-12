@@ -28,15 +28,24 @@ const fixture = {
 };
 
 describe('ProjectVideoProps', () => {
-  it('keeps the fixed canvas and deterministic frame conversion', () => {
+  it('accepts qualified output profiles and keeps deterministic frame conversion', () => {
     const props = parseProjectVideoProps(fixture);
     expect([props.width, props.height, props.fps]).toEqual([1920, 1080, 30]);
     expect(msToFrames(2000, props.fps)).toBe(60);
     expect(msToFrames(50, props.fps)).toBe(2);
   });
 
-  it('rejects a non-16:9 canvas and unknown fields', () => {
-    expect(() => parseProjectVideoProps({ ...fixture, width: 1280 })).toThrow(/1920/);
+  it('accepts landscape, portrait and square output profiles', () => {
+    expect(parseProjectVideoProps({ ...fixture, width: 1280, height: 720, fps: 24 }).fps).toBe(24);
+    expect(parseProjectVideoProps({ ...fixture, width: 720, height: 1280, fps: 25 }).height).toBe(
+      1280,
+    );
+    expect(parseProjectVideoProps({ ...fixture, width: 1080, height: 1080, fps: 60 }).fps).toBe(60);
+  });
+
+  it('rejects an unqualified canvas, frame rate and unknown fields', () => {
+    expect(() => parseProjectVideoProps({ ...fixture, width: 1281 })).toThrow(/画布/);
+    expect(() => parseProjectVideoProps({ ...fixture, fps: 50 })).toThrow(/FPS/);
     expect(() => parseProjectVideoProps({ ...fixture, unknown: true })).toThrow(/unknown|未知/i);
   });
 });

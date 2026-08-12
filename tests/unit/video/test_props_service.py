@@ -48,11 +48,20 @@ def test_video_page_props_is_strict_and_rejects_unknown_fields() -> None:
         VideoPageProps.model_validate({**page, "unexpected": True})
 
 
-def test_video_props_rejects_wrong_canvas_or_out_of_order_pages() -> None:
+def test_video_props_accepts_qualified_output_profiles_and_rejects_unknown_canvas() -> None:
+    for width, height, fps in ((1280, 720, 24), (720, 1280, 25), (1080, 1080, 60)):
+        payload = _props()
+        payload.update({"width": width, "height": height, "fps": fps})
+        props = ProjectVideoProps.model_validate(payload)
+        assert (props.width, props.height, props.fps) == (width, height, fps)
+
     wrong_canvas = _props()
-    wrong_canvas["width"] = 1280
-    with pytest.raises(ValueError, match="1920"):
+    wrong_canvas["width"] = 1281
+    with pytest.raises(ValueError, match="qualified"):
         ProjectVideoProps.model_validate(wrong_canvas)
+
+
+def test_video_props_rejects_out_of_order_pages() -> None:
 
     out_of_order = _props()
     first = out_of_order["pages"][0]

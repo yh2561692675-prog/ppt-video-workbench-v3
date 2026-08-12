@@ -8,7 +8,12 @@ from PIL import Image
 from workbench.jobs.execution import RenderCancelled
 from workbench.video.models import ProjectVideoProps, SubtitlePlacement, TextRect, VideoPageProps
 from workbench.video.process_runner import ProcessCancelled
-from workbench.video.render_service import RemotionPageRenderer, RenderError, VideoRenderService
+from workbench.video.render_service import (
+    PillowPageRenderer,
+    RemotionPageRenderer,
+    RenderError,
+    VideoRenderService,
+)
 
 
 class FakePageRenderer:
@@ -95,6 +100,24 @@ def test_page_render_cache_skips_unchanged_pages(tmp_path: Path) -> None:
     assert all(item.cached is False for item in first)
     assert all(item.cached is True for item in second)
     assert (tmp_path / "07_视频工程/pages/page-0001.mp4").is_file()
+
+
+def test_pillow_renderer_uses_requested_canvas_and_cache_key_includes_fps(tmp_path: Path) -> None:
+    props = _props(tmp_path, page_count=1).model_copy(
+        update={"width": 720, "height": 1280, "fps": 24}
+    )
+    source = tmp_path / props.pages[0].image_path
+    output = tmp_path / "portrait.png"
+    PillowPageRenderer().render(props, props.pages[0], source, output)
+
+    with Image.open(output) as rendered:
+        assert rendered.size == (720, 1280)
+
+    service = VideoRenderService(tmp_path, renderer=object())
+    fps_25 = props.model_copy(update={"fps": 25})
+    assert service._cache_key(props, props.pages[0], source) != service._cache_key(
+        fps_25, fps_25.pages[0], source
+    )
 
 
 def test_failed_page_can_be_retried_without_rerendering_successful_pages(tmp_path: Path) -> None:
