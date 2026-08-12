@@ -34,6 +34,7 @@ jobs:
       - run: uv run mypy apps/api/src
       - run: uv run pytest
       - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm check
       - run: pnpm e2e
       - if: runner.os == 'Windows'
