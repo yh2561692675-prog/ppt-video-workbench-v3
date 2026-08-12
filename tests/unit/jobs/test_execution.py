@@ -105,3 +105,40 @@ def test_registered_temporary_paths_survive_later_checkpoints_without_progress_r
     assert record.progress == 0.7
     assert restored is not None
     assert restored.temporary_paths == [f"08_输出/.render-jobs/{context.job_id}"]
+
+
+def test_recovered_context_clamps_cached_page_progress_to_latest_checkpoint(
+    tmp_path: Path,
+) -> None:
+    repository, context, _ = setup_context(tmp_path)
+    first_page = context.project_dir / "page-0010.mp4"
+    first_page.write_bytes(b"completed page")
+    context.checkpoint(
+        stage="rendering_pages",
+        progress=0.17,
+        message="page 10 complete",
+        artifacts=(first_page,),
+        payload={"completed_pages": list(range(1, 11))},
+    )
+
+    recovered = PersistentRenderExecutionContext(
+        job_id=context.job_id,
+        project_dir=context.project_dir,
+        repository=repository,
+        input_fingerprint="fingerprint-a",
+    )
+    cached_page = context.project_dir / "page-0001.mp4"
+    cached_page.write_bytes(b"cached page")
+    recovered.checkpoint(
+        stage="rendering_pages",
+        progress=0.05,
+        message="cached page 1 reused after recovery",
+        artifacts=(cached_page,),
+        payload={"completed_pages": [1]},
+    )
+
+    record = repository.get(context.job_id)
+    checkpoint = recovered.restore()
+    assert record.progress == 0.17
+    assert checkpoint is not None
+    assert checkpoint.progress == 0.17

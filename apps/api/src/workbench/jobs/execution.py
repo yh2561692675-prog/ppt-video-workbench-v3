@@ -122,6 +122,10 @@ class PersistentRenderExecutionContext:
         artifacts: Iterable[Path] = (),
         payload: Mapping[str, object] | None = None,
     ) -> None:
+        # A resumed render can enumerate cache hits from page 1 again after a
+        # durable checkpoint near the end of the same stage. Checkpoint callers
+        # report local page progress, but durable job progress cannot decrease.
+        effective_progress = max(progress, self.repository.get(self.job_id).progress)
         data: dict[str, object] = {
             "stage": stage,
             "message": message,
@@ -129,7 +133,7 @@ class PersistentRenderExecutionContext:
         }
         if payload:
             data.update(payload)
-        checkpoint = self._job_context.checkpoint(progress, data, artifacts)
+        checkpoint = self._job_context.checkpoint(effective_progress, data, artifacts)
         checkpoint_hash = self.store.checksum(checkpoint)
         self.repository.record_checkpoint(
             self.job_id,
@@ -139,7 +143,7 @@ class PersistentRenderExecutionContext:
         )
         self.repository.update_progress(
             self.job_id,
-            progress,
+            effective_progress,
             stage=stage,
             message=message,
             payload=data,
