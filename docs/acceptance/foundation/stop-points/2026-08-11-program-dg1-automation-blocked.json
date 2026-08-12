@@ -100,12 +100,30 @@
       "evidence_sha256": "353340289e7d052d1f03fc4c18d4bada8d2f8e4f3622a1aa6669facf250a112f",
       "aggregate_sha256": "b56188402f40b723338afcbf86769bf25be5b90a83b3ff940264feb859eddf99",
       "files": {
-        "artifacts/ppt-video-workbench-setup.exe": { "sha256": "bb3629c7cd3f0dbe19f06a266176ed9f3c6a6d3a857be58fe32c7a75eeeecf3f", "size": 172092737 },
-        "artifacts/release-artifacts.json": { "sha256": "a9fdab0ebc23e1aa3d1bda243b372c71c229f31dd87c485ba5058de087c02b0a", "size": 964 },
-        "payload/runtime-manifest.json": { "sha256": "53d7261b71245b11b207e2f94e46f50f4a1bf5151631bc64c1986fb7191c7d2e", "size": 2154421 },
-        "payload/sbom/node-dependencies.json": { "sha256": "a7bb6777b5c74b5f0d8776e64e924321a4f280ee8fcf320fbfe87b4fec18e423", "size": 540 },
-        "payload/sbom/python-dependencies.json": { "sha256": "3dd1a1dd2bf2f2bdcf74483c4b50ccec369cc4191991d7f1a298b9c9f5214c6c", "size": 1869 },
-        "payload/licenses/THIRD-PARTY-NOTICES.txt": { "sha256": "82f948b4c9f38e6ced11c8627b101c995cfc71630dd6d28fb6c017f968e841d4", "size": 175 }
+        "artifacts/ppt-video-workbench-setup.exe": {
+          "sha256": "bb3629c7cd3f0dbe19f06a266176ed9f3c6a6d3a857be58fe32c7a75eeeecf3f",
+          "size": 172092737
+        },
+        "artifacts/release-artifacts.json": {
+          "sha256": "a9fdab0ebc23e1aa3d1bda243b372c71c229f31dd87c485ba5058de087c02b0a",
+          "size": 964
+        },
+        "payload/runtime-manifest.json": {
+          "sha256": "53d7261b71245b11b207e2f94e46f50f4a1bf5151631bc64c1986fb7191c7d2e",
+          "size": 2154421
+        },
+        "payload/sbom/node-dependencies.json": {
+          "sha256": "a7bb6777b5c74b5f0d8776e64e924321a4f280ee8fcf320fbfe87b4fec18e423",
+          "size": 540
+        },
+        "payload/sbom/python-dependencies.json": {
+          "sha256": "3dd1a1dd2bf2f2bdcf74483c4b50ccec369cc4191991d7f1a298b9c9f5214c6c",
+          "size": 1869
+        },
+        "payload/licenses/THIRD-PARTY-NOTICES.txt": {
+          "sha256": "82f948b4c9f38e6ced11c8627b101c995cfc71630dd6d28fb6c017f968e841d4",
+          "size": 175
+        }
       }
     },
     "run_2": {
@@ -114,12 +132,30 @@
       "evidence_sha256": "bf135b69225b1b80df75e8dc45263e98cf4a4c3f01b3db75b6b5be39077193a5",
       "aggregate_sha256": "7c8509de6e0fe18cdf9a05a986d91e06029ebfabe8ea8c4f45caea25ee162748",
       "files": {
-        "artifacts/ppt-video-workbench-setup.exe": { "sha256": "4ee914f3fcc567ab8f4204286ddf24f6341bb3b71953cc8bbf90e3887352723e", "size": 172111866 },
-        "artifacts/release-artifacts.json": { "sha256": "27f842b4ccbaf5fcd4da0d081ae4f10a47a520554b463850de30eb27d17c4428", "size": 964 },
-        "payload/runtime-manifest.json": { "sha256": "edbaa8c4431b2211d8eb02d8dfb3aa65f3126a8d941e4ac29798e595eb8a6beb", "size": 2154421 },
-        "payload/sbom/node-dependencies.json": { "sha256": "a7bb6777b5c74b5f0d8776e64e924321a4f280ee8fcf320fbfe87b4fec18e423", "size": 540 },
-        "payload/sbom/python-dependencies.json": { "sha256": "3dd1a1dd2bf2f2bdcf74483c4b50ccec369cc4191991d7f1a298b9c9f5214c6c", "size": 1869 },
-        "payload/licenses/THIRD-PARTY-NOTICES.txt": { "sha256": "82f948b4c9f38e6ced11c8627b101c995cfc71630dd6d28fb6c017f968e841d4", "size": 175 }
+        "artifacts/ppt-video-workbench-setup.exe": {
+          "sha256": "4ee914f3fcc567ab8f4204286ddf24f6341bb3b71953cc8bbf90e3887352723e",
+          "size": 172111866
+        },
+        "artifacts/release-artifacts.json": {
+          "sha256": "27f842b4ccbaf5fcd4da0d081ae4f10a47a520554b463850de30eb27d17c4428",
+          "size": 964
+        },
+        "payload/runtime-manifest.json": {
+          "sha256": "edbaa8c4431b2211d8eb02d8dfb3aa65f3126a8d941e4ac29798e595eb8a6beb",
+          "size": 2154421
+        },
+        "payload/sbom/node-dependencies.json": {
+          "sha256": "a7bb6777b5c74b5f0d8776e64e924321a4f280ee8fcf320fbfe87b4fec18e423",
+          "size": 540
+        },
+        "payload/sbom/python-dependencies.json": {
+          "sha256": "3dd1a1dd2bf2f2bdcf74483c4b50ccec369cc4191991d7f1a298b9c9f5214c6c",
+          "size": 1869
+        },
+        "payload/licenses/THIRD-PARTY-NOTICES.txt": {
+          "sha256": "82f948b4c9f38e6ced11c8627b101c995cfc71630dd6d28fb6c017f968e841d4",
+          "size": 175
+        }
       }
     },
     "comparison": {
