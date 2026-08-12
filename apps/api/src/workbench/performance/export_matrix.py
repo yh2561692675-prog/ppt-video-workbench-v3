@@ -210,6 +210,7 @@ def _create_fixture(projects: Any) -> MatrixFixture:
     revision_id = uuid4()
     image = root / "02_pages" / "page-0001.png"
     audio = root / "05_audio" / "page-0001.wav"
+    image.parent.mkdir(parents=True, exist_ok=True)
     Image.new("RGB", (640, 360), (41, 97, 173)).save(image, format="PNG")
     _write_wav(audio, _PAGE_DURATION_MS)
     audio_relative = audio.relative_to(root).as_posix()

@@ -50,3 +50,13 @@ def test_matrix_run_root_must_be_new(tmp_path) -> None:
     run_root.mkdir()
     with pytest.raises(FileExistsError):
         execute_output_matrix(run_root, ffmpeg="ffmpeg", ffprobe="ffprobe")
+
+
+def test_matrix_fixture_creates_its_media_directories(tmp_path) -> None:
+    from workbench.performance.export_matrix import _create_fixture
+    from workbench.services.project_service import ProjectService
+
+    projects = ProjectService(tmp_path)
+    fixture = _create_fixture(projects)
+    assert (fixture.project_root / "02_pages" / "page-0001.png").is_file()
+    assert (fixture.project_root / "05_audio" / "page-0001.wav").is_file()
