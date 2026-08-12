@@ -455,7 +455,7 @@ def _create_s50_fixture(projects: Any, run_root: Path) -> S50Fixture:
         image = project_root / "02_pages" / f"page-{page_order:04d}.png"
         audio = project_root / "05_audio" / f"page-{page_order:04d}.wav"
         _write_page_image(image, page_order)
-        _write_wav(audio, _PAGE_DURATION_MS)
+        _write_wav(audio, _PAGE_DURATION_MS, page_order=page_order)
         relative_audio = audio.relative_to(project_root).as_posix()
         start_ms = (page_order - 1) * _PAGE_DURATION_MS
         end_ms = page_order * _PAGE_DURATION_MS
@@ -551,14 +551,18 @@ def _write_page_image(path: Path, page_order: int) -> None:
     Image.new("RGB", (640, 360), color).save(path, format="PNG")
 
 
-def _write_wav(path: Path, duration_ms: int) -> None:
+def _write_wav(path: Path, duration_ms: int, *, page_order: int) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     frame_count = 16_000 * duration_ms // 1_000
+    # A per-page value makes the generated media and its cache key unique.
+    # Identical silence would correctly be rejected by the product audio gate
+    # as accidental reuse across pages.
+    sample = page_order.to_bytes(2, byteorder="little", signed=True)
     with wave.open(str(path), "wb") as handle:
         handle.setnchannels(1)
         handle.setsampwidth(2)
         handle.setframerate(16_000)
-        handle.writeframes(b"\0\0" * frame_count)
+        handle.writeframes(sample * frame_count)
 
 
 def _validate_package(project_root: Path, result: VideoExportResult) -> dict[str, object]:

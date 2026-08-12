@@ -8,6 +8,7 @@ from workbench.performance.s50_acceptance import (
     _candidate_run_root,
     _temporary_file_count,
     _validate_package,
+    _write_wav,
     sha256_file,
 )
 from workbench.video.package_service import VideoExportResult, build_package_manifest
@@ -89,3 +90,13 @@ def test_candidate_run_root_is_short_and_candidate_hash_bound(tmp_path: Path) ->
 
     assert "candidate-aaaaaaaaaaaa" in run_root.parts
     assert len(str(manifest_temp)) < 260
+
+
+def test_s50_page_audio_fixture_is_unique_per_page(tmp_path: Path) -> None:
+    first = tmp_path / "page-0001.wav"
+    second = tmp_path / "page-0002.wav"
+
+    _write_wav(first, 300, page_order=1)
+    _write_wav(second, 300, page_order=2)
+
+    assert sha256_file(first) != sha256_file(second)
