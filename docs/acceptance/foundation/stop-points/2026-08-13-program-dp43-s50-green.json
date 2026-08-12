@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects-program",
+  "wave": "W1",
+  "task": "DP43_S50_LARGE_PROJECT",
+  "status": "PASS",
+  "generated_at": "2026-08-13T02:13:54Z",
+  "branch": "codex/program-integration-v1",
+  "source": {
+    "commit": "245ee7e848ff7048abf32f3369d3dd9bd8836028",
+    "worktree": "F:/ppt-video-workbench-v3/.worktrees/program-integration-v1"
+  },
+  "candidate": {
+    "id": "v1-rc-245ee7e848ff-20260812T181222Z",
+    "manifest_sha256": "fee67ffd32ccfed45deab80fb682f17ae925fc6501c88cf058aac9942492b378",
+    "valid": true
+  },
+  "fixture": {
+    "id": "S50-synthetic-media-v1",
+    "page_count": 50,
+    "page_duration_ms": 300,
+    "duration_ms": 15000,
+    "content_policy": "generated image plus unique generated WAV only"
+  },
+  "recovery": {
+    "interruption_after_page": 10,
+    "checkpoint_completed_pages": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    "checkpoint_count": 66,
+    "cached_pages_after_resume": 10,
+    "progress_policy": "persistent checkpoints clamp local cached-page progress to the existing job progress"
+  },
+  "result": {
+    "elapsed_ms": 61838,
+    "final_duration_ms": 15050,
+    "video_codec": "h264",
+    "audio_codec": "aac",
+    "final_mp4_sha256": "0f3493eef22b342bd5306ad87786c4677b62d075d6bd4ba5d3f0bce6711b4779",
+    "srt_sha256": "b1c31f2d16c6898aa940a277f7544fe6119fb001c97dcdcc648e68ef5f1c7848",
+    "package_manifest_sha256": "78e7a05f5896649249dc140e51f6daaa510079cf67f0ff762b8c1e79d61d8295",
+    "package_manifest_artifact_count": 58,
+    "temporary_file_count_at_completion": 0
+  },
+  "performance": {
+    "sample_count": 57,
+    "roots_not_observed": [],
+    "harness_peak_rss_bytes": 238821376,
+    "ffmpeg_peak_rss_bytes": 202006528,
+    "minimum_free_temporary_bytes": 26056806400,
+    "gpu_memory_bytes": null,
+    "summary_sha256": "13e2ea2a63729bc9d547e2ad75eba782b586e6a8c72664347b0879217ccf3461",
+    "events_sha256": "781a82e7f6fea920318c9633f042243ff32d5d3daa9ae311cf01cf3a84ef7b60"
+  },
+  "evidence": {
+    "path": "test-results/s50/c-fee67ffd32cc/r-20260813T021245Z-83a61b93/s50-acceptance-v1.json",
+    "sha256": "a01f6a7a191b7e3680d8f56c4f73bbf8121d9acbe8af7c99bf9fff426f5f1aae",
+    "policy": "new candidate-specific, non-overwriteable ignored evidence root"
+  },
+  "verification": [
+    "Candidate validation passed.",
+    "S50 evidence contract independently parsed: 50 pages, pages 1-10 checkpointed, zero final temporary files.",
+    "20 unit, recovery, package and S50 tests passed before candidate execution.",
+    "Ruff and mypy --strict passed."
+  ],
+  "scope_boundary": {
+    "completed": "local FFmpeg S50 package, durable checkpoint interruption/recovery and resource evidence",
+    "not_claimed": [
+      "real external Provider",
+      "Remotion browser renderer",
+      "cloud executor",
+      "human presenter media",
+      "export aspect/fps pressure",
+      "long-duration soak"
+    ],
+    "next": "DP44 export aspect and frame-rate pressure"
+  },
+  "rollback": "All S50 artifacts are isolated under ignored test-results; no user project, external provider or feature flag changed.",
+  "safe_resume": "Use a new clean candidate and a new non-overwriteable root for DP44; preserve the S50 JSON/hash pair as the only DP43 pass evidence.",
+  "will_write_again": false
+}
