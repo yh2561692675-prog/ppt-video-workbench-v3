@@ -672,7 +672,10 @@ def _create_fixture(projects: Any, *, page_count: int) -> SoakFixture:
                 audio=AudioRecord(
                     id=uuid4(),
                     status=NodeStatus.COMPLETED,
-                    source="local",
+                    # The file is generated locally, but the fixture models the
+                    # already-confirmed per-page delivery route.  This keeps the
+                    # existing subtitle gate in scope without contacting HeyGen.
+                    source="heygen",
                     relative_path=audio.relative_to(project_root).as_posix(),
                     duration_ms=_DEFAULT_PAGE_DURATION_MS,
                     cache_key=sha256_file(audio),
