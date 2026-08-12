@@ -1,0 +1,48 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from workbench.performance.s50_acceptance import (
+    _temporary_file_count,
+    _validate_package,
+    sha256_file,
+)
+from workbench.video.package_service import VideoExportResult, build_package_manifest
+
+
+def test_package_validation_checks_mp4_srt_and_manifest_hashes(tmp_path: Path) -> None:
+    mp4 = tmp_path / "08_output" / "final.mp4"
+    package = tmp_path / "08_output" / "package"
+    mp4.parent.mkdir(parents=True)
+    package.mkdir()
+    mp4.write_bytes(b"final-media")
+    packaged_mp4 = package / "final.mp4"
+    packaged_srt = package / "subtitles.srt"
+    packaged_mp4.write_bytes(mp4.read_bytes())
+    packaged_srt.write_text("1\n00:00:00,000 --> 00:00:00,300\nS50\n", encoding="utf-8")
+    manifest = build_package_manifest(package, [packaged_mp4, packaged_srt])
+    (package / "manifest.json").write_text(manifest.model_dump_json(), encoding="utf-8")
+
+    result = VideoExportResult(
+        mp4_relative_path="08_output/final.mp4",
+        package_relative_path="08_output/package",
+        duration_ms=300,
+        video_codec="h264",
+        audio_codec="aac",
+        artifact_count=3,
+        cached_pages=10,
+    )
+    checked = _validate_package(tmp_path, result)
+
+    assert checked["final_mp4_sha256"] == sha256_file(mp4)
+    assert checked["package_manifest_artifact_count"] == 2
+
+
+def test_temporary_file_count_ignores_published_render_history(tmp_path: Path) -> None:
+    published = tmp_path / "08_output" / ".render-jobs" / "completed" / "page.mp4"
+    temporary = tmp_path / "08_output" / ".final.mp4.example.tmp"
+    published.parent.mkdir(parents=True)
+    published.write_bytes(b"published history")
+    temporary.write_bytes(b"unfinished publication")
+
+    assert _temporary_file_count(tmp_path) == 1
