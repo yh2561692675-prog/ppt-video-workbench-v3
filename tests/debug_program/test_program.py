@@ -497,6 +497,18 @@ def test_candidate_runtime_probe_records_access_denied_without_claiming_availabl
     assert "access denied" in str(probe["error"])
 
 
+def test_candidate_runtime_resolution_can_return_an_inaccessible_local_iscc(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    local_app_data = tmp_path / "LocalAppData"
+    iscc = local_app_data / "Programs" / "Inno Setup 6" / "ISCC.exe"
+    monkeypatch.setenv("LOCALAPPDATA", str(local_app_data))
+    monkeypatch.setattr(candidate_module.shutil, "which", lambda _: None)
+    monkeypatch.setattr(Path, "is_file", lambda _self: (_ for _ in ()).throw(PermissionError()))
+
+    assert candidate_module.resolve_iscc_path() == iscc
+
+
 def test_release_output_rejects_escape_and_absolute_paths(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="relative path"):
         _safe_release_output(tmp_path, "../outside")

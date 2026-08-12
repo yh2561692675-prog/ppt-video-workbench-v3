@@ -116,12 +116,18 @@ def _probe_path(path: Path, command: str, *args: str) -> dict[str, Any]:
 def resolve_iscc_path() -> Path | None:
     configured = shutil.which("ISCC.exe")
     if configured:
-        return Path(configured).resolve()
+        return Path(configured)
     local_app_data = os.environ.get("LOCALAPPDATA")
     if local_app_data:
         fallback = Path(local_app_data) / "Programs" / "Inno Setup 6" / "ISCC.exe"
-        if fallback.is_file():
-            return fallback.resolve()
+        try:
+            if fallback.is_file():
+                return fallback
+        except OSError:
+            # The subsequent probe records the inaccessible runtime. Candidate
+            # creation must remain a source snapshot operation, not a tool
+            # execution authorization check.
+            return fallback
     return None
 
 
