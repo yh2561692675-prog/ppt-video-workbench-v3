@@ -3,7 +3,10 @@ name: platform-contracts
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [codex/program-integration-v1]
+
+permissions:
+  contents: read
 
 jobs:
   contract-tests:

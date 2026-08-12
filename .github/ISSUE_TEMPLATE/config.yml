@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private security report
+    url: https://github.com/yh2561692675-prog/ppt-video-workbench-v3/security/advisories/new
+    about: Report suspected vulnerabilities or accidental credential exposure privately.
+  - name: Usage and setup documentation
+    url: https://github.com/yh2561692675-prog/ppt-video-workbench-v3#quick-start-from-source
+    about: Check installation, local startup, and troubleshooting guidance before filing an Issue.

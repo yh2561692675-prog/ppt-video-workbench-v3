@@ -2,7 +2,11 @@ name: CI
 
 on:
   push:
+    branches: [codex/program-integration-v1]
   pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   quality:
@@ -38,7 +42,10 @@ jobs:
           $env:PATH = "C:\Program Files\LibreOffice\program;$env:PATH"
           uv run pytest
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      - if: runner.os != 'Windows'
+        run: pnpm exec playwright install --with-deps chromium
+      - if: runner.os == 'Windows'
+        run: pnpm exec playwright install ffmpeg
       - run: pnpm check
       - run: pnpm e2e
       - if: runner.os == 'Windows'

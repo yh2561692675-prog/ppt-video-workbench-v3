@@ -35,3 +35,6 @@ Pull Request 应说明：
 - UI 变化对应的截图或短视频（不得包含真实项目数据或凭据）。
 
 提交即表示你同意按本仓库的 [MIT License](LICENSE) 提供贡献。
+
+维护者的 Issue 分流、PR 审查、依赖升级和发布流程见
+[Maintainer guide](docs/maintainer-guide.md)。

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.1.0 - 2026-08-13
+
+- Published the first public source preview with a local-first PPT-to-video
+  workflow, auditable render artifacts, and deterministic cross-platform CI.
+- Added an MIT license, contribution and security policies, structured Issue
+  forms, PR review guidance, and an immutable release process.
+- This is a source prerelease. Signed Windows installer acceptance and operator
+  sign-off remain pending and are not claimed by this release.
+
 - Completed the asynchronous final-render API, resumable checkpoints, safe
   cancellation cleanup, artifact-verified result reuse, diagnostic queue
   counters, and the accessible React render-job panel.

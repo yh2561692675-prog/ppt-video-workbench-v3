@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version without the v prefix; it must match every checked-in package version.
+        required: true
+        type: string
+      prerelease:
+        description: Publish as a GitHub prerelease.
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  actions: read
+  checks: read
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Validate and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate version, target, notes, and CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "version must use X.Y.Z without a v prefix" >&2
+            exit 1
+          fi
+          python scripts/validate-release.py --version "$VERSION"
+          tag="v$VERSION"
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" >/dev/null 2>&1; then
+            echo "$tag already exists; releases are immutable" >&2
+            exit 1
+          fi
+          sha="$(git rev-parse HEAD)"
+          successful_jobs="$(gh api "repos/$GITHUB_REPOSITORY/commits/$sha/check-runs" --jq '[.check_runs[] | select((.name == "quality (ubuntu-latest)" or .name == "quality (windows-latest)") and .conclusion == "success") | .name] | unique | length')"
+          if [[ "$successful_jobs" != "2" ]]; then
+            echo "both default-branch quality jobs must be successful; observed $successful_jobs of 2" >&2
+            exit 1
+          fi
+
+      - name: Publish immutable GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=("v$VERSION" --target "$(git rev-parse HEAD)" --title "PPT Video Workbench v$VERSION" --notes-file "docs/releases/v$VERSION.md")
+          if [[ "$PRERELEASE" == "true" ]]; then
+            args+=(--prerelease)
+          else
+            args+=(--latest)
+          fi
+          gh release create "${args[@]}"

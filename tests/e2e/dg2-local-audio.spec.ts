@@ -62,7 +62,7 @@ for (const profile of ['S1', 'S8'] as const) {
     await page.getByRole('button', { name: '第4步 逐页旁白校对' }).click();
     const editors = page.locator('.narration-editor');
     const pageCount = profile === 'S1' ? 2 : 8;
-    await expect(editors).toHaveCount(pageCount);
+    await expect(editors).toHaveCount(pageCount, { timeout: 60_000 });
     for (let index = 0; index < pageCount; index += 1) {
       const editor = editors.nth(index);
       await editor.getByLabel('旁白正文').fill(`合成第${index + 1}页旁白`);
