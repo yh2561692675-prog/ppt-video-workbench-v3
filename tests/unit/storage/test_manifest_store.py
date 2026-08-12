@@ -107,6 +107,28 @@ def test_save_retries_a_transient_windows_sharing_violation(
     assert store.load(project_dir).name == "重试成功"
 
 
+def test_non_windows_permission_error_without_winerror_is_not_retried(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "source.json"
+    destination = tmp_path / "destination.json"
+    source.write_text("{}", encoding="utf-8")
+    attempts = 0
+
+    def fail_replace(_: str | Path, __: str | Path) -> None:
+        nonlocal attempts
+        attempts += 1
+        raise PermissionError(13, "permission denied")
+
+    monkeypatch.setattr(os, "replace", fail_replace)
+    monkeypatch.setattr("workbench.storage.manifest_store.os.name", "posix")
+
+    with pytest.raises(PermissionError, match="permission denied"):
+        ManifestStore._replace_with_retry(source, destination)
+
+    assert attempts == 1
+
+
 def test_file_hash_is_stable_and_content_sensitive(tmp_path: Path) -> None:
     source = tmp_path / "中文资料.txt"
     source.write_bytes("同一内容".encode())
