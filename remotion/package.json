@@ -10,13 +10,13 @@
   },
   "dependencies": {
     "@remotion/cli": "4.0.507",
-    "react": "19.1.1",
-    "react-dom": "19.1.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "remotion": "4.0.507"
   },
   "devDependencies": {
-    "@types/react": "19.1.9",
-    "@types/react-dom": "19.1.7",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
     "vitest": "3.2.6"
   }
 }
