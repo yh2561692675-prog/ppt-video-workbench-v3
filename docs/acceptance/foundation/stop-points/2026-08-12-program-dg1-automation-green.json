@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects-program",
+  "wave": "W1",
+  "gate": "DG1_AUTOMATION_GREEN",
+  "status": "PASS",
+  "generated_at": "2026-08-12T05:04:02Z",
+  "branch": "codex/program-integration-v1",
+  "source": {
+    "commit": "abd0949711ab3d0758487438f8a39d697e32ac55",
+    "worktree": "F:/ppt-video-workbench-v3/.worktrees/program-integration-v1",
+    "worktree_status": "clean"
+  },
+  "candidate": {
+    "candidate_id": "v1-rc-abd0949711ab-20260812T031335Z",
+    "manifest": "test-results/debug-program/candidates/v1-rc-abd0949711ab-20260812T031335Z/candidate-manifest.json",
+    "manifest_sha256": "8293bba6a52c874c066bba1a194e3a988694b8bda7b62ab5d538a892ff917a30",
+    "source_commit": "abd0949711ab3d0758487438f8a39d697e32ac55",
+    "dirty": false
+  },
+  "external_ci": {
+    "provider": "github-actions",
+    "repository": "yh2561692675-prog/ppt-video-workbench-v3",
+    "workflow_run_id": "31559311888",
+    "workflow_run_url": "https://github.com/yh2561692675-prog/ppt-video-workbench-v3/actions/runs/31559311888",
+    "source_commit": "abd0949711ab3d0758487438f8a39d697e32ac55",
+    "windows_job_id": "93998187248",
+    "ubuntu_job_id": "93998187221",
+    "status": "success",
+    "evidence": "test-results/debug-program/external-ci/v1-rc-abd0949711ab-20260812T031335Z/external-ci-evidence.json",
+    "evidence_sha256": "02980017207a1c72ee6832ca4f127090e1dedef141a39a6d728f25283f29824c"
+  },
+  "complete_runs": [
+    {
+      "purpose": "DP20 clean full automation",
+      "run_id": "v1-rc-abd0949711-dp20-full-1786508375446450100-6d09f6",
+      "run_root": "test-results/debug-program/dg1-runs/v1-rc-abd0949711ab-20260812T031335Z/v1-rc-abd0949711-dp20-full-1786508375446450100-6d09f6",
+      "status": "passed",
+      "commands": 15,
+      "verdict_sha256": "899b923de3eebafad2d4ceaa06ccdcce654ee776a7c9a8437b72a3d1c0602099",
+      "evidence_manifest_sha256": "2e3f8a4c8e3fad7363a684baa3c283c67b6a1d32c7574131411c039da0f91abe"
+    },
+    {
+      "purpose": "DP25 independent repeat",
+      "run_id": "v1-rc-abd0949711-dp20-full-1786509768781100700-b85743",
+      "run_root": "test-results/debug-program/dg1-runs/v1-rc-abd0949711ab-20260812T031335Z/v1-rc-abd0949711-dp20-full-1786509768781100700-b85743",
+      "status": "passed",
+      "commands": 15,
+      "verdict_sha256": "7f8cc2bc0ddc9c18bcc4d296cae45764b337a22256b35e1975a11861daa14d6d",
+      "evidence_manifest_sha256": "483dcd0c0913ac45ca6d6d9e29b66fecfe5247662491ada8e19dce58d297488c"
+    }
+  ],
+  "repeatability": {
+    "release_file_set_equal": true,
+    "runtime_manifest_entries": [8415, 8415],
+    "runtime_manifest_path_set_equal": true,
+    "exact_hash_matches": [
+      "payload/licenses/THIRD-PARTY-NOTICES.txt",
+      "payload/sbom/node-dependencies.json",
+      "payload/sbom/python-dependencies.json"
+    ],
+    "allowed_nondeterminism": [
+      "Inno Setup installer compression/build metadata changes installer bytes and size",
+      "release-artifacts.json embeds run-specific release paths and hashes",
+      "runtime-manifest.json built_at changes",
+      "api/workbench.exe and two pnpm runtime state metadata files change during packaging"
+    ],
+    "unexpected_runtime_artifact_drift": []
+  },
+  "interrupted_history": {
+    "run_id": "v1-rc-abd0949711-dp20-full-1786506004890650400-fbfb85",
+    "status": "interrupted",
+    "reason": "external tool observation was interrupted; no matching automation process remained",
+    "treatment": "append-only recovery; excluded from pass evidence"
+  },
+  "conclusion": {
+    "dg1_automation_green_claimed": true,
+    "next_gate": "DG2_LOCAL_E2E_GREEN",
+    "scope_boundary": "Real Provider, real Presenter/HeyGen authorization, manual audiovisual review, signing and final RC acceptance remain gated by later phases."
+  }
+}
