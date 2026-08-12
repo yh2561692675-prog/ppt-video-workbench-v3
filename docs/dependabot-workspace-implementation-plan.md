@@ -8,4 +8,3 @@
 - [x] Keep weekly uv and GitHub Actions update queues.
 - [ ] Verify GitHub accepts the configuration on a protected pull request.
 - [ ] Close the tracking Issue after the protected checks pass and the PR merges.
-

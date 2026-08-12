@@ -21,4 +21,3 @@ version.
 - A failed or incomplete dependency PR cannot enter the protected default branch.
 - Runtime, test-tool, and workflow dependencies remain reviewable as separate
   maintenance concerns.
-
