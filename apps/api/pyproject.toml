@@ -9,7 +9,7 @@ dependencies = [
   "ppt-video-workbench-peripheral-platform",
   "pillow>=11,<13",
   "pydantic>=2.11,<3",
-  "pymupdf>=1.26,<2",
+  "pymupdf>=1.28.2,<2",
   "python-docx>=1.2,<2",
   "python-multipart>=0.0.20,<1",
   "python-pptx>=1.0,<2",
