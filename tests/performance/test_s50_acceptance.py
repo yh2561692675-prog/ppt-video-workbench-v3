@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+import workbench.performance.s50_acceptance as s50_acceptance
 from workbench.performance.s50_acceptance import (
     _temporary_file_count,
     _validate_package,
@@ -46,3 +48,25 @@ def test_temporary_file_count_ignores_published_render_history(tmp_path: Path) -
     temporary.write_bytes(b"unfinished publication")
 
     assert _temporary_file_count(tmp_path) == 1
+
+
+def test_s50_creates_its_owned_workspace_before_creating_app(
+    tmp_path: Path, monkeypatch
+) -> None:
+    observed: list[Path] = []
+
+    def app_factory(workspace: Path, *, video_renderer: object) -> object:
+        del video_renderer
+        observed.append(workspace)
+        raise RuntimeError("stop after workspace initialization")
+
+    monkeypatch.setattr(s50_acceptance, "create_app", app_factory)
+    with pytest.raises(RuntimeError, match="workspace initialization"):
+        s50_acceptance.execute_s50_acceptance(
+            tmp_path / "run",
+            ffmpeg="ffmpeg",
+            ffprobe="ffprobe",
+        )
+
+    assert observed == [tmp_path / "run" / "workspace"]
+    assert observed[0].is_dir()

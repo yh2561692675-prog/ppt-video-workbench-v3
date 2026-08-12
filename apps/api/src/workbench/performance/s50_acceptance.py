@@ -246,6 +246,11 @@ def execute_s50_acceptance(
         raise FileExistsError(f"S50 run root already exists: {run_root}")
     run_root.mkdir(parents=True)
     workspace = run_root / "workspace"
+    # ProjectService intentionally does not create an arbitrary configured
+    # workspace. This acceptance owns its candidate-specific directory, so it
+    # must create that exact directory before asking the product store to
+    # publish a project manifest.
+    workspace.mkdir()
     sampler = PerformanceSampler(
         run_root / "performance",
         {"s50_harness": os.getpid()},
