@@ -367,8 +367,14 @@ def run_s50_acceptance(
     output_root = output_root.resolve()
     _require_test_results_child(repo_root, output_root)
     candidate_id, source_commit = _candidate_identity(candidate)
+    manifest_sha256 = sha256_file(candidate_manifest_path)
     run_id = f"s50-{time.strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
-    run_root = output_root / candidate_id / run_id
+    # The full candidate ID remains in signed evidence.  Windows project
+    # manifests also create an atomic temporary filename, so nesting the full
+    # candidate ID here can exceed MAX_PATH before a render begins. A manifest
+    # hash prefix is still candidate-specific while keeping every runtime path
+    # below the Windows compatibility boundary.
+    run_root = _candidate_run_root(output_root, manifest_sha256, run_id)
     report = execute_s50_acceptance(run_root, ffmpeg=ffmpeg, ffprobe=ffprobe)
     performance_summary = next((run_root / "performance").glob("*-summary.json"), None)
     performance_events = next((run_root / "performance").glob("*.jsonl"), None)
@@ -382,7 +388,7 @@ def run_s50_acceptance(
         "candidate": {
             "candidate_id": candidate_id,
             "source_commit": source_commit,
-            "manifest_sha256": sha256_file(candidate_manifest_path),
+            "manifest_sha256": manifest_sha256,
         },
         "fixture": {
             "id": "S50-synthetic-media-v1",
@@ -433,7 +439,10 @@ def run_s50_acceptance(
 
 
 def _create_s50_fixture(projects: Any, run_root: Path) -> S50Fixture:
-    project = projects.create("S50 synthetic media performance acceptance")
+    del run_root
+    # Keep the generated ProjectService directory short. Its atomic manifest
+    # writer appends a UUID temporary filename during every checkpoint update.
+    project = projects.create("s50")
     project_root = (projects.workspace_root / project.project_dir).resolve()
     pages: list[PageRecord] = []
     extractions: list[PageExtraction] = []
@@ -607,6 +616,16 @@ def _candidate_identity(candidate: dict[str, object]) -> tuple[str, str]:
     if not isinstance(source_commit, str):
         raise ValueError("validated candidate source commit is missing")
     return candidate_id, source_commit
+
+
+def _candidate_run_root(output_root: Path, manifest_sha256: str, run_id: str) -> Path:
+    if len(manifest_sha256) != 64 or any(
+        character not in "0123456789abcdef" for character in manifest_sha256
+    ):
+        raise ValueError("candidate manifest SHA-256 must be a lowercase 64-character digest")
+    if not run_id.startswith("s50-"):
+        raise ValueError("S50 run ID is invalid")
+    return output_root / f"candidate-{manifest_sha256[:12]}" / run_id
 
 
 def _require_test_results_child(repo_root: Path, output_root: Path) -> None:
