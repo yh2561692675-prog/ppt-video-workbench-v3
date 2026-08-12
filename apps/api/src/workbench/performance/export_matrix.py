@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import time
 import wave
 from dataclasses import dataclass
@@ -33,6 +34,7 @@ from .s50_acceptance import FfmpegPageRenderer, sha256_file
 _SCHEMA_VERSION = "1.0"
 _PAGE_DURATION_MS = 1_000
 _PROJECT_NAME = "m"
+_WINDOWS_ACCEPTANCE_PATH_LIMIT = 240
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,8 +86,9 @@ def execute_output_matrix(
     run_root = run_root.resolve()
     if run_root.exists():
         raise FileExistsError(f"output matrix run root already exists: {run_root}")
+    _require_windows_path_budget(run_root)
     run_root.mkdir(parents=True)
-    workspace = run_root / "workspace"
+    workspace = run_root / "w"
     workspace.mkdir()
     app = create_app(workspace, video_renderer=FfmpegPageRenderer(ffmpeg))
     exporter = app.state.video_export_service
@@ -158,8 +161,13 @@ def run_output_matrix_acceptance(
     except ValueError as error:
         raise ValueError("output_root must remain inside repository test-results") from error
     candidate_id, source_commit = _candidate_identity(candidate)
-    run_id = f"matrix-{time.strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
-    run_root = output_root / candidate_id / run_id
+    manifest_sha256 = sha256_file(candidate_manifest_path)
+    run_id = f"r-matrix-{time.strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
+    # Retain the full candidate ID in immutable evidence, but use the manifest
+    # hash prefix for runtime directories.  VideoExportService writes a UUID
+    # job directory and an atomic hidden page file; nesting the full candidate
+    # ID makes that genuine FFmpeg output path exceed Windows MAX_PATH.
+    run_root = _candidate_run_root(output_root, manifest_sha256, run_id)
     fixture, cases = execute_output_matrix(run_root, ffmpeg=ffmpeg, ffprobe=ffprobe)
     evidence_path = run_root / "output-matrix-acceptance-v1.json"
     payload = {
@@ -169,7 +177,7 @@ def run_output_matrix_acceptance(
         "candidate": {
             "candidate_id": candidate_id,
             "source_commit": source_commit,
-            "manifest_sha256": sha256_file(candidate_manifest_path),
+            "manifest_sha256": manifest_sha256,
         },
         "fixture": {
             "id": "DP44-one-page-synthetic-v1",
@@ -304,6 +312,36 @@ def _candidate_identity(candidate: dict[str, object]) -> tuple[str, str]:
     if not isinstance(source_commit, str):
         raise ValueError("validated candidate source commit is missing")
     return candidate_id, source_commit
+
+
+def _candidate_run_root(output_root: Path, manifest_sha256: str, run_id: str) -> Path:
+    if len(manifest_sha256) != 64 or any(
+        character not in "0123456789abcdef" for character in manifest_sha256
+    ):
+        raise ValueError("candidate manifest SHA-256 must be a lowercase 64-character digest")
+    if not run_id.startswith("r-matrix-"):
+        raise ValueError("DP44 matrix run ID is invalid")
+    return output_root / f"c-{manifest_sha256[:12]}" / run_id
+
+
+def _require_windows_path_budget(run_root: Path) -> None:
+    """Reject a matrix layout that cannot publish an atomic rendered page."""
+
+    projected = (
+        run_root
+        / "w"
+        / "m_20260813_0301"
+        / "08_输出"
+        / ".render-jobs"
+        / ("0" * 8 + "-" + "0" * 4 + "-" + "0" * 4 + "-" + "0" * 4 + "-" + "0" * 12)
+        / "pages"
+        / ".page-0001.tmp.mp4"
+    )
+    if os.name == "nt" and len(str(projected)) >= _WINDOWS_ACCEPTANCE_PATH_LIMIT:
+        raise ValueError(
+            "DP44 output matrix root is too deep for Windows FFmpeg publication; "
+            "choose a shorter path inside test-results"
+        )
 
 
 def _case_payload(case: MatrixCaseResult) -> dict[str, object]:

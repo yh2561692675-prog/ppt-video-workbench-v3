@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import pytest
-from workbench.performance.export_matrix import EXECUTABLE_OUTPUT_MATRIX, _profile_props
+from workbench.performance.export_matrix import (
+    EXECUTABLE_OUTPUT_MATRIX,
+    _candidate_run_root,
+    _profile_props,
+)
 from workbench.video.models import ProjectVideoProps, VideoPageProps
 
 
@@ -60,3 +64,9 @@ def test_matrix_fixture_creates_its_media_directories(tmp_path) -> None:
     fixture = _create_fixture(projects)
     assert (fixture.project_root / "02_pages" / "page-0001.png").is_file()
     assert (fixture.project_root / "05_audio" / "page-0001.wav").is_file()
+
+
+def test_matrix_runtime_root_uses_a_short_candidate_manifest_prefix(tmp_path) -> None:
+    manifest_sha256 = "a" * 64
+    root = _candidate_run_root(tmp_path, manifest_sha256, "r-matrix-20260813T030117Z-4913262d")
+    assert root == tmp_path / "c-aaaaaaaaaaaa" / "r-matrix-20260813T030117Z-4913262d"
