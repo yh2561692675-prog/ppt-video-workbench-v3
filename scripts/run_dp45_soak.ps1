@@ -11,7 +11,8 @@ param(
     [int]$RecoveryEvery = 3,
     [int]$CancellationEvery = 5,
     [int]$RetainCompletedJobs = 2,
-    [int]$LedgerSegmentBytes = 262144
+    [int]$LedgerSegmentBytes = 262144,
+    [string]$TempRoot
 )
 
 $ErrorActionPreference = 'Stop'
@@ -43,6 +44,21 @@ Set-Location $repoRoot
 
 $logRoot = Join-Path $repoRoot 'test-results\soak\long-runs'
 New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
+$tempRootWasExplicit = -not [string]::IsNullOrWhiteSpace($TempRoot)
+if (-not $tempRootWasExplicit) {
+    $TempRoot = Join-Path $repoRoot 'test-results\soak\temp'
+}
+$resolvedTempRoot = (New-Item -ItemType Directory -Path $TempRoot -Force).FullName
+$resolvedTempRoot = (Resolve-Path -LiteralPath $resolvedTempRoot).Path
+if ($resolvedTempRoot -notmatch '^[Ff]:\\') {
+    throw "DP45 TEMP/TMP must be isolated on the F: drive: $resolvedTempRoot"
+}
+$oldTemp = $env:TEMP
+$oldTmp = $env:TMP
+$oldTmpDir = $env:TMPDIR
+$env:TEMP = $resolvedTempRoot
+$env:TMP = $resolvedTempRoot
+$env:TMPDIR = $resolvedTempRoot
 $runStamp = Get-Date -Format 'yyyyMMddTHHmmssZ'
 $logPrefix = Join-Path $logRoot "dp45-soak-scheduled-$runStamp"
 $startedPath = "$logPrefix.started.json"
@@ -60,6 +76,7 @@ $completedPath = "$logPrefix.completed.json"
     recovery_every = $RecoveryEvery
     cancellation_every = $CancellationEvery
     retain_completed_jobs = $RetainCompletedJobs
+    temp_root = $resolvedTempRoot
 } | ConvertTo-Json | Set-Content -LiteralPath $startedPath -Encoding utf8
 
 $previousErrorActionPreference = $ErrorActionPreference
@@ -83,6 +100,9 @@ try {
 }
 finally {
     $ErrorActionPreference = $previousErrorActionPreference
+    $env:TEMP = $oldTemp
+    $env:TMP = $oldTmp
+    $env:TMPDIR = $oldTmpDir
 }
 
 [ordered]@{
@@ -92,6 +112,7 @@ finally {
     exit_code = $exitCode
     candidate = (Resolve-Path -LiteralPath $Candidate).Path
     output_log = "$logPrefix.output.log"
+    temp_root = $resolvedTempRoot
 } | ConvertTo-Json | Set-Content -LiteralPath $completedPath -Encoding utf8
 
 exit $exitCode
