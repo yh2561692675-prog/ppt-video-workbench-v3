@@ -36,5 +36,24 @@ Pull Request 应说明：
 
 提交即表示你同意按本仓库的 [MIT License](LICENSE) 提供贡献。
 
+## Maintaining the Codex skill
+
+The reusable Agent Skill lives in `skills/ppt-video-workbench`. Keep its `SKILL.md` concise and
+move detailed, workflow-specific guidance into a direct file under `references/`. Add scripts only
+for deterministic, repeatable operations and keep them read-only unless their name and instructions
+clearly declare a mutation.
+
+When application commands, safety boundaries, error codes, maintenance policy, or release gates
+change, update the corresponding skill reference in the same pull request. Validate the skill with:
+
+```powershell
+python "$env:USERPROFILE\.codex\skills\.system\skill-creator\scripts\quick_validate.py" `
+  .\skills\ppt-video-workbench
+python .\skills\ppt-video-workbench\scripts\preflight.py --repo .
+```
+
+Do not add a second README, changelog, installation guide, generated output, lockfile, or copied
+application source inside the skill directory.
+
 维护者的 Issue 分流、PR 审查、依赖升级和发布流程见
 [Maintainer guide](docs/maintainer-guide.md)。
