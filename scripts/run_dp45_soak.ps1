@@ -44,9 +44,10 @@ Set-Location $repoRoot
 
 $logRoot = Join-Path $repoRoot 'test-results\soak\long-runs'
 New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
+$runStamp = Get-Date -Format 'yyyyMMddTHHmmssZ'
 $tempRootWasExplicit = -not [string]::IsNullOrWhiteSpace($TempRoot)
 if (-not $tempRootWasExplicit) {
-    $TempRoot = Join-Path $repoRoot 'test-results\soak\temp'
+    $TempRoot = Join-Path $repoRoot "test-results\soak\temp\dp45-soak-$runStamp"
 }
 $resolvedTempRoot = (New-Item -ItemType Directory -Path $TempRoot -Force).FullName
 $resolvedTempRoot = (Resolve-Path -LiteralPath $resolvedTempRoot).Path
@@ -59,7 +60,6 @@ $oldTmpDir = $env:TMPDIR
 $env:TEMP = $resolvedTempRoot
 $env:TMP = $resolvedTempRoot
 $env:TMPDIR = $resolvedTempRoot
-$runStamp = Get-Date -Format 'yyyyMMddTHHmmssZ'
 $logPrefix = Join-Path $logRoot "dp45-soak-scheduled-$runStamp"
 $startedPath = "$logPrefix.started.json"
 $completedPath = "$logPrefix.completed.json"
@@ -81,6 +81,7 @@ $completedPath = "$logPrefix.completed.json"
 
 $previousErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = 'Continue'
+$exitCode = 1
 try {
     & $Uv run python scripts/performance_soak_acceptance.py `
         --candidate $Candidate `
