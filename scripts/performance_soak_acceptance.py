@@ -36,6 +36,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--page-count", type=int, default=2)
     parser.add_argument("--recovery-every", type=int, default=3)
     parser.add_argument("--cancellation-every", type=int, default=5)
+    parser.add_argument("--retain-completed-jobs", type=int, default=2)
     parser.add_argument("--ledger-segment-bytes", type=int, default=256 * 1024)
     return parser
 
@@ -61,6 +62,7 @@ def main(argv: list[str] | None = None) -> int:
         page_count=args.page_count,
         recovery_every=args.recovery_every,
         cancellation_every=args.cancellation_every,
+        retain_completed_jobs=args.retain_completed_jobs,
         ledger_segment_bytes=args.ledger_segment_bytes,
     )
     print(json.dumps({"status": "passed", "evidence": str(evidence)}, ensure_ascii=False))

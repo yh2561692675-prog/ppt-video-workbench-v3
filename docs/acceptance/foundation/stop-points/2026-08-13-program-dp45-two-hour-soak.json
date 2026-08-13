@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0",
+  "program": "remaining-major-projects-program",
+  "wave": "W1",
+  "task": "DP45_LONG_DURATION_SOAK",
+  "status": "PARTIAL_PASS",
+  "generated_at": "2026-08-13T08:30:00Z",
+  "branch": "codex/program-integration-v1",
+  "source": {
+    "commit": "4470566876cdf49debcb84ef63a28212fc55ea7b",
+    "worktree": "F:/ppt-video-workbench-v3/.worktrees/program-integration-v1"
+  },
+  "candidate": {
+    "id": "v1-rc-4470566876cd-20260812T233338Z",
+    "manifest_sha256": "f5e537ba0a98c5755afec49cb2c3bc19a06447b31f993b21d7d1f0271e8fef0c",
+    "valid": true
+  },
+  "two_hour_soak": {
+    "evidence_path": "test-results/soak/c-f5e537ba0a98/r-soak-20260813T073434Z-4dd897d3/soak-acceptance-v1.json",
+    "evidence_sha256": "024358b373aa1cff44fc5e6314c475b7283898a290bc9d121c92056209bd341b",
+    "requested_duration_seconds": 7200.0,
+    "observed_duration_seconds": 7204.859,
+    "cycle_count": 322,
+    "normal_cycles": 172,
+    "recovery_cycles": 86,
+    "cancel_retry_cycles": 64,
+    "final_temporary_file_count": 0,
+    "orphan_processes": [],
+    "rss_curve_bytes": {
+      "first": 137228288,
+      "last": 129712128,
+      "peak": 146092032,
+      "growth": -7516160
+    },
+    "sampling": {
+      "summary_sha256": "62cd6266324784b77c8cd7995a122b83f68f92b4f016316fef582719b8c00d9f",
+      "sample_count": 3748,
+      "ledger_max_segment_bytes": 262144,
+      "ledger_segment_count": 1
+    }
+  },
+  "prior_failure_preserved": {
+    "failure": "Windows WinError 5 while atomically publishing a package directory",
+    "remediation_commits": ["495cc35", "8638667"],
+    "policy": "Failed candidate logs and artifacts are preserved."
+  },
+  "scope_boundary": {
+    "completed": "Two-hour local repeated preview/export, checkpoint recovery, cancellation cleanup, retry, resource sampling, log-segment budget and process hygiene.",
+    "not_claimed": [
+      "eight-hour S50 or batch-equivalent result",
+      "formal performance-budget engineering approval",
+      "real external provider",
+      "hardware-specific GPU budget",
+      "signed installer",
+      "production application log rotation"
+    ],
+    "next": "Implement safe bounded retention for successful artifacts produced only by a new isolated soak, then schedule and monitor the eight-hour S50/batch-equivalent soak from a new clean candidate."
+  },
+  "rollback": "All evidence is candidate-specific ignored test-results; no user project or feature flag was changed.",
+  "safe_resume": "Preserve all prior failed and passed evidence. Do not overwrite this run root. Build a new clean candidate before the eight-hour run.",
+  "will_write_again": true
+}

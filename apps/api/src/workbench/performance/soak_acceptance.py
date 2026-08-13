@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import time
 import wave
 from dataclasses import dataclass
@@ -88,6 +89,7 @@ class SoakRuntimeReport:
     ledger_paths: tuple[Path, ...]
     final_temporary_file_count: int
     orphan_processes: tuple[str, ...]
+    pruned_successful_job_count: int
 
 
 class _InterruptAfterPageCheckpoint:
@@ -242,6 +244,7 @@ def execute_soak_acceptance(
     page_count: int,
     recovery_every: int,
     cancellation_every: int,
+    retain_completed_jobs: int = 2,
     ledger_segment_bytes: int = _DEFAULT_LEDGER_SEGMENT_BYTES,
 ) -> SoakRuntimeReport:
     """Run real exports until duration and cycle minimum are both satisfied."""
@@ -253,6 +256,7 @@ def execute_soak_acceptance(
         page_count=page_count,
         recovery_every=recovery_every,
         cancellation_every=cancellation_every,
+        retain_completed_jobs=retain_completed_jobs,
     )
     run_root = run_root.resolve()
     if run_root.exists():
@@ -279,6 +283,8 @@ def execute_soak_acceptance(
     started = time.monotonic()
     deadline = started + duration_seconds
     cycles: list[SoakCycle] = []
+    completed_job_ids: list[str] = []
+    pruned_successful_job_count = 0
     sampler.start()
     try:
         while time.monotonic() < deadline or len(cycles) < minimum_cycles:
@@ -308,6 +314,19 @@ def execute_soak_acceptance(
                 package_sha256=cycle.package_sha256,
             )
             cycles.append(checked)
+            # A cancel/retry cycle contains the cancelled job followed by the
+            # retry that actually published the validated package.  Retention
+            # is deliberately limited to that final successful job so the
+            # cancelled job's diagnostic history remains available.
+            completed_job_ids.append(checked.job_ids[-1])
+            retained_job_ids = completed_job_ids[-retain_completed_jobs:]
+            pruned = _prune_completed_cycle_artifacts(
+                fixture,
+                completed_job_ids[:-retain_completed_jobs],
+            )
+            if pruned:
+                pruned_successful_job_count += len(pruned)
+                completed_job_ids = retained_job_ids
             ledger.append(
                 {
                     "type": "cycle_finished",
@@ -319,6 +338,7 @@ def execute_soak_acceptance(
                     "cached_pages": checked.cached_pages,
                     "temporary_file_count": checked.temporary_file_count,
                     "package_sha256": checked.package_sha256,
+                    "pruned_successful_job_ids": pruned,
                 }
             )
             sampler.record_stage("soak_cycle", "finished")
@@ -345,6 +365,7 @@ def execute_soak_acceptance(
         ledger_paths=ledger.paths,
         final_temporary_file_count=final_temporary,
         orphan_processes=tuple(orphans),
+        pruned_successful_job_count=pruned_successful_job_count,
     )
 
 
@@ -362,6 +383,7 @@ def run_soak_acceptance(
     page_count: int,
     recovery_every: int,
     cancellation_every: int,
+    retain_completed_jobs: int = 2,
     ledger_segment_bytes: int = _DEFAULT_LEDGER_SEGMENT_BYTES,
 ) -> Path:
     """Write non-overwriteable candidate-bound DP45 evidence under test-results."""
@@ -383,6 +405,7 @@ def run_soak_acceptance(
         page_count=page_count,
         recovery_every=recovery_every,
         cancellation_every=cancellation_every,
+        retain_completed_jobs=retain_completed_jobs,
         ledger_segment_bytes=ledger_segment_bytes,
     )
     sampler_summary = _load_json(report.sampler_summary)
@@ -404,6 +427,7 @@ def run_soak_acceptance(
             "page_count": page_count,
             "recovery_every": recovery_every,
             "cancellation_every": cancellation_every,
+            "retain_completed_jobs": retain_completed_jobs,
         },
         "observed": {
             "duration_seconds": round(report.finished_monotonic - report.started_monotonic, 3),
@@ -413,6 +437,7 @@ def run_soak_acceptance(
             "normal_cycles": sum(cycle.mode == "normal" for cycle in report.cycles),
             "final_temporary_file_count": report.final_temporary_file_count,
             "orphan_processes": list(report.orphan_processes),
+            "pruned_successful_job_count": report.pruned_successful_job_count,
             "rss_curve": _rss_curve(sampler_events),
             "sampler": _sampler_payload(report.sampler_summary, sampler_summary),
             "ledger": {
@@ -781,6 +806,43 @@ def _temporary_file_count(root: Path) -> int:
     )
 
 
+def _prune_completed_cycle_artifacts(fixture: SoakFixture, job_ids: list[str]) -> list[str]:
+    """Remove only validated-success history belonging to this isolated soak fixture.
+
+    This is acceptance-run storage control, not product retention behaviour. It
+    runs only after package validation and never touches failed/cancelled
+    evidence roots. The final stable output and the configured most-recent
+    versioned packages remain available.
+    """
+
+    output_root = (fixture.project_root / "08_输出").resolve()
+    log_root = (fixture.project_root / "09_日志" / "render-jobs").resolve()
+    staging_root = (output_root / ".render-jobs").resolve()
+    pruned: list[str] = []
+    for job_id in job_ids:
+        UUID(job_id)
+        package = output_root / f"制作包-{job_id}"
+        staging = staging_root / job_id
+        job_log = log_root / job_id
+        removed_any = False
+        for root, target in (
+            (output_root, package),
+            (staging_root, staging),
+            (log_root, job_log),
+        ):
+            resolved = target.resolve()
+            if root not in resolved.parents:
+                raise RuntimeError("DP45 retention target escapes the isolated fixture")
+            if resolved.is_dir():
+                shutil.rmtree(resolved)
+                removed_any = True
+            elif resolved.exists():
+                raise RuntimeError("DP45 retention target must be a directory")
+        if removed_any:
+            pruned.append(job_id)
+    return pruned
+
+
 def _child_processes_of_current_harness() -> list[str]:
     observed = list(SystemProcessProvider().snapshot())
     by_parent: dict[int, list[ProcessObservation]] = {}
@@ -932,6 +994,7 @@ def _validate_options(
     page_count: int,
     recovery_every: int,
     cancellation_every: int,
+    retain_completed_jobs: int,
 ) -> None:
     if duration_seconds < 0:
         raise ValueError("duration_seconds must not be negative")
@@ -943,6 +1006,8 @@ def _validate_options(
         raise ValueError("page_count must be between 1 and 50")
     if recovery_every < 0 or cancellation_every < 0:
         raise ValueError("recovery and cancellation cadence must not be negative")
+    if retain_completed_jobs < 1:
+        raise ValueError("retain_completed_jobs must be positive")
 
 
 def _write_new_json(path: Path, payload: object) -> None:

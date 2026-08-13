@@ -7,6 +7,7 @@ from workbench.performance.soak_acceptance import (
     _DEFAULT_PAGE_DURATION_MS,
     _candidate_run_root,
     _cycle_mode,
+    _prune_completed_cycle_artifacts,
     _require_windows_path_budget,
     _RotatingLedger,
     _temporary_file_count,
@@ -42,6 +43,7 @@ def test_soak_rejects_invalid_run_options() -> None:
             page_count=1,
             recovery_every=0,
             cancellation_every=0,
+            retain_completed_jobs=2,
         )
 
 
@@ -61,3 +63,20 @@ def test_soak_temporary_count_detects_atomic_media_publication_names(tmp_path) -
     (tmp_path / ".page-0001.tmp.mp4").write_bytes(b"partial media")
     (tmp_path / ".final.json.tmp").write_text("{}", encoding="utf-8")
     assert _temporary_file_count(tmp_path) == 2
+
+
+def test_soak_retention_only_prunes_old_validated_fixture_artifacts(tmp_path) -> None:
+    old_job = "00000000-0000-0000-0000-000000000001"
+    retained_job = "00000000-0000-0000-0000-000000000002"
+    output = tmp_path / "08_输出"
+    for job_id in (old_job, retained_job):
+        (output / ".render-jobs" / job_id).mkdir(parents=True)
+        (output / f"制作包-{job_id}").mkdir()
+        (tmp_path / "09_日志" / "render-jobs" / job_id).mkdir(parents=True)
+    fixture = type("Fixture", (), {"project_root": tmp_path})()
+
+    assert _prune_completed_cycle_artifacts(fixture, [old_job]) == [old_job]
+    assert not (output / ".render-jobs" / old_job).exists()
+    assert not (output / f"制作包-{old_job}").exists()
+    assert not (tmp_path / "09_日志" / "render-jobs" / old_job).exists()
+    assert (output / f"制作包-{retained_job}").is_dir()
