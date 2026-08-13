@@ -10,6 +10,7 @@ param(
     [int]$PageCount = 2,
     [int]$RecoveryEvery = 3,
     [int]$CancellationEvery = 5,
+    [int]$RetainCompletedJobs = 2,
     [int]$LedgerSegmentBytes = 262144
 )
 
@@ -27,6 +28,9 @@ if ($Config) {
     $PageCount = [int]$scheduledConfig.page_count
     $RecoveryEvery = [int]$scheduledConfig.recovery_every
     $CancellationEvery = [int]$scheduledConfig.cancellation_every
+    if ($null -ne $scheduledConfig.retain_completed_jobs) {
+        $RetainCompletedJobs = [int]$scheduledConfig.retain_completed_jobs
+    }
     $LedgerSegmentBytes = [int]$scheduledConfig.ledger_segment_bytes
 }
 foreach ($requiredValue in @($Candidate, $Ffmpeg, $Ffprobe, $Uv)) {
@@ -40,7 +44,7 @@ Set-Location $repoRoot
 $logRoot = Join-Path $repoRoot 'test-results\soak\long-runs'
 New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
 $runStamp = Get-Date -Format 'yyyyMMddTHHmmssZ'
-$logPrefix = Join-Path $logRoot "dp45-2h-scheduled-$runStamp"
+$logPrefix = Join-Path $logRoot "dp45-soak-scheduled-$runStamp"
 $startedPath = "$logPrefix.started.json"
 $completedPath = "$logPrefix.completed.json"
 
@@ -55,6 +59,7 @@ $completedPath = "$logPrefix.completed.json"
     page_count = $PageCount
     recovery_every = $RecoveryEvery
     cancellation_every = $CancellationEvery
+    retain_completed_jobs = $RetainCompletedJobs
 } | ConvertTo-Json | Set-Content -LiteralPath $startedPath -Encoding utf8
 
 $previousErrorActionPreference = $ErrorActionPreference
@@ -72,6 +77,7 @@ try {
         --page-count $PageCount `
         --recovery-every $RecoveryEvery `
         --cancellation-every $CancellationEvery `
+        --retain-completed-jobs $RetainCompletedJobs `
         --ledger-segment-bytes $LedgerSegmentBytes *>> "$logPrefix.output.log"
     $exitCode = $LASTEXITCODE
 }
