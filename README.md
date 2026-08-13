@@ -39,6 +39,22 @@ PPT Video Workbench 将 PPTX、DOCX、PDF 和图片素材组织成一条完整�
 | `tests`               | 单元、集成、契约、安全、性能和发布门禁测试 |
 | `docs`                | 用户、接口、排障、架构决策和实施状态文档   |
 
+## Codex skill
+
+The repository includes an independently installable Agent Skill at
+[`skills/ppt-video-workbench`](skills/ppt-video-workbench/SKILL.md). The skill teaches Codex how to
+run the source workflow, diagnose production failures, and maintain Issues, pull requests,
+dependencies, and releases without loading the entire project documentation into context.
+
+Install it from its GitHub directory with Codex's skill installer:
+
+```text
+$skill-installer install https://github.com/yh2561692675-prog/ppt-video-workbench-v3/tree/codex/program-integration-v1/skills/ppt-video-workbench
+```
+
+Restart Codex after installation, then invoke it explicitly with `$ppt-video-workbench`, or let
+Codex select it for matching PPT Video Workbench requests.
+
 ## Quick start from source / 从源码启动
 
 ### Prerequisites / 环境要求
