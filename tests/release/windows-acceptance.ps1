@@ -69,6 +69,21 @@ function Write-JsonAtomic {
     Move-Item -LiteralPath $temporary -Destination $Path -Force
 }
 
+function Read-JsonFile {
+    param([Parameter(Mandatory = $true)][string]$Path)
+    # Windows PowerShell 5.1 reads Get-Content without an explicit encoding
+    # using the system ANSI code page. Candidate and runtime manifests are
+    # emitted as UTF-8 by Python, so decode their bytes explicitly before
+    # ConvertFrom-Json. Strip an optional UTF-8 BOM for PS5 compatibility.
+    $bytes = [System.IO.File]::ReadAllBytes($Path)
+    $encoding = New-Object System.Text.UTF8Encoding($false, $true)
+    $text = $encoding.GetString($bytes)
+    if ($text.Length -gt 0 -and [int][char]$text[0] -eq 0xFEFF) {
+        $text = $text.Substring(1)
+    }
+    return $text | ConvertFrom-Json
+}
+
 function Set-Phase {
     param(
         [Parameter(Mandatory = $true)][string]$Name,
@@ -203,11 +218,11 @@ try {
     $env:NO_PROXY = "127.0.0.1,localhost,::1"
     & $PythonExecutable (Join-Path $repositoryRoot "scripts\release_artifacts.py") --repository-root $repositoryRoot --verify $ArtifactManifest
     if ($LASTEXITCODE -ne 0) { throw "artifact_manifest_verification_failed" }
-    $artifact = Get-Content -LiteralPath $ArtifactManifest -Raw | ConvertFrom-Json
+    $artifact = Read-JsonFile -Path $ArtifactManifest
     $candidateId = [string]$artifact.candidate_id
     $candidateRecord = $null
     if (-not [string]::IsNullOrWhiteSpace($CandidateManifest) -and (Test-Path -LiteralPath $CandidateManifest -PathType Leaf)) {
-        $candidateRecord = Get-Content -LiteralPath $CandidateManifest -Raw | ConvertFrom-Json
+        $candidateRecord = Read-JsonFile -Path $CandidateManifest
         $evidence.release.candidate_manifest = "candidate:$CandidateManifest"
     }
     else {
@@ -259,8 +274,8 @@ try {
     $installedPolicyPath = Join-Path $installedReleaseRoot "feature-policy.json"
     $installedRuntimeManifestPath = Join-Path $installedReleaseRoot "runtime-manifest.json"
     if ($null -ne $candidateRecord -and (Test-Path -LiteralPath $installedPolicyPath -PathType Leaf) -and (Test-Path -LiteralPath $installedRuntimeManifestPath -PathType Leaf)) {
-        $installedPolicy = Get-Content -LiteralPath $installedPolicyPath -Raw | ConvertFrom-Json
-        $installedRuntimeManifest = Get-Content -LiteralPath $installedRuntimeManifestPath -Raw | ConvertFrom-Json
+        $installedPolicy = Read-JsonFile -Path $installedPolicyPath
+        $installedRuntimeManifest = Read-JsonFile -Path $installedRuntimeManifestPath
         $installedPolicyHash = (Get-FileHash -LiteralPath $installedPolicyPath -Algorithm SHA256).Hash.ToLowerInvariant()
         $identityErrors = @()
         if ([string]$installedPolicy.candidate_id -ne $candidateId) { $identityErrors += "installed_candidate_id_mismatch" }
