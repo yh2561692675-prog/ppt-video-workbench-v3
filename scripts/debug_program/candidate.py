@@ -192,7 +192,7 @@ def build_candidate(repo_root: Path, output_root: Path, candidate_id: str | None
         "runtime": runtime,
         "features": {
             "contract_set_sha256": (
-                "de55cc1090e49b0ab4d7fb6375b4509cb878d5888e8bef54fd00407a34fbebf6"
+                "d5c1c5a0116fd4da38825bad535c075bfc476a4694b276d7ff5ff3e9cbfda1e6"
             ),
             "missing_snapshot_files": missing,
             "installer_required_for_release": True,

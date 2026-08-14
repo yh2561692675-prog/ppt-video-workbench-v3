@@ -4675,6 +4675,114 @@
         "title": "Envelope[Transcript]",
         "type": "object"
       },
+      "Envelope_Union_ProductionTimeline__NoneType__": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProductionTimeline"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[Union[ProductionTimeline, NoneType]]",
+        "type": "object"
+      },
+      "Envelope_Union_QualityJobRecord__NoneType__": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QualityJobRecord"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[Union[QualityJobRecord, NoneType]]",
+        "type": "object"
+      },
+      "Envelope_Union_RenderGraphV2__NoneType__": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RenderGraphV2"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[Union[RenderGraphV2, NoneType]]",
+        "type": "object"
+      },
       "Envelope_Union_UpdateCandidate__NoneType__": {
         "additionalProperties": false,
         "properties": {
@@ -7254,6 +7362,18 @@
             "format": "uuid",
             "title": "Project Id",
             "type": "string"
+          },
+          "resource_wait": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Wait"
           },
           "result": {
             "anyOf": [
@@ -10798,17 +10918,16 @@
             "type": "integer"
           },
           "fps": {
-            "const": 30,
             "default": 30,
+            "exclusiveMinimum": 0.0,
+            "maximum": 60.0,
             "title": "Fps",
             "type": "integer"
           },
           "height": {
             "default": 1080,
-            "enum": [
-              1080,
-              1920
-            ],
+            "exclusiveMinimum": 0.0,
+            "maximum": 2160.0,
             "title": "Height",
             "type": "integer"
           },
@@ -10904,10 +11023,8 @@
           },
           "width": {
             "default": 1920,
-            "enum": [
-              1920,
-              1080
-            ],
+            "exclusiveMinimum": 0.0,
+            "maximum": 3840.0,
             "title": "Width",
             "type": "integer"
           }
@@ -11779,6 +11896,25 @@
           "action"
         ],
         "title": "RenderJobActionRequest",
+        "type": "object"
+      },
+      "RenderJobSubmitRequest": {
+        "properties": {
+          "preset_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preset Id"
+          }
+        },
+        "title": "RenderJobSubmitRequest",
         "type": "object"
       },
       "RenderNode": {
@@ -14943,6 +15079,11 @@
           "duration_ms": {
             "minimum": 0.0,
             "title": "Duration Ms",
+            "type": "integer"
+          },
+          "fps": {
+            "default": 30,
+            "title": "Fps",
             "type": "integer"
           },
           "height": {
@@ -19655,7 +19796,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Envelope_QualityJobRecord_"
+                  "$ref": "#/components/schemas/Envelope_Union_QualityJobRecord__NoneType__"
                 }
               }
             },
@@ -19775,7 +19916,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Envelope_RenderGraphV2_"
+                  "$ref": "#/components/schemas/Envelope_Union_RenderGraphV2__NoneType__"
                 }
               }
             },
@@ -19815,7 +19956,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Envelope_RenderGraphV2_"
+                  "$ref": "#/components/schemas/Envelope_Union_RenderGraphV2__NoneType__"
                 }
               }
             },
@@ -21015,7 +21156,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Envelope_ProductionTimeline_"
+                  "$ref": "#/components/schemas/Envelope_Union_ProductionTimeline__NoneType__"
                 }
               }
             },
@@ -21576,6 +21717,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RenderJobSubmitRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
         "responses": {
           "202": {
             "content": {

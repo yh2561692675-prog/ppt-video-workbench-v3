@@ -599,7 +599,7 @@ class CloudRepository:
                 "TEXT NOT NULL DEFAULT "
                 "'{\"schema_version\":1,"
                 "\"core_contract_set_sha256\":"
-                "\"de55cc1090e49b0ab4d7fb6375b4509cb878d5888e8bef54fd00407a34fbebf6\","
+                "\"d5c1c5a0116fd4da38825bad535c075bfc476a4694b276d7ff5ff3e9cbfda1e6\","
                 "\"job_schema_version\":\"1.0\","
                 "\"asset_schema_version\":\"1.0\","
                 "\"error_mapping_version\":\"1.0\","

@@ -67,7 +67,7 @@ def verify_contract_catalog(root: Path) -> dict[str, Any]:
         if not isinstance(schema_info, dict):
             raise ContractDriftError(f"schema_reference_missing:{name}")
         schema_path = root / str(schema_info.get("path", ""))
-        if not schema_path.is_file() or _sha256(schema_path) != schema_info.get("sha256"):
+        if not schema_path.is_file() or _canonical_hash(_load(schema_path)) != schema_info.get("sha256"):
             raise ContractDriftError(f"schema_hash_mismatch:{name}")
         schema = _load(schema_path)
         try:

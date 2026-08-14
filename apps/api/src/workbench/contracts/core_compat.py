@@ -11,9 +11,9 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 CORE_CONTRACT_SET_SHA256: Literal[
-    "de55cc1090e49b0ab4d7fb6375b4509cb878d5888e8bef54fd00407a34fbebf6"
+    "d5c1c5a0116fd4da38825bad535c075bfc476a4694b276d7ff5ff3e9cbfda1e6"
 ] = (
-    "de55cc1090e49b0ab4d7fb6375b4509cb878d5888e8bef54fd00407a34fbebf6"
+    "d5c1c5a0116fd4da38825bad535c075bfc476a4694b276d7ff5ff3e9cbfda1e6"
 )
 
 
@@ -24,7 +24,7 @@ class CoreCompatibilityEnvelopeV1(BaseModel):
 
     schema_version: Literal[1] = 1
     core_contract_set_sha256: Literal[
-        "de55cc1090e49b0ab4d7fb6375b4509cb878d5888e8bef54fd00407a34fbebf6"
+        "d5c1c5a0116fd4da38825bad535c075bfc476a4694b276d7ff5ff3e9cbfda1e6"
     ] = CORE_CONTRACT_SET_SHA256
     job_schema_version: Literal["1.0"] = "1.0"
     asset_schema_version: Literal["1.0"] = "1.0"

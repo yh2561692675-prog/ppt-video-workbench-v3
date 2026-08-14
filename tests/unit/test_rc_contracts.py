@@ -13,8 +13,9 @@ SPEC.loader.exec_module(MODULE)
 
 
 def test_contract_catalog_and_migration_chain_are_current() -> None:
-    with pytest.raises(MODULE.ContractDriftError, match="schema_hash_mismatch"):
-        MODULE.verify(ROOT)
+    report = MODULE.verify(ROOT)
+    assert report["contracts"]["contract_count"] == 10
+    assert report["migrations"]["current_version"] == 5
 
 
 def test_contract_drift_fails_closed(tmp_path: Path) -> None:

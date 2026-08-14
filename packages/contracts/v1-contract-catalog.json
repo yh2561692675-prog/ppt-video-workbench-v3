@@ -11,7 +11,7 @@
       "enum_path": "status",
       "python": { "module": "workbench.domain.models", "symbol": "ProjectManifest" },
       "typescript": { "path": "apps/web/src/api/client.ts", "symbol": "Project" },
-      "json_schema": { "path": "packages/contracts/project.schema.json", "pointer": "#", "sha256": "aaaa62b346e0cf42c0b6a265a040b287f415acf48ea1fae0f9197dc00d5c2dbb" },
+      "json_schema": { "path": "packages/contracts/project.schema.json", "pointer": "#", "sha256": "0bc9ea309da51f1363312902847e36a53f7c41abd29e9fac6972d26d86865415" },
       "openapi_component": "ProjectManifest",
       "fixture_sha256": "91cd90b416c1101d3c32c60c50e347d38f821e16dc996d7b9eedc6e20c494fdf",
       "compatibility": { "unknown_fields": "reject", "older_versions": "explicit_migration", "invalid_enum": "reject" }
@@ -102,7 +102,7 @@
       "enum_path": "job_type",
       "python": { "module": "workbench.domain.models", "symbol": "JobRecord" },
       "typescript": { "path": "apps/web/src/api/client.ts", "symbol": "DurableJobRecord" },
-      "json_schema": { "path": "packages/contracts/project.schema.json", "pointer": "#/$defs/JobRecord", "sha256": "aaaa62b346e0cf42c0b6a265a040b287f415acf48ea1fae0f9197dc00d5c2dbb" },
+      "json_schema": { "path": "packages/contracts/project.schema.json", "pointer": "#/$defs/JobRecord", "sha256": "0bc9ea309da51f1363312902847e36a53f7c41abd29e9fac6972d26d86865415" },
       "openapi_component": "JobRecord",
       "fixture_sha256": "ec2e09e92b4043f2043fb181805d8ef7e42634fad5da12f397504902a3e3680a",
       "compatibility": { "unknown_fields": "reject", "older_versions": "explicit_migration", "invalid_enum": "reject" }
@@ -134,5 +134,5 @@
       "compatibility": { "unknown_fields": "reject", "older_versions": "explicit_migration", "invalid_enum": "reject" }
     }
   ],
-  "contract_set_sha256": "de55cc1090e49b0ab4d7fb6375b4509cb878d5888e8bef54fd00407a34fbebf6"
+  "contract_set_sha256": "d5c1c5a0116fd4da38825bad535c075bfc476a4694b276d7ff5ff3e9cbfda1e6"
 }
