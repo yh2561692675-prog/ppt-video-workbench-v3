@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "candidate_id": "rc-460bda9-20260814T141600Z",
+  "status": "candidate_frozen",
+  "generated_at": "2026-08-14T14:32:05.955674+00:00",
+  "source": {
+    "git_commit": "460bda93644ccefa5ac2b7c5be97b8856f7655dd",
+    "dirty": false,
+    "lock_hashes": {
+      "uv.lock": "6b28c859afdb99e2f2c6d14bb07b0d69ec01e327be6644015a4930fbc0ab50d1",
+      "pnpm-lock.yaml": "f4363f840d6821b2d25a0020e5dff4ea63c78d08f710ccbd057c71f79597d20a"
+    }
+  },
+  "feature_policy": {
+    "relative_path": "dist/release-v1-rc-460bda9-final/feature-policy.json",
+    "sha256": "dc7e314a80936083fd2679ba396e0088af3f4f990430c6d736ed836815e3f1a4",
+    "policy_id": "effects-v1-safe-default"
+  },
+  "blocking_failures": [],
+  "freeze_policy": "Any source, lockfile, runtime, feature policy, installer or evidence change requires a new candidate."
+}

@@ -1,0 +1,259 @@
+﻿{
+    "schema_version":  "2.0",
+    "release":  {
+                    "run_id":  "9e4ea01e6ff7459f8815e44aa32c66a3",
+                    "candidate_id":  "rc-460bda9-20260814T141600Z",
+                    "artifact_manifest":  "artifact-manifest.json",
+                    "candidate_manifest":  "candidate:test-results/candidate-identity-460bda9.json",
+                    "installer_path":  "installer:release/v1-rc-460bda9-final/ppt-video-workbench-setup.exe",
+                    "installer_sha256":  "10fca04ab21f0d7f8317dbf1836cd7223fc2ae7fb033c504bab57c6b511c5ec4",
+                    "workspace_root":  "C:\\Users\\HanYu\\AppData\\Local\\Temp\\pvb-w4-20260814\\w",
+                    "install_root":  "C:\\Users\\HanYu\\AppData\\Local\\Temp\\pvb-w4-20260814\\i",
+                    "execution_mode":  "physical_windows"
+                },
+    "phases":  {
+                   "candidate_identity":  {
+                                              "result":  "passed",
+                                              "started_at":  "2026-08-14T14:32:33.9769858Z",
+                                              "finished_at":  "2026-08-14T14:32:33.9802330Z",
+                                              "duration_ms":  3,
+                                              "attempt":  1,
+                                              "reason_codes":  [
+
+                                                               ],
+                                              "evidence_refs":  [
+                                                                    "phase-evidence/candidate_identity.json"
+                                                                ],
+                                              "metrics":  {
+                                                              "candidate_id":  "rc-460bda9-20260814T141600Z",
+                                                              "source_commit":  "460bda93644ccefa5ac2b7c5be97b8856f7655dd",
+                                                              "policy_id":  "effects-v1-safe-default"
+                                                          }
+                                          },
+                   "artifact_resolution":  {
+                                               "result":  "passed",
+                                               "started_at":  "2026-08-14T14:32:34.0969088Z",
+                                               "finished_at":  "2026-08-14T14:32:34.0969088Z",
+                                               "duration_ms":  0,
+                                               "attempt":  1,
+                                               "reason_codes":  [
+
+                                                                ],
+                                               "evidence_refs":  [
+                                                                     "phase-evidence/artifact_resolution.json"
+                                                                 ],
+                                               "metrics":  {
+                                                               "candidate_id":  "rc-460bda9-20260814T141600Z",
+                                                               "installer_sha256":  "10fca04ab21f0d7f8317dbf1836cd7223fc2ae7fb033c504bab57c6b511c5ec4"
+                                                           }
+                                           },
+                   "clean_install":  {
+                                         "result":  "passed",
+                                         "started_at":  "2026-08-14T14:32:34.1028550Z",
+                                         "finished_at":  "2026-08-14T14:32:34.1028550Z",
+                                         "duration_ms":  0,
+                                         "attempt":  1,
+                                         "reason_codes":  [
+
+                                                          ],
+                                         "evidence_refs":  [
+                                                               "phase-evidence/clean_install.json"
+                                                           ],
+                                         "metrics":  {
+                                                         "install_root":  "isolated"
+                                                     }
+                                     },
+                   "first_launch":  {
+                                        "result":  "failed",
+                                        "started_at":  "2026-08-14T14:33:42.8145169Z",
+                                        "finished_at":  "2026-08-14T14:33:42.8145169Z",
+                                        "duration_ms":  0,
+                                        "attempt":  1,
+                                        "reason_codes":  [
+                                                             "runner_failed"
+                                                         ],
+                                        "evidence_refs":  [
+                                                              "phase-evidence/first_launch.json"
+                                                          ],
+                                        "metrics":  {
+
+                                                    }
+                                    },
+                   "second_launch":  {
+                                         "result":  "blocked",
+                                         "started_at":  "2026-08-14T14:33:42.8313605Z",
+                                         "finished_at":  "2026-08-14T14:33:42.8313605Z",
+                                         "duration_ms":  0,
+                                         "attempt":  1,
+                                         "reason_codes":  [
+                                                              "phase_not_executed"
+                                                          ],
+                                         "evidence_refs":  [
+                                                               "phase-evidence/second_launch.json"
+                                                           ],
+                                         "metrics":  {
+
+                                                     }
+                                     },
+                   "legacy_project":  {
+                                          "result":  "blocked",
+                                          "started_at":  "2026-08-14T14:33:42.8581823Z",
+                                          "finished_at":  "2026-08-14T14:33:42.8581823Z",
+                                          "duration_ms":  0,
+                                          "attempt":  1,
+                                          "reason_codes":  [
+                                                               "phase_not_executed"
+                                                           ],
+                                          "evidence_refs":  [
+                                                                "phase-evidence/legacy_project.json"
+                                                            ],
+                                          "metrics":  {
+
+                                                      }
+                                      },
+                   "interruption_recovery":  {
+                                                 "result":  "blocked",
+                                                 "started_at":  "2026-08-14T14:33:42.8788247Z",
+                                                 "finished_at":  "2026-08-14T14:33:42.8788247Z",
+                                                 "duration_ms":  0,
+                                                 "attempt":  1,
+                                                 "reason_codes":  [
+                                                                      "phase_not_executed"
+                                                                  ],
+                                                 "evidence_refs":  [
+                                                                       "phase-evidence/interruption_recovery.json"
+                                                                   ],
+                                                 "metrics":  {
+
+                                                             }
+                                             },
+                   "full_preflight":  {
+                                          "result":  "blocked",
+                                          "started_at":  "2026-08-14T14:33:42.8839098Z",
+                                          "finished_at":  "2026-08-14T14:33:42.8839098Z",
+                                          "duration_ms":  0,
+                                          "attempt":  1,
+                                          "reason_codes":  [
+                                                               "phase_not_executed"
+                                                           ],
+                                          "evidence_refs":  [
+                                                                "phase-evidence/full_preflight.json"
+                                                            ],
+                                          "metrics":  {
+
+                                                      }
+                                      },
+                   "play_from_start":  {
+                                           "result":  "blocked",
+                                           "started_at":  "2026-08-14T14:33:42.8898295Z",
+                                           "finished_at":  "2026-08-14T14:33:42.8898295Z",
+                                           "duration_ms":  0,
+                                           "attempt":  1,
+                                           "reason_codes":  [
+                                                                "phase_not_executed"
+                                                            ],
+                                           "evidence_refs":  [
+                                                                 "phase-evidence/play_from_start.json"
+                                                             ],
+                                           "metrics":  {
+
+                                                       }
+                                       },
+                   "final_export":  {
+                                        "result":  "blocked",
+                                        "started_at":  "2026-08-14T14:33:42.8972433Z",
+                                        "finished_at":  "2026-08-14T14:33:42.8972433Z",
+                                        "duration_ms":  0,
+                                        "attempt":  1,
+                                        "reason_codes":  [
+                                                             "phase_not_executed"
+                                                         ],
+                                        "evidence_refs":  [
+                                                              "phase-evidence/final_export.json"
+                                                          ],
+                                        "metrics":  {
+
+                                                    }
+                                    },
+                   "uninstall_reinstall":  {
+                                               "result":  "blocked",
+                                               "started_at":  "2026-08-14T14:33:42.9052584Z",
+                                               "finished_at":  "2026-08-14T14:33:42.9052584Z",
+                                               "duration_ms":  0,
+                                               "attempt":  1,
+                                               "reason_codes":  [
+                                                                    "phase_not_executed"
+                                                                ],
+                                               "evidence_refs":  [
+                                                                     "phase-evidence/uninstall_reinstall.json"
+                                                                 ],
+                                               "metrics":  {
+
+                                                           }
+                                           },
+                   "reinstall_launch":  {
+                                            "result":  "blocked",
+                                            "started_at":  "2026-08-14T14:33:42.9112578Z",
+                                            "finished_at":  "2026-08-14T14:33:42.9112578Z",
+                                            "duration_ms":  0,
+                                            "attempt":  1,
+                                            "reason_codes":  [
+                                                                 "phase_not_executed"
+                                                             ],
+                                            "evidence_refs":  [
+                                                                  "phase-evidence/reinstall_launch.json"
+                                                              ],
+                                            "metrics":  {
+
+                                                        }
+                                        },
+                   "version_rollback":  {
+                                            "result":  "blocked",
+                                            "started_at":  "2026-08-14T14:33:42.9153674Z",
+                                            "finished_at":  "2026-08-14T14:33:42.9153674Z",
+                                            "duration_ms":  0,
+                                            "attempt":  1,
+                                            "reason_codes":  [
+                                                                 "phase_not_executed"
+                                                             ],
+                                            "evidence_refs":  [
+                                                                  "phase-evidence/version_rollback.json"
+                                                              ],
+                                            "metrics":  {
+
+                                                        }
+                                        },
+                   "process_cleanup":  {
+                                           "result":  "blocked",
+                                           "started_at":  "2026-08-14T14:33:42.9301653Z",
+                                           "finished_at":  "2026-08-14T14:33:42.9301653Z",
+                                           "duration_ms":  0,
+                                           "attempt":  1,
+                                           "reason_codes":  [
+                                                                "phase_not_executed"
+                                                            ],
+                                           "evidence_refs":  [
+                                                                 "phase-evidence/process_cleanup.json"
+                                                             ],
+                                           "metrics":  {
+
+                                                       }
+                                       },
+                   "workspace_retention":  {
+                                               "result":  "blocked",
+                                               "started_at":  "2026-08-14T14:33:42.9341616Z",
+                                               "finished_at":  "2026-08-14T14:33:42.9341616Z",
+                                               "duration_ms":  0,
+                                               "attempt":  1,
+                                               "reason_codes":  [
+                                                                    "phase_not_executed"
+                                                                ],
+                                               "evidence_refs":  [
+                                                                     "phase-evidence/workspace_retention.json"
+                                                                 ],
+                                               "metrics":  {
+
+                                                           }
+                                           }
+               }
+}
