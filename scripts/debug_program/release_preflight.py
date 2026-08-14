@@ -23,8 +23,13 @@ def resolve_iscc() -> Path | None:
     local_app_data = os.environ.get("LOCALAPPDATA")
     if local_app_data:
         fallback = Path(local_app_data) / "Programs" / "Inno Setup 6" / "ISCC.exe"
-        if fallback.is_file():
-            return fallback.resolve()
+        try:
+            if fallback.is_file():
+                return fallback.resolve()
+        except OSError:
+            # Keep the exact candidate path so the probe can emit a stable
+            # access-denied reason instead of crashing the preflight process.
+            return fallback
     return None
 
 
@@ -36,7 +41,17 @@ def _probe(path: Path | None, *arguments: str) -> dict[str, Any]:
             [str(path), *arguments], capture_output=True, text=True, timeout=20, check=False
         )
     except (OSError, subprocess.TimeoutExpired) as error:
-        return {"available": False, "path": str(path), "error": str(error)}
+        reason_code = (
+            "iscc_probe_access_denied"
+            if isinstance(error, PermissionError)
+            else "iscc_probe_failed"
+        )
+        return {
+            "available": False,
+            "path": str(path),
+            "error": str(error),
+            "reason_code": reason_code,
+        }
     lines = (result.stdout or result.stderr).splitlines()
     return {
         "available": result.returncode == 0,
@@ -83,6 +98,8 @@ def run_preflight(
     if iscc_path is None:
         reasons.append("ISCC.exe is unavailable; installer cannot be generated")
     iscc_probe = _probe(iscc_path, "/?")
+    if iscc_probe.get("reason_code"):
+        reasons.append(str(iscc_probe["reason_code"]))
     if iscc_path is not None and "Inno Setup" not in str(iscc_probe.get("identity", "")):
         reasons.append("ISCC.exe identity probe failed")
     historical = repo_root / "release/ppt-video-workbench-setup.exe"

@@ -20,7 +20,7 @@ from scripts.debug_program.models import (
     validate_signoff,
 )
 from scripts.debug_program.registry import list_scenarios
-from scripts.debug_program.release_preflight import resolve_iscc
+from scripts.debug_program.release_preflight import resolve_iscc, run_preflight
 from scripts.debug_program.runner import (
     CommandSpec,
     _safe_release_output,
@@ -467,6 +467,38 @@ def test_release_preflight_resolves_user_local_iscc(
     monkeypatch.setenv("LOCALAPPDATA", str(local_app_data))
     monkeypatch.setattr("scripts.debug_program.release_preflight.shutil.which", lambda _: None)
     assert resolve_iscc() == iscc.resolve()
+
+
+def test_release_preflight_preserves_access_denied_iscc_as_blocking_reason(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    candidate = tmp_path / "candidate-manifest.json"
+    candidate.write_text("{}", encoding="utf-8")
+    denied = tmp_path / "ISCC.exe"
+
+    monkeypatch.setattr(
+        "scripts.debug_program.release_preflight.load_and_validate",
+        lambda *_args, **_kwargs: {
+            "candidate_id": "v1-rc-abc1234-20260811T193000Z",
+            "source": {"commit": "a" * 40},
+        },
+    )
+    monkeypatch.setattr(
+        "scripts.debug_program.release_preflight.resolve_iscc", lambda: denied
+    )
+    monkeypatch.setattr(
+        "scripts.debug_program.release_preflight._probe",
+        lambda *_args, **_kwargs: {
+            "available": False,
+            "path": str(denied),
+            "error": "access denied",
+            "reason_code": "iscc_probe_access_denied",
+        },
+    )
+    monkeypatch.setattr(Path, "is_file", lambda self: self == denied)
+    payload, exit_code = run_preflight(tmp_path, candidate, phase="tools")
+    assert exit_code == 2
+    assert "iscc_probe_access_denied" in payload["reasons"]
 
 
 def test_candidate_runtime_probe_resolves_user_local_iscc(
