@@ -1,0 +1,14 @@
+{
+  "allow_fallback": true,
+  "candidate_id": null,
+  "effects_v2": {
+    "persistence": false,
+    "preview": false,
+    "render": false
+  },
+  "legacy_project_default": "v1",
+  "new_project_default": "v1",
+  "policy_id": "effects-v1-safe-default",
+  "schema_version": "1.0",
+  "status": "candidate"
+}

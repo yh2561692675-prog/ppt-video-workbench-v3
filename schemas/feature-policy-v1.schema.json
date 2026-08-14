@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/feature-policy-v1.schema.json",
+  "title": "Candidate-bound feature policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy_id",
+    "candidate_id",
+    "legacy_project_default",
+    "new_project_default",
+    "effects_v2",
+    "allow_fallback",
+    "status"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "policy_id": { "type": "string", "minLength": 1 },
+    "candidate_id": { "type": ["string", "null"] },
+    "legacy_project_default": { "const": "v1" },
+    "new_project_default": { "enum": ["v1", "v2"] },
+    "effects_v2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["persistence", "preview", "render"],
+      "properties": {
+        "persistence": { "type": "boolean" },
+        "preview": { "type": "boolean" },
+        "render": { "type": "boolean" }
+      }
+    },
+    "allow_fallback": { "type": "boolean" },
+    "status": { "enum": ["candidate", "acceptance", "promotable"] }
+  }
+}

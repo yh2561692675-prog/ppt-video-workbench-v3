@@ -36,6 +36,27 @@ def test_runtime_manifest_records_and_validates_hashes_and_licenses(tmp_path: Pa
     assert manifest.licenses[0].relative_path == "licenses/python.txt"
 
 
+def test_runtime_manifest_binds_feature_policy_hash(tmp_path: Path) -> None:
+    release, artifact, license_file = _bundle(tmp_path)
+    policy = release / "feature-policy.json"
+    policy.write_text('{"candidate_id":"rc-test"}\n', encoding="utf-8")
+    manifest = build_runtime_manifest(
+        release,
+        artifact_paths=[(artifact, "python-runtime")],
+        license_paths=[license_file],
+        feature_policy_path=policy,
+        version="1.0.0",
+    )
+
+    assert manifest.feature_policy_relative_path == "feature-policy.json"
+    assert manifest.feature_policy_sha256
+    assert validate_runtime_manifest(release, manifest).valid is True
+
+    policy.write_text('{"candidate_id":"rc-other"}\n', encoding="utf-8")
+    validation = validate_runtime_manifest(release, manifest)
+    assert "feature_policy_hash_mismatch" in validation.codes
+
+
 def test_runtime_manifest_rejects_missing_or_tampered_artifacts(tmp_path: Path) -> None:
     release, artifact, license_file = _bundle(tmp_path)
     manifest = build_runtime_manifest(

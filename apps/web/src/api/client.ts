@@ -189,6 +189,23 @@ export interface EffectWorkspace {
   pages: EffectWorkspacePage[];
 }
 
+export interface ReleaseFeaturePolicy {
+  schema_version: '1.0';
+  policy_id: string;
+  candidate_id: string | null;
+  legacy_project_default: 'v1';
+  new_project_default: 'v1' | 'v2';
+  effects_v2: { persistence: boolean; preview: boolean; render: boolean };
+  allow_fallback: boolean;
+  status: 'candidate' | 'acceptance' | 'promotable';
+}
+
+export interface ReleaseStatus {
+  candidate_id: string | null;
+  source_commit: string | null;
+  feature_policy: ReleaseFeaturePolicy;
+}
+
 export interface VideoExportResult {
   mp4_relative_path: string;
   package_relative_path: string;
@@ -1338,6 +1355,7 @@ export const api = {
       body: JSON.stringify({ action }),
     }),
   effectWorkspace: (id: string) => request<EffectWorkspace>(`/api/projects/${id}/effects`),
+  releaseStatus: () => request<ReleaseStatus>('/api/release/status'),
   effectCatalog: (id: string) =>
     request<{ catalog_version: string; templates: Array<{ name: string; internal: boolean }> }>(
       `/api/projects/${id}/effects/catalog`,

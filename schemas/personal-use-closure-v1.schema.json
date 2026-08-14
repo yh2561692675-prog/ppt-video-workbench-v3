@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/personal-use-closure-v1.schema.json",
+  "title": "Personal-use closure report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "candidate_id",
+    "status",
+    "decision",
+    "blocking_failures",
+    "evidence"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "candidate_id": { "type": "string", "pattern": "^rc-.+" },
+    "status": { "enum": ["personal_use_ready", "personal_use_blocked"] },
+    "decision": { "enum": ["pass", "blocked"] },
+    "blocking_failures": { "type": "array", "items": { "type": "string" } },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "stage", "status", "candidate_ids"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "stage": { "type": ["string", "number"] },
+          "status": { "type": ["string", "null"] },
+          "candidate_ids": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

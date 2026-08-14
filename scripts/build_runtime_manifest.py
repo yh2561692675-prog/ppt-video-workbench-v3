@@ -19,6 +19,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--runtime-root", required=True, type=Path)
     parser.add_argument("--license-notice", required=True, type=Path)
     parser.add_argument("--sbom", required=True, type=Path)
+    parser.add_argument("--feature-policy", type=Path)
     arguments = parser.parse_args(argv)
 
     manifest = build_release_manifest(
@@ -28,6 +29,7 @@ def main(argv: list[str] | None = None) -> None:
         runtime_root=arguments.runtime_root,
         license_paths=[arguments.license_notice],
         version=arguments.version,
+        feature_policy_path=arguments.feature_policy,
     )
     manifest.sbom_relative_path = arguments.sbom.relative_to(arguments.release_root).as_posix()
     validation = validate_runtime_manifest(arguments.release_root, manifest)

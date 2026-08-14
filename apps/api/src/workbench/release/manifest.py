@@ -48,6 +48,8 @@ class RuntimeManifest(BaseModel):
     feature_flags: dict[str, Literal["disabled", "internal", "stable_optional"]] = Field(
         default_factory=_default_feature_flags
     )
+    feature_policy_relative_path: str | None = None
+    feature_policy_sha256: str | None = None
 
 
 class ManifestValidation(BaseModel):
@@ -83,6 +85,7 @@ def build_runtime_manifest(
     license_paths: list[Path],
     version: str,
     require_licenses: bool = False,
+    feature_policy_path: Path | None = None,
 ) -> RuntimeManifest:
     artifacts = [
         ReleaseArtifact(
@@ -103,7 +106,18 @@ def build_runtime_manifest(
     ]
     if require_licenses and not licenses:
         raise ReleaseManifestError("许可证清单不能为空")
-    return RuntimeManifest(version=version, artifacts=artifacts, licenses=licenses)
+    feature_policy_relative_path = None
+    feature_policy_sha256 = None
+    if feature_policy_path is not None:
+        feature_policy_relative_path = _relative(release_root, feature_policy_path)
+        feature_policy_sha256 = _sha256(feature_policy_path)
+    return RuntimeManifest(
+        version=version,
+        artifacts=artifacts,
+        licenses=licenses,
+        feature_policy_relative_path=feature_policy_relative_path,
+        feature_policy_sha256=feature_policy_sha256,
+    )
 
 
 def build_release_manifest(
@@ -114,6 +128,7 @@ def build_release_manifest(
     runtime_root: Path,
     license_paths: list[Path],
     version: str,
+    feature_policy_path: Path | None = None,
 ) -> RuntimeManifest:
     resolved_runtime = runtime_root.resolve()
     missing = [
@@ -139,6 +154,7 @@ def build_release_manifest(
         license_paths=license_paths,
         version=version,
         require_licenses=True,
+        feature_policy_path=feature_policy_path,
     )
 
 
@@ -182,6 +198,15 @@ def validate_runtime_manifest(
         _validate_path(root, manifest.sbom_relative_path, codes)
         if not (root / manifest.sbom_relative_path).is_file():
             codes.add("sbom_missing")
+    if manifest.feature_policy_relative_path:
+        _validate_path(root, manifest.feature_policy_relative_path, codes)
+        policy_path = root / manifest.feature_policy_relative_path
+        if not policy_path.is_file():
+            codes.add("feature_policy_missing")
+        elif manifest.feature_policy_sha256 and _sha256(policy_path) != manifest.feature_policy_sha256:
+            codes.add("feature_policy_hash_mismatch")
+    elif manifest.feature_policy_sha256:
+        codes.add("feature_policy_path_missing")
     return ManifestValidation(valid=not codes, codes=sorted(codes))
 
 

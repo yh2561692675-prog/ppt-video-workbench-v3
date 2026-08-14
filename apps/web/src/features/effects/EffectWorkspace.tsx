@@ -8,6 +8,11 @@ export function EffectWorkspace({ projectId }: { projectId: string }) {
     queryKey: ['effects', projectId],
     queryFn: () => api.effectWorkspace(projectId),
   });
+  const release = useQuery({
+    queryKey: ['release-status'],
+    queryFn: () => api.releaseStatus(),
+    staleTime: Infinity,
+  });
   const generate = useMutation({
     mutationFn: () => api.generateEffects(projectId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['effects', projectId] }),
@@ -19,6 +24,20 @@ export function EffectWorkspace({ projectId }: { projectId: string }) {
   const missing = pages.filter((page) => page.record === null).length;
   return (
     <section className="effect-workspace" aria-label="特效计划工作台">
+      <div className="effect-policy-banner" role="status">
+        {release.isLoading ? (
+          <span className="muted">正在读取版本特效策略…</span>
+        ) : release.isError || !release.data ? (
+          <span className="error">版本特效策略未能读取，请先校验候选版本。</span>
+        ) : (
+          <span>
+            候选 {release.data.candidate_id ?? '未绑定'} · 旧项目 V1 · 新项目{' '}
+            {release.data.feature_policy.new_project_default.toUpperCase()} · 特效 V2{' '}
+            {release.data.feature_policy.effects_v2.render ? '已启用' : '未启用'} ·{' '}
+            {release.data.feature_policy.allow_fallback ? '允许降级' : '禁止降级'}
+          </span>
+        )}
+      </div>
       <div className="preview-heading">
         <div>
           <h3>特效引擎 V2</h3>

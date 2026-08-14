@@ -41,6 +41,7 @@ from workbench.api.preflight import create_preflight_router
 from workbench.api.presenter import create_presenter_router
 from workbench.api.projects import create_projects_router
 from workbench.api.quality import create_quality_router
+from workbench.api.release import create_release_router
 from workbench.api.scheduler import create_scheduler_router
 from workbench.api.secure_updates import create_secure_updates_router
 from workbench.api.settings import create_settings_router
@@ -111,6 +112,7 @@ from workbench.rendering.models import RenderGraphV2
 from workbench.rendering.preflight import GraphPreflight
 from workbench.rendering.preview_service import AuthoritativePreviewService
 from workbench.rendering.project_reader import ProjectRenderSourceReader
+from workbench.release.feature_policy import load_environment_feature_policy
 from workbench.runtime.layout import RuntimeComponentMissingError, RuntimeLayout
 from workbench.scheduler.service import BatchSchedulerService
 from workbench.services.import_service import ImportService
@@ -393,6 +395,8 @@ def create_app(
     app.state.authoritative_preview_service = authoritative_preview_service
     app.state.video_export_service = video_export_service
     render_feature_flags = RenderFeatureFlags.from_environment()
+    feature_policy = load_environment_feature_policy()
+    app.state.feature_policy = feature_policy
 
     def compatibility_video_preflight(project_id: UUID) -> VideoPreflight | None:
         root, payload = load_raw_project(service, project_id)
@@ -594,6 +598,7 @@ def create_app(
         )
     )
     app.include_router(create_quality_router(quality_job_service))
+    app.include_router(create_release_router(feature_policy))
     app.include_router(create_jobs_router(service))
     app.include_router(create_migrations_router(service))
     app.include_router(create_assets_router(asset_registry_service))
