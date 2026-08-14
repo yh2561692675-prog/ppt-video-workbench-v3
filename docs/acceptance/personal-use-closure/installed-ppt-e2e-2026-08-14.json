@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "recorded_at": "2026-08-14T14:04:37Z",
+  "candidate": {
+    "candidate_id": "rc-bfe03a8-20260814T110248Z",
+    "source_commit": "bfe03a8a3859f87bdc04fbb825adf1715f4d8c9e",
+    "installer_sha256": "76a398ddd9e7a3654505366c0347a271249261a5c40146f0c3cdee4a4d8c8377"
+  },
+  "physical_ppt_ingest_and_fidelity": {
+    "result": "passed",
+    "api_port": 9204,
+    "project_id": "d792aecf-1093-49b1-8a73-c7f473791238",
+    "source": "sample.pptx",
+    "source_sha256": "33e36da74b25ab759749c89ac0cb3f151855b828c5ce59cd6e3bbf9032dc6f82",
+    "slide_count": 2,
+    "fidelity_job_id": "7b51c4c8-0eb1-4663-bd9a-9a783bb7a960",
+    "fidelity_status": "succeeded",
+    "fidelity_manifest_hash": "ae8feba2536719e6ec02dce9491f95db966932211b150e61eb20def7360c3c95",
+    "notes": "Real PPTX upload, OOXML parse, LibreOffice static previews, and page manifest completed in the installed binary."
+  },
+  "installed_synthetic_audio_and_export": {
+    "result": "passed_supplemental",
+    "api_port": 9205,
+    "project_id": "74101697-6adb-4646-bd0c-10cb799f2332",
+    "mode": "WORKBENCH_E2E_SYNTHETIC_MODE=true",
+    "render_job_id": "91965553-5d7c-416e-afde-599dddcbf546",
+    "render_status": "succeeded",
+    "video_preflight_allowed": true,
+    "artifact_count": 11,
+    "duration_ms": 1518,
+    "mp4_relative_path": "08_输出/最终视频.mp4",
+    "mp4_sha256": "4e2179542a06ead7755202bef0c251858d5ae7d97f7d24afc75e9856699c9106",
+    "srt_sha256": "80fff7ee5a7aaabe8cd25d7cb3e38fd039616eca4183819da068cc468af6d2bc",
+    "package_manifest_sha256": "a07103950b11ee6cd3142c89defcce41cea7b2748defcb56114a9d69118b21db",
+    "workspace": "C:\\Users\\HanYu\\AppData\\Local\\Temp\\pvb-elev-bfe03a8\\i\\releases\\0.1.0\\release\\api\\workspace-data",
+    "notes": "This proves the installed render/export path with deterministic local adapters; it is not real-provider or production audiovisual acceptance."
+  },
+  "non_synthetic_audio_gate": {
+    "result": "blocked",
+    "api_port": 9204,
+    "project_id": "d792aecf-1093-49b1-8a73-c7f473791238",
+    "reason_code": "audio_transcription_rejected",
+    "reason": "本地语音模型 small 尚未下载",
+    "next_action": "Install or provision the reviewed local ASR model, then rerun the physical PPT workflow."
+  },
+  "acceptance_boundary": "supplemental_only_until_normal_user_install_and_non_synthetic_audio_are revalidated"
+}

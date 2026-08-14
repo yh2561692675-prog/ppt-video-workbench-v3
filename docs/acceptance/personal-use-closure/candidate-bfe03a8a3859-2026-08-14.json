@@ -1,0 +1,130 @@
+{
+  "candidate_id": "v1-rc-bfe03a8a3859-20260814T110248Z",
+  "features": {
+    "contract_set_sha256": "d5c1c5a0116fd4da38825bad535c075bfc476a4694b276d7ff5ff3e9cbfda1e6",
+    "installer_required_for_release": true,
+    "missing_snapshot_files": []
+  },
+  "files": [
+    {
+      "path": "source/package.json",
+      "sha256": "8f187f4869aa6d180b701497150f373bbf9d928536f2a591433ddb1c63367c39",
+      "size": 1060
+    },
+    {
+      "path": "source/pnpm-lock.yaml",
+      "sha256": "f4363f840d6821b2d25a0020e5dff4ea63c78d08f710ccbd057c71f79597d20a",
+      "size": 153283
+    },
+    {
+      "path": "source/pnpm-workspace.yaml",
+      "sha256": "6bf1b637aecbc04ecff67360468350041603ba623bbbbc6e149971b716e69083",
+      "size": 101
+    },
+    {
+      "path": "source/pyproject.toml",
+      "sha256": "083a8b91cc3cd07f4ce05a7fa0504fa802eae66b038d65de6b48f943e2a5ebb2",
+      "size": 1102
+    },
+    {
+      "path": "source/uv.lock",
+      "sha256": "6b28c859afdb99e2f2c6d14bb07b0d69ec01e327be6644015a4930fbc0ab50d1",
+      "size": 169590
+    },
+    {
+      "path": "source/packages/contracts/openapi.json",
+      "sha256": "fcd43976c0020a3dfb51318b1d5537518d1151eddfa3c1add537d0cf3f1b46c4",
+      "size": 580326
+    },
+    {
+      "path": "source/packages/contracts/v1-contract-catalog.json",
+      "sha256": "826cb740e8fad5765b18ae04222a08dedf70149e1ae4483cb773d621fbbd0246",
+      "size": 8103
+    },
+    {
+      "path": "source/packages/contracts/project.schema.json",
+      "sha256": "aa2013ce59aedf0a5c34d14a917565d35044c23b0abf8a7bf2f01278728a4aab",
+      "size": 85743
+    },
+    {
+      "path": "source/schemas/cloud/cloud-collaboration-v1.openapi.yaml",
+      "sha256": "bcdf8d345798bc27cb761812ea87020447f0f935d03135c79777fee0a45a371c",
+      "size": 77431
+    },
+    {
+      "path": "source/schemas/render-graph-v2.schema.json",
+      "sha256": "f9b6622e15710d89fb82e8128609a7c1560684d4302835ad8cffe5b3a30337b8",
+      "size": 12877
+    },
+    {
+      "path": "source/schemas/export-plan-v1.schema.json",
+      "sha256": "a1ad5bef10dcd17e3dd6d95d041410a383e9e0d907103fcc6c2b8bd55702ee4b",
+      "size": 2185
+    },
+    {
+      "path": "source/schemas/performance-budget-v1.schema.json",
+      "sha256": "33d2fe415a8442d71522668870ae2e793f1ad5942594f9b179cb74996c35c9b2",
+      "size": 7350
+    },
+    {
+      "path": "source/schemas/quality-report-v1.schema.json",
+      "sha256": "1cad82873af396da6d9bcaf82b37fa196781940316c22465e6860f2f8df3d23a",
+      "size": 3066
+    },
+    {
+      "path": "source/apps/api/src/workbench/contracts/core_compat.py",
+      "sha256": "da7f1cb67b97bfa41e1a0c6aff6be7b1d5dcf7bce21353c4e3af458153856f64",
+      "size": 2882
+    }
+  ],
+  "generated_at": "2026-08-14T11:02:48Z",
+  "runtime": {
+    "ffmpeg": {
+      "available": true,
+      "exit_code": 0,
+      "path": "C:\\Users\\HanYu\\AppData\\Roaming\\npm\\node_modules\\@ffmpeg-installer\\ffmpeg\\node_modules\\@ffmpeg-installer\\win32-x64\\ffmpeg.exe",
+      "version": "ffmpeg version N-92722-gf22fcd4483 Copyright (c) 2000-2018 the FFmpeg developers"
+    },
+    "ffprobe": {
+      "available": true,
+      "exit_code": 0,
+      "path": "C:\\Users\\HanYu\\AppData\\Roaming\\npm\\node_modules\\@ffmpeg-installer\\ffmpeg\\node_modules\\@ffmpeg-installer\\win32-x64\\ffprobe.exe",
+      "version": "ffmpeg version N-92722-gf22fcd4483 Copyright (c) 2000-2018 the FFmpeg developers"
+    },
+    "iscc": {
+      "available": false,
+      "error": "[WinError 5] 拒绝访问。",
+      "path": "C:\\Users\\HanYu\\AppData\\Local\\Programs\\Inno Setup 6\\ISCC.exe"
+    },
+    "launcher": {
+      "available": false
+    },
+    "node": {
+      "available": true,
+      "exit_code": 0,
+      "path": "D:\\node.exe",
+      "version": "v24.19.0"
+    },
+    "pnpm": {
+      "available": true,
+      "exit_code": 0,
+      "path": "E:\\nodejs\\node_global\\pnpm.cmd",
+      "version": "11.7.0"
+    },
+    "python": {
+      "available": true,
+      "exit_code": 0,
+      "path": "C:\\Program Files\\LibreOffice\\program\\python.exe",
+      "version": "Python 3.12.13"
+    },
+    "remotion_cli": {
+      "available": false
+    }
+  },
+  "schema_version": "1.0",
+  "source": {
+    "branch": "codex/dp45-final-clean",
+    "commit": "bfe03a8a3859f87bdc04fbb825adf1715f4d8c9e",
+    "dirty": false
+  }
+}

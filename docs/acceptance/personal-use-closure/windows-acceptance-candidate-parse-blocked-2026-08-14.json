@@ -1,0 +1,256 @@
+﻿{
+    "schema_version":  "2.0",
+    "release":  {
+                    "run_id":  "e0ce12db1a094969a8d3f742d89c5e5b",
+                    "candidate_id":  "",
+                    "artifact_manifest":  "",
+                    "candidate_manifest":  "",
+                    "installer_path":  "",
+                    "installer_sha256":  "",
+                    "workspace_root":  "C:\\Users\\HanYu\\AppData\\Local\\Temp\\pvb-bfe-20260814211427\\w",
+                    "install_root":  "C:\\Users\\HanYu\\AppData\\Local\\Temp\\pvb-bfe-20260814211427\\i",
+                    "execution_mode":  "physical_windows"
+                },
+    "phases":  {
+                   "artifact_resolution":  {
+                                               "result":  "failed",
+                                               "started_at":  "2026-08-14T13:14:28.9686550Z",
+                                               "finished_at":  "2026-08-14T13:14:28.9756679Z",
+                                               "duration_ms":  7,
+                                               "attempt":  1,
+                                               "reason_codes":  [
+                                                                    "runner_failed"
+                                                                ],
+                                               "evidence_refs":  [
+                                                                     "phase-evidence/artifact_resolution.json"
+                                                                 ],
+                                               "metrics":  {
+
+                                                           }
+                                           },
+                   "clean_install":  {
+                                         "result":  "failed",
+                                         "started_at":  "2026-08-14T13:14:29.1749514Z",
+                                         "finished_at":  "2026-08-14T13:14:29.1749514Z",
+                                         "duration_ms":  0,
+                                         "attempt":  1,
+                                         "reason_codes":  [
+                                                              "runner_failed"
+                                                          ],
+                                         "evidence_refs":  [
+                                                               "phase-evidence/clean_install.json"
+                                                           ],
+                                         "metrics":  {
+
+                                                     }
+                                     },
+                   "first_launch":  {
+                                        "result":  "failed",
+                                        "started_at":  "2026-08-14T13:14:29.1809633Z",
+                                        "finished_at":  "2026-08-14T13:14:29.1809633Z",
+                                        "duration_ms":  0,
+                                        "attempt":  1,
+                                        "reason_codes":  [
+                                                             "runner_failed"
+                                                         ],
+                                        "evidence_refs":  [
+                                                              "phase-evidence/first_launch.json"
+                                                          ],
+                                        "metrics":  {
+
+                                                    }
+                                    },
+                   "candidate_identity":  {
+                                              "result":  "blocked",
+                                              "started_at":  "2026-08-14T13:14:29.2289288Z",
+                                              "finished_at":  "2026-08-14T13:14:29.2289288Z",
+                                              "duration_ms":  0,
+                                              "attempt":  1,
+                                              "reason_codes":  [
+                                                                   "phase_not_executed"
+                                                               ],
+                                              "evidence_refs":  [
+                                                                    "phase-evidence/candidate_identity.json"
+                                                                ],
+                                              "metrics":  {
+
+                                                          }
+                                          },
+                   "second_launch":  {
+                                         "result":  "blocked",
+                                         "started_at":  "2026-08-14T13:14:29.2349237Z",
+                                         "finished_at":  "2026-08-14T13:14:29.2359260Z",
+                                         "duration_ms":  1,
+                                         "attempt":  1,
+                                         "reason_codes":  [
+                                                              "phase_not_executed"
+                                                          ],
+                                         "evidence_refs":  [
+                                                               "phase-evidence/second_launch.json"
+                                                           ],
+                                         "metrics":  {
+
+                                                     }
+                                     },
+                   "legacy_project":  {
+                                          "result":  "blocked",
+                                          "started_at":  "2026-08-14T13:14:29.2423265Z",
+                                          "finished_at":  "2026-08-14T13:14:29.2423265Z",
+                                          "duration_ms":  0,
+                                          "attempt":  1,
+                                          "reason_codes":  [
+                                                               "phase_not_executed"
+                                                           ],
+                                          "evidence_refs":  [
+                                                                "phase-evidence/legacy_project.json"
+                                                            ],
+                                          "metrics":  {
+
+                                                      }
+                                      },
+                   "interruption_recovery":  {
+                                                 "result":  "blocked",
+                                                 "started_at":  "2026-08-14T13:14:29.2470989Z",
+                                                 "finished_at":  "2026-08-14T13:14:29.2470989Z",
+                                                 "duration_ms":  0,
+                                                 "attempt":  1,
+                                                 "reason_codes":  [
+                                                                      "phase_not_executed"
+                                                                  ],
+                                                 "evidence_refs":  [
+                                                                       "phase-evidence/interruption_recovery.json"
+                                                                   ],
+                                                 "metrics":  {
+
+                                                             }
+                                             },
+                   "full_preflight":  {
+                                          "result":  "blocked",
+                                          "started_at":  "2026-08-14T13:14:29.2545820Z",
+                                          "finished_at":  "2026-08-14T13:14:29.2545820Z",
+                                          "duration_ms":  0,
+                                          "attempt":  1,
+                                          "reason_codes":  [
+                                                               "phase_not_executed"
+                                                           ],
+                                          "evidence_refs":  [
+                                                                "phase-evidence/full_preflight.json"
+                                                            ],
+                                          "metrics":  {
+
+                                                      }
+                                      },
+                   "play_from_start":  {
+                                           "result":  "blocked",
+                                           "started_at":  "2026-08-14T13:14:29.2601228Z",
+                                           "finished_at":  "2026-08-14T13:14:29.2601228Z",
+                                           "duration_ms":  0,
+                                           "attempt":  1,
+                                           "reason_codes":  [
+                                                                "phase_not_executed"
+                                                            ],
+                                           "evidence_refs":  [
+                                                                 "phase-evidence/play_from_start.json"
+                                                             ],
+                                           "metrics":  {
+
+                                                       }
+                                       },
+                   "final_export":  {
+                                        "result":  "blocked",
+                                        "started_at":  "2026-08-14T13:14:29.2681272Z",
+                                        "finished_at":  "2026-08-14T13:14:29.2681272Z",
+                                        "duration_ms":  0,
+                                        "attempt":  1,
+                                        "reason_codes":  [
+                                                             "phase_not_executed"
+                                                         ],
+                                        "evidence_refs":  [
+                                                              "phase-evidence/final_export.json"
+                                                          ],
+                                        "metrics":  {
+
+                                                    }
+                                    },
+                   "uninstall_reinstall":  {
+                                               "result":  "blocked",
+                                               "started_at":  "2026-08-14T13:14:29.2756351Z",
+                                               "finished_at":  "2026-08-14T13:14:29.2756351Z",
+                                               "duration_ms":  0,
+                                               "attempt":  1,
+                                               "reason_codes":  [
+                                                                    "phase_not_executed"
+                                                                ],
+                                               "evidence_refs":  [
+                                                                     "phase-evidence/uninstall_reinstall.json"
+                                                                 ],
+                                               "metrics":  {
+
+                                                           }
+                                           },
+                   "reinstall_launch":  {
+                                            "result":  "blocked",
+                                            "started_at":  "2026-08-14T13:14:29.2831981Z",
+                                            "finished_at":  "2026-08-14T13:14:29.2831981Z",
+                                            "duration_ms":  0,
+                                            "attempt":  1,
+                                            "reason_codes":  [
+                                                                 "phase_not_executed"
+                                                             ],
+                                            "evidence_refs":  [
+                                                                  "phase-evidence/reinstall_launch.json"
+                                                              ],
+                                            "metrics":  {
+
+                                                        }
+                                        },
+                   "version_rollback":  {
+                                            "result":  "blocked",
+                                            "started_at":  "2026-08-14T13:14:29.2891957Z",
+                                            "finished_at":  "2026-08-14T13:14:29.2901962Z",
+                                            "duration_ms":  1,
+                                            "attempt":  1,
+                                            "reason_codes":  [
+                                                                 "phase_not_executed"
+                                                             ],
+                                            "evidence_refs":  [
+                                                                  "phase-evidence/version_rollback.json"
+                                                              ],
+                                            "metrics":  {
+
+                                                        }
+                                        },
+                   "process_cleanup":  {
+                                           "result":  "blocked",
+                                           "started_at":  "2026-08-14T13:14:29.2957026Z",
+                                           "finished_at":  "2026-08-14T13:14:29.2957026Z",
+                                           "duration_ms":  0,
+                                           "attempt":  1,
+                                           "reason_codes":  [
+                                                                "phase_not_executed"
+                                                            ],
+                                           "evidence_refs":  [
+                                                                 "phase-evidence/process_cleanup.json"
+                                                             ],
+                                           "metrics":  {
+
+                                                       }
+                                       },
+                   "workspace_retention":  {
+                                               "result":  "blocked",
+                                               "started_at":  "2026-08-14T13:14:29.3024437Z",
+                                               "finished_at":  "2026-08-14T13:14:29.3034551Z",
+                                               "duration_ms":  1,
+                                               "attempt":  1,
+                                               "reason_codes":  [
+                                                                    "phase_not_executed"
+                                                                ],
+                                               "evidence_refs":  [
+                                                                     "phase-evidence/workspace_retention.json"
+                                                                 ],
+                                               "metrics":  {
+
+                                                           }
+                                           }
+               }
+}

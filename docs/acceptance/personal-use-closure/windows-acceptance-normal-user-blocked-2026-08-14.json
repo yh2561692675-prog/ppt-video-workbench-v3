@@ -1,0 +1,257 @@
+﻿{
+    "schema_version":  "2.0",
+    "release":  {
+                    "run_id":  "9a9453aca83344c7b1965ece0d0d9df6",
+                    "candidate_id":  "rc-bfe03a8-20260814T110248Z",
+                    "artifact_manifest":  "artifact-manifest.json",
+                    "candidate_manifest":  "",
+                    "installer_path":  "installer:release/v1-rc-bfe03a8/ppt-video-workbench-setup.exe",
+                    "installer_sha256":  "76a398ddd9e7a3654505366c0347a271249261a5c40146f0c3cdee4a4d8c8377",
+                    "workspace_root":  "C:\\Users\\HanYu\\AppData\\Local\\Temp\\pvb-bfe2-20260814211538\\w",
+                    "install_root":  "C:\\Users\\HanYu\\AppData\\Local\\Temp\\pvb-bfe2-20260814211538\\i",
+                    "execution_mode":  "physical_windows"
+                },
+    "phases":  {
+                   "candidate_identity":  {
+                                              "result":  "blocked",
+                                              "started_at":  "2026-08-14T13:15:40.1222840Z",
+                                              "finished_at":  "2026-08-14T13:15:40.1267978Z",
+                                              "duration_ms":  5,
+                                              "attempt":  1,
+                                              "reason_codes":  [
+                                                                   "candidate_manifest_missing"
+                                                               ],
+                                              "evidence_refs":  [
+                                                                    "phase-evidence/candidate_identity.json"
+                                                                ],
+                                              "metrics":  {
+
+                                                          }
+                                          },
+                   "artifact_resolution":  {
+                                               "result":  "passed",
+                                               "started_at":  "2026-08-14T13:15:41.3352950Z",
+                                               "finished_at":  "2026-08-14T13:15:41.3352950Z",
+                                               "duration_ms":  0,
+                                               "attempt":  1,
+                                               "reason_codes":  [
+
+                                                                ],
+                                               "evidence_refs":  [
+                                                                     "phase-evidence/artifact_resolution.json"
+                                                                 ],
+                                               "metrics":  {
+                                                               "candidate_id":  "rc-bfe03a8-20260814T110248Z",
+                                                               "installer_sha256":  "76a398ddd9e7a3654505366c0347a271249261a5c40146f0c3cdee4a4d8c8377"
+                                                           }
+                                           },
+                   "clean_install":  {
+                                         "result":  "passed",
+                                         "started_at":  "2026-08-14T13:15:41.3502931Z",
+                                         "finished_at":  "2026-08-14T13:15:41.3502931Z",
+                                         "duration_ms":  0,
+                                         "attempt":  1,
+                                         "reason_codes":  [
+
+                                                          ],
+                                         "evidence_refs":  [
+                                                               "phase-evidence/clean_install.json"
+                                                           ],
+                                         "metrics":  {
+                                                         "install_root":  "isolated"
+                                                     }
+                                     },
+                   "first_launch":  {
+                                        "result":  "failed",
+                                        "started_at":  "2026-08-14T13:16:41.8819587Z",
+                                        "finished_at":  "2026-08-14T13:16:41.8819587Z",
+                                        "duration_ms":  0,
+                                        "attempt":  1,
+                                        "reason_codes":  [
+                                                             "runner_failed"
+                                                         ],
+                                        "evidence_refs":  [
+                                                              "phase-evidence/first_launch.json"
+                                                          ],
+                                        "metrics":  {
+
+                                                    }
+                                    },
+                   "second_launch":  {
+                                         "result":  "blocked",
+                                         "started_at":  "2026-08-14T13:16:41.9012414Z",
+                                         "finished_at":  "2026-08-14T13:16:41.9012414Z",
+                                         "duration_ms":  0,
+                                         "attempt":  1,
+                                         "reason_codes":  [
+                                                              "phase_not_executed"
+                                                          ],
+                                         "evidence_refs":  [
+                                                               "phase-evidence/second_launch.json"
+                                                           ],
+                                         "metrics":  {
+
+                                                     }
+                                     },
+                   "legacy_project":  {
+                                          "result":  "blocked",
+                                          "started_at":  "2026-08-14T13:16:41.9137928Z",
+                                          "finished_at":  "2026-08-14T13:16:41.9137928Z",
+                                          "duration_ms":  0,
+                                          "attempt":  1,
+                                          "reason_codes":  [
+                                                               "phase_not_executed"
+                                                           ],
+                                          "evidence_refs":  [
+                                                                "phase-evidence/legacy_project.json"
+                                                            ],
+                                          "metrics":  {
+
+                                                      }
+                                      },
+                   "interruption_recovery":  {
+                                                 "result":  "blocked",
+                                                 "started_at":  "2026-08-14T13:16:41.9386394Z",
+                                                 "finished_at":  "2026-08-14T13:16:41.9386394Z",
+                                                 "duration_ms":  0,
+                                                 "attempt":  1,
+                                                 "reason_codes":  [
+                                                                      "phase_not_executed"
+                                                                  ],
+                                                 "evidence_refs":  [
+                                                                       "phase-evidence/interruption_recovery.json"
+                                                                   ],
+                                                 "metrics":  {
+
+                                                             }
+                                             },
+                   "full_preflight":  {
+                                          "result":  "blocked",
+                                          "started_at":  "2026-08-14T13:16:41.9427063Z",
+                                          "finished_at":  "2026-08-14T13:16:41.9427063Z",
+                                          "duration_ms":  0,
+                                          "attempt":  1,
+                                          "reason_codes":  [
+                                                               "phase_not_executed"
+                                                           ],
+                                          "evidence_refs":  [
+                                                                "phase-evidence/full_preflight.json"
+                                                            ],
+                                          "metrics":  {
+
+                                                      }
+                                      },
+                   "play_from_start":  {
+                                           "result":  "blocked",
+                                           "started_at":  "2026-08-14T13:16:41.9486303Z",
+                                           "finished_at":  "2026-08-14T13:16:41.9486303Z",
+                                           "duration_ms":  0,
+                                           "attempt":  1,
+                                           "reason_codes":  [
+                                                                "phase_not_executed"
+                                                            ],
+                                           "evidence_refs":  [
+                                                                 "phase-evidence/play_from_start.json"
+                                                             ],
+                                           "metrics":  {
+
+                                                       }
+                                       },
+                   "final_export":  {
+                                        "result":  "blocked",
+                                        "started_at":  "2026-08-14T13:16:41.9536298Z",
+                                        "finished_at":  "2026-08-14T13:16:41.9536298Z",
+                                        "duration_ms":  0,
+                                        "attempt":  1,
+                                        "reason_codes":  [
+                                                             "phase_not_executed"
+                                                         ],
+                                        "evidence_refs":  [
+                                                              "phase-evidence/final_export.json"
+                                                          ],
+                                        "metrics":  {
+
+                                                    }
+                                    },
+                   "uninstall_reinstall":  {
+                                               "result":  "blocked",
+                                               "started_at":  "2026-08-14T13:16:41.9583005Z",
+                                               "finished_at":  "2026-08-14T13:16:41.9583005Z",
+                                               "duration_ms":  0,
+                                               "attempt":  1,
+                                               "reason_codes":  [
+                                                                    "phase_not_executed"
+                                                                ],
+                                               "evidence_refs":  [
+                                                                     "phase-evidence/uninstall_reinstall.json"
+                                                                 ],
+                                               "metrics":  {
+
+                                                           }
+                                           },
+                   "reinstall_launch":  {
+                                            "result":  "blocked",
+                                            "started_at":  "2026-08-14T13:16:41.9618216Z",
+                                            "finished_at":  "2026-08-14T13:16:41.9618216Z",
+                                            "duration_ms":  0,
+                                            "attempt":  1,
+                                            "reason_codes":  [
+                                                                 "phase_not_executed"
+                                                             ],
+                                            "evidence_refs":  [
+                                                                  "phase-evidence/reinstall_launch.json"
+                                                              ],
+                                            "metrics":  {
+
+                                                        }
+                                        },
+                   "version_rollback":  {
+                                            "result":  "blocked",
+                                            "started_at":  "2026-08-14T13:16:41.9667749Z",
+                                            "finished_at":  "2026-08-14T13:16:41.9667749Z",
+                                            "duration_ms":  0,
+                                            "attempt":  1,
+                                            "reason_codes":  [
+                                                                 "phase_not_executed"
+                                                             ],
+                                            "evidence_refs":  [
+                                                                  "phase-evidence/version_rollback.json"
+                                                              ],
+                                            "metrics":  {
+
+                                                        }
+                                        },
+                   "process_cleanup":  {
+                                           "result":  "blocked",
+                                           "started_at":  "2026-08-14T13:16:41.9707752Z",
+                                           "finished_at":  "2026-08-14T13:16:41.9707752Z",
+                                           "duration_ms":  0,
+                                           "attempt":  1,
+                                           "reason_codes":  [
+                                                                "phase_not_executed"
+                                                            ],
+                                           "evidence_refs":  [
+                                                                 "phase-evidence/process_cleanup.json"
+                                                             ],
+                                           "metrics":  {
+
+                                                       }
+                                       },
+                   "workspace_retention":  {
+                                               "result":  "blocked",
+                                               "started_at":  "2026-08-14T13:16:41.9754376Z",
+                                               "finished_at":  "2026-08-14T13:16:41.9754376Z",
+                                               "duration_ms":  0,
+                                               "attempt":  1,
+                                               "reason_codes":  [
+                                                                    "phase_not_executed"
+                                                                ],
+                                               "evidence_refs":  [
+                                                                     "phase-evidence/workspace_retention.json"
+                                                                 ],
+                                               "metrics":  {
+
+                                                           }
+                                           }
+               }
+}
