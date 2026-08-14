@@ -141,3 +141,26 @@ def test_sampler_records_missing_named_root_without_forging_a_process(tmp_path: 
     summary = json.loads(sampler.stop().read_text(encoding="utf-8"))
 
     assert summary["roots_not_observed"] == {"worker": 99}
+
+
+def test_sampler_recreates_owned_evidence_directory_before_append(tmp_path: Path) -> None:
+    provider = SnapshotProvider(
+        [[observation(10, None, "python", "one", rss=1, cpu=0.0)]]
+    )
+    evidence = tmp_path / "evidence"
+    sampler = PerformanceSampler(
+        evidence,
+        {"api": 10},
+        temporary_root=tmp_path,
+        provider=provider,
+        session_id="recreate-dir",
+    )
+
+    sampler.start()
+    import shutil
+
+    shutil.rmtree(evidence)
+    summary = json.loads(sampler.stop().read_text(encoding="utf-8"))
+
+    assert summary["sample_count"] >= 2
+    assert sampler.events_path.is_file()

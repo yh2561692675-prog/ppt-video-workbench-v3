@@ -455,6 +455,11 @@ class PerformanceSampler:
 
     def _append_event(self, event: dict[str, object]) -> None:
         self._events.append(event)
+        # The sampler runs alongside acceptance cleanup and process teardown.
+        # Recreate the owned evidence directory before every append so a
+        # transient directory removal cannot turn an otherwise valid run into
+        # a sampler-thread crash during final flush.
+        self.events_path.parent.mkdir(parents=True, exist_ok=True)
         with self.events_path.open("a", encoding="utf-8", newline="\n") as handle:
             handle.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
 
