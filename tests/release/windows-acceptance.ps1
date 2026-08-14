@@ -144,8 +144,23 @@ function Stop-OwnedLauncher {
             if ($ownedLauncherPid -le 0 -or $apiPid -le 0) { throw "owned_pid_mismatch" }
             $ownedLauncher = Get-Process -Id $ownedLauncherPid -ErrorAction SilentlyContinue
             if ($null -eq $ownedLauncher) { throw "owned_launcher_missing" }
+            # Frozen PyInstaller launchers may expose an empty CommandLine via
+            # Win32_Process even when the process is owned by this run. Prefer
+            # the executable path and only use CommandLine as a fallback.
+            $ownedPath = [string]$ownedLauncher.Path
             $ownedCommand = (Get-CimInstance Win32_Process -Filter "ProcessId=$ownedLauncherPid" -ErrorAction SilentlyContinue).CommandLine
-            if ([string]::IsNullOrWhiteSpace($ownedCommand) -or $ownedCommand -notlike "*$InstallRoot*") { throw "owned_pid_mismatch" }
+            $ownedPathMatches = (
+                -not [string]::IsNullOrWhiteSpace($ownedPath) -and
+                [System.IO.Path]::GetFullPath($ownedPath).StartsWith(
+                    [System.IO.Path]::GetFullPath($InstallRoot) + [System.IO.Path]::DirectorySeparatorChar,
+                    [StringComparison]::OrdinalIgnoreCase
+                )
+            )
+            $ownedCommandMatches = (
+                -not [string]::IsNullOrWhiteSpace($ownedCommand) -and
+                $ownedCommand -like "*$InstallRoot*"
+            )
+            if (-not ($ownedPathMatches -or $ownedCommandMatches)) { throw "owned_pid_mismatch" }
             if (Get-Process -Id $apiPid -ErrorAction SilentlyContinue) { Stop-Process -Id $apiPid -Force -ErrorAction Stop }
             if (-not $ownedLauncher.WaitForExit(10000)) {
                 Stop-Process -Id $ownedLauncherPid -Force -ErrorAction Stop
