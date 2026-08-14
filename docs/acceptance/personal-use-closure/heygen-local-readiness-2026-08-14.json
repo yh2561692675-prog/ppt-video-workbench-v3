@@ -3,7 +3,47 @@
   "status": "HEYGEN_WAIT_EXTERNAL",
   "generated_at": "2026-08-14",
   "real_canary_executed": false,
-  "reason": "No explicit real-flow credential, spend authorization, approved voice, and signed Windows candidate were available in this run.",
+  "reason": "HeyGen connector authentication and non-billing asset discovery passed, but the local app credential has not been live-validated, no voice has been explicitly approved for this canary, no hard spend cap has been authorized, and the current Windows candidate is not signed for the external gate.",
+  "observed_external_connection": {
+    "source": "HeyGen connector",
+    "authentication": "passed",
+    "account_plan": "free",
+    "wallet_or_usage_credits": "not_available",
+    "read_only_queries": [
+      "current user",
+      "private avatar groups",
+      "private Chinese starfish voices"
+    ],
+    "private_voice_inventory": [
+      {
+        "voice_id": "13aecbe252834ba59536046b9940b437",
+        "name": "本人声音",
+        "language": "Chinese",
+        "gender": "male"
+      },
+      {
+        "voice_id": "25349af25fa049dc8246bda297c17a40",
+        "name": "004.航空航天领域",
+        "language": "Chinese",
+        "gender": "male"
+      }
+    ],
+    "private_avatar_inventory": [
+      {
+        "group_id": "d67b38a3c535479f848f5c78cc83ccc1",
+        "name": "Lily",
+        "looks_count": 4,
+        "default_voice_id": "c516bd553fd2402e9b1696b5e5bde910"
+      }
+    ],
+    "cost_boundary": "No speech, video, avatar creation, cloning, or other billable operation was submitted."
+  },
+  "local_credential_inventory": {
+    "store": "C:\\Users\\HanYu\\AppData\\Local\\PPTVideoWorkbench\\workspace-data\\settings\\heygen-profiles.json",
+    "profile_count": 6,
+    "encrypted_key_values_recorded": false,
+    "live_validation": "not_run"
+  },
   "local_security_and_fault_matrix": {
     "result": "passed",
     "test_command": "tests/integration/test_heygen_retry.py tests/unit/diagnostics/test_probes.py tests/security/test_secret_redaction.py tests/security/test_diagnostic_bundle_redaction.py",
@@ -26,6 +66,12 @@
     "non-sensitive two-page sample",
     "hard spend cap",
     "same frozen Windows candidate"
+  ],
+  "next_manual_actions": [
+    "In the installed app, save or re-save the HeyGen API Key under the current Windows user; never paste it into chat or a report.",
+    "Explicitly select one listed voice ID for the canary.",
+    "Authorize one two-page non-sensitive canary with a hard spend cap in HeyGen, then retain the provider usage/charge record.",
+    "Run the canary only against the frozen signed Windows candidate and attach request IDs, output hashes, and the cost record."
   ],
   "local_use_impact": "none; local audio and no-audio paths remain eligible for PERSONAL_USE_LOCAL_READY"
 }
