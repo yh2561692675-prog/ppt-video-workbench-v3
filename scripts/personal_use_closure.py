@@ -56,6 +56,8 @@ def aggregate_closure(candidate_path: Path, evidence_paths: tuple[Path, ...]) ->
         raise PersonalUseClosureError("candidate_id_missing_or_invalid")
     blockers: list[str] = []
     source = candidate.get("source")
+    if candidate.get("status") not in {"candidate_frozen", "release_artifacts_ready"}:
+        blockers.append(f"candidate_not_frozen:{candidate.get('status', 'missing')}")
     if not isinstance(source, Mapping) or not isinstance(source.get("git_commit"), str):
         blockers.append("source_commit_missing")
     if isinstance(source, Mapping) and source.get("dirty") is not False:

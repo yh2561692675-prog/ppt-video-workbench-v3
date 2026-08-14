@@ -14,7 +14,11 @@ def _write(path: Path, payload: object) -> Path:
 def _candidate(tmp_path: Path, candidate_id: str = "rc-test") -> Path:
     return _write(
         tmp_path / "candidate.json",
-        {"candidate_id": candidate_id, "source": {"git_commit": "a" * 40, "dirty": False}},
+        {
+            "candidate_id": candidate_id,
+            "status": "candidate_frozen",
+            "source": {"git_commit": "a" * 40, "dirty": False},
+        },
     )
 
 
@@ -49,6 +53,25 @@ def test_closure_blocks_cross_candidate_evidence(tmp_path: Path) -> None:
 
     assert report["status"] == "personal_use_blocked"
     assert "candidate_id_mismatch:g02.json" in report["blocking_failures"]
+
+
+def test_closure_blocks_a_candidate_identity_that_is_not_frozen(tmp_path: Path) -> None:
+    candidate = _write(
+        tmp_path / "candidate.json",
+        {
+            "candidate_id": "rc-test",
+            "status": "candidate_blocked",
+            "source": {"git_commit": "a" * 40, "dirty": False},
+        },
+    )
+    stage = _write(
+        tmp_path / "g03.json",
+        {"candidate_id": "rc-test", "status": "passed", "evidence_refs": []},
+    )
+
+    report = aggregate_closure(candidate, (stage,))
+
+    assert "candidate_not_frozen:candidate_blocked" in report["blocking_failures"]
 
 
 def test_closure_blocks_missing_and_unsafe_evidence(tmp_path: Path) -> None:
