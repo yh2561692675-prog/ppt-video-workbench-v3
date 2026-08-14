@@ -32,6 +32,7 @@ it('exposes transcription, difference comparison and automatic paging in order',
     });
   });
   render(<AudioPipelineActions projectId="project-1" onChanged={onChanged} />);
+  await screen.findByRole('option', { name: 'CUDA（float16）' });
   fireEvent.change(await screen.findByLabelText('转写设备'), { target: { value: 'cuda' } });
   fireEvent.click(screen.getByRole('button', { name: '转写本地录音' }));
   expect(await screen.findByText('本地转写已完成')).toBeInTheDocument();
