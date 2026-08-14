@@ -32,15 +32,15 @@ $releaseArtifactsScript = Join-Path $repoRoot "scripts/release_artifacts.py"
 $webRoot = Join-Path $stageRoot "web"
 $runtimeRoot = Join-Path $stageRoot "runtime"
 $runtimeAssetsRoot = Join-Path $repoRoot "runtime-assets"
-$featurePolicySource = Join-Path $repoRoot "schemas\feature-policy-default.json"
+$featurePolicySourcePath = Join-Path $repoRoot "schemas\feature-policy-default.json"
 if (-not [string]::IsNullOrWhiteSpace($FeaturePolicySource)) {
     if ([System.IO.Path]::IsPathRooted($FeaturePolicySource)) {
-        $featurePolicySource = $FeaturePolicySource
+        $featurePolicySourcePath = $FeaturePolicySource
     }
     else {
-        $featurePolicySource = Join-Path $repoRoot $FeaturePolicySource
+        $featurePolicySourcePath = Join-Path $repoRoot $FeaturePolicySource
     }
-    $featurePolicySource = [System.IO.Path]::GetFullPath($featurePolicySource)
+    $featurePolicySourcePath = [System.IO.Path]::GetFullPath($featurePolicySourcePath)
 }
 $featurePolicyPath = Join-Path $stageRoot "feature-policy.json"
 $licenseRoot = Join-Path $stageRoot "licenses"
@@ -239,8 +239,8 @@ try {
     if ([string]::IsNullOrWhiteSpace($CandidateId) -or $CandidateId -notmatch '^rc-[A-Za-z0-9][A-Za-z0-9._-]*$') {
         throw "A valid -CandidateId using the rc- prefix is required for a release build."
     }
-    if (-not (Test-Path -LiteralPath $featurePolicySource -PathType Leaf)) {
-        throw "Feature policy source was not found: $featurePolicySource"
+    if (-not (Test-Path -LiteralPath $featurePolicySourcePath -PathType Leaf)) {
+        throw "Feature policy source was not found: $featurePolicySourcePath"
     }
 
     if ($includePeripheral) {
@@ -316,7 +316,7 @@ try {
     Copy-Item -Path (Join-Path $repoRoot "apps/web/dist/*") -Destination $webRoot -Recurse -Force
     Copy-PreparedRuntime -SourceRoot $runtimeAssetsRoot -DestinationRoot $runtimeRoot
     uv run --frozen python (Join-Path $repoRoot "scripts\build_feature_policy.py") `
-        --source $featurePolicySource `
+        --source $featurePolicySourcePath `
         --output $featurePolicyPath `
         --candidate-id $CandidateId
     if ($LASTEXITCODE -ne 0) {

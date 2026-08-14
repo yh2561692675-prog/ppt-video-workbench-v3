@@ -26,6 +26,8 @@ def test_build_release_refuses_to_compile_an_installer_without_all_runtime_paylo
     assert '"runtime-manifest.json"' in source
     assert "FeaturePolicySource" in source
     assert "feature-policy-default.json" in source
+    assert "$featurePolicySourcePath" in source
+    assert "$featurePolicySource =" not in source
     assert '"runtime\\node\\node.exe"' in source
     assert '"runtime\\ffmpeg\\ffmpeg.exe"' in source
     assert '"runtime\\ffmpeg\\ffprobe.exe"' in source
