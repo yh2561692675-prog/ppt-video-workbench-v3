@@ -46,3 +46,13 @@
 “环境诊断”只读取组件版本、路径摘要、磁盘、权限和中文目录读写结果。诊断 ZIP 包含 JSON、Markdown 和说明文件，不包含配置密钥、认证头、项目源文件正文或音频内容。发送诊断包前仍建议人工打开 ZIP 检查内容。
 
 完整错误 code 和处理建议见 [排障手册](troubleshooting.md)。
+
+## 本地 ASR 模型
+
+真实本地录音转写需要在当前 Windows 用户的工作区中预置 `faster-whisper-small` 模型；应用启动和转写时不会偷偷联网下载。安装 Python 依赖后，在安全的工作区根目录执行：
+
+```powershell
+python scripts/provision_asr_model.py --workspace-root "$env:LOCALAPPDATA\PPTVideoWorkbench\workspace-data" --model small
+```
+
+脚本会把模型下载到临时目录，确认 `config.json` 和 `model.bin` 齐全后再原子切换；下载失败不会留下半成品。模型文件属于本机运行时资产，不应提交 Git 或打进项目制作包。完成后重新启动应用，再运行本地音频转写；模型缺失时仍应明确显示 `ASR_MODEL_UNAVAILABLE`。

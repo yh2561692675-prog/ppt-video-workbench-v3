@@ -52,9 +52,12 @@ def test_inno_setup_is_non_admin_and_preserves_user_data() -> None:
     source = INSTALLER.read_text(encoding="utf-8")
 
     assert "PrivilegesRequired=lowest" in source
+    assert "CreateUninstallRegKey=no" in source
     assert "OutputBaseFilename" in source
     assert "{autoprograms}" in source
     assert "{autodesktop}" in source
+    assert 'Name: "shortcuts"' in source
+    assert "Tasks: shortcuts" in source
     assert "workbench-launcher.exe" in source
     assert "WindowsPowerShell" not in source
     assert "workspace-data" in source
@@ -63,6 +66,22 @@ def test_inno_setup_is_non_admin_and_preserves_user_data() -> None:
     assert "workspace-data" not in source.split("[UninstallDelete]", 1)[1]
     assert "[UninstallRun]" in source
     assert "shutdown" in source
+
+
+def test_inno_setup_does_not_require_hkcu_uninstall_registration() -> None:
+    source = INSTALLER.read_text(encoding="utf-8")
+
+    assert "CreateUninstallRegKey=no" in source
+    assert 'Name: "shortcuts"' in source
+    assert "Tasks: shortcuts" in source
+
+
+def test_asr_provisioner_keeps_downloads_atomic() -> None:
+    source = (REPOSITORY_ROOT / "scripts" / "provision_asr_model.py").read_text(encoding="utf-8")
+
+    assert "local_dir_use_symlinks=False" in source
+    assert "temporary.replace(target)" in source
+    assert "model.bin" in source
 
 
 def test_install_smoke_covers_windows_installation_matrix() -> None:

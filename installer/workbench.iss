@@ -17,6 +17,10 @@ DefaultDirName={localappdata}\PPTVideoWorkbench\app
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
+; Keep the uninstaller binary, but do not write the per-user Add/Remove
+; Programs registration. Some managed Windows profiles deny HKCU uninstall
+; key creation even though the user's app directory is writable.
+CreateUninstallRegKey=no
 OutputBaseFilename=ppt-video-workbench-setup
 OutputDir=..\release
 Compression=lzma
@@ -31,9 +35,12 @@ Source: "{#ReleaseRoot}\launcher\workbench-launcher.exe"; DestDir: "{app}\launch
 [Dirs]
 Name: "{localappdata}\PPTVideoWorkbench\workspace-data"
 
+[Tasks]
+Name: "shortcuts"; Description: "创建开始菜单和桌面快捷方式"; GroupDescription: "快捷方式："; Flags: unchecked
+
 [Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\launcher\workbench-launcher.exe"; Parameters: "--app-root ""{app}"" start"; WorkingDir: "{app}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\launcher\workbench-launcher.exe"; Parameters: "--app-root ""{app}"" start"; WorkingDir: "{app}"
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\launcher\workbench-launcher.exe"; Parameters: "--app-root ""{app}"" start"; WorkingDir: "{app}"; Tasks: shortcuts
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\launcher\workbench-launcher.exe"; Parameters: "--app-root ""{app}"" start"; WorkingDir: "{app}"; Tasks: shortcuts
 
 [Run]
 Filename: "{app}\launcher\workbench-launcher.exe"; Parameters: "--app-root ""{app}"" activate --version ""{#MyAppVersion}"" --release-root ""{app}\releases\{#MyAppVersion}\release"""; WorkingDir: "{app}"; Flags: runhidden waituntilterminated

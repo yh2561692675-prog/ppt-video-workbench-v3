@@ -7,6 +7,8 @@ import os
 import sys
 from pathlib import Path
 
+from PyInstaller.utils.hooks import collect_all
+
 project_root = Path(SPECPATH).parents[1]
 api_entry = project_root / "apps" / "api" / "src" / "workbench" / "desktop.py"
 
@@ -66,13 +68,21 @@ def find_visual_cpp_runtime_binaries() -> list[tuple[str, str]]:
 
 
 binaries = find_visual_cpp_runtime_binaries()
+faster_whisper_datas, faster_whisper_binaries, faster_whisper_hiddenimports = collect_all(
+    "faster_whisper"
+)
+ctranslate2_datas, ctranslate2_binaries, ctranslate2_hiddenimports = collect_all("ctranslate2")
 
 analysis = Analysis(
     [str(api_entry)],
     pathex=[str(project_root / "apps" / "api" / "src")],
-    datas=[],
-    binaries=binaries,
-    hiddenimports=["workbench"],
+    datas=faster_whisper_datas + ctranslate2_datas,
+    binaries=binaries + faster_whisper_binaries + ctranslate2_binaries,
+    hiddenimports=[
+        "workbench",
+        *faster_whisper_hiddenimports,
+        *ctranslate2_hiddenimports,
+    ],
     name="workbench",
 )
 pyz = PYZ(analysis.pure)
