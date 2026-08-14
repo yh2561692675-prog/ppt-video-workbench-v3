@@ -2,6 +2,7 @@ param(
     [string]$Output = "dist/release",
     [string]$InstallerOutputDirectory = "",
     [string]$CandidateId = "",
+    [string]$FeaturePolicySource = "",
     [switch]$Verify,
     [switch]$PeripheralEnabled
 )
@@ -32,6 +33,15 @@ $webRoot = Join-Path $stageRoot "web"
 $runtimeRoot = Join-Path $stageRoot "runtime"
 $runtimeAssetsRoot = Join-Path $repoRoot "runtime-assets"
 $featurePolicySource = Join-Path $repoRoot "schemas\feature-policy-default.json"
+if (-not [string]::IsNullOrWhiteSpace($FeaturePolicySource)) {
+    if ([System.IO.Path]::IsPathRooted($FeaturePolicySource)) {
+        $featurePolicySource = $FeaturePolicySource
+    }
+    else {
+        $featurePolicySource = Join-Path $repoRoot $FeaturePolicySource
+    }
+    $featurePolicySource = [System.IO.Path]::GetFullPath($featurePolicySource)
+}
 $featurePolicyPath = Join-Path $stageRoot "feature-policy.json"
 $licenseRoot = Join-Path $stageRoot "licenses"
 $sbomRoot = Join-Path $stageRoot "sbom"

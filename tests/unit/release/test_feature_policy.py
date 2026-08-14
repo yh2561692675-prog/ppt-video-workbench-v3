@@ -40,3 +40,15 @@ def test_loader_rejects_malformed_policy(tmp_path: Path) -> None:
 
     with pytest.raises(FeaturePolicyError):
         load_feature_policy(path)
+
+
+def test_effects_v2_acceptance_policy_is_complete() -> None:
+    path = Path(__file__).parents[3] / "schemas" / "feature-policy-effects-v2-acceptance.json"
+    policy = load_feature_policy(path)
+
+    assert policy.policy_id == "effects-v2-acceptance"
+    assert policy.status == "acceptance"
+    assert policy.new_project_default == "v2"
+    assert policy.effects_v2.persistence is True
+    assert policy.effects_v2.preview is True
+    assert policy.effects_v2.render is True
