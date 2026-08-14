@@ -198,7 +198,7 @@ uv run --frozen python scripts/personal_use_preflight.py `
 - 修改 `scripts/windows_acceptance_report.py` 和对应 schema/tests。
 
 - [ ] `clean_install` 只在安装进程退出、launcher/runtime 文件完整后标 pass。
-- [ ] `first_launch` 包含首次和第二次启动子场景。
+- [ ] `first_launch`、`second_launch` 和 `reinstall_launch` 分别记录首次、二次和重装后启动。
 - [ ] 第二次启动复用同一 workspace/state，端点健康且没有重复 API。
 - [ ] launcher/API/Web/runtime candidate ID 一致。
 - [ ] workspace、state、logs 与 InstallRoot 分离。
@@ -209,6 +209,7 @@ uv run --frozen python scripts/personal_use_preflight.py `
 ```powershell
 .\tests\release\windows-acceptance.ps1 `
   -ArtifactManifest "release\<candidate-id>\release-artifacts.json" `
+  -CandidateManifest "test-results\personal-use\<candidate-id>\candidate-identity.json" `
   -InstallRoot "F:\PPTVideoWorkbench-Acceptance\<candidate-id>\app" `
   -WorkspaceRoot "F:\PPTVideoWorkbench-Acceptance\<candidate-id>\workspace" `
   -ReportDirectory "F:\PPTVideoWorkbench-Acceptance\<candidate-id>\report"

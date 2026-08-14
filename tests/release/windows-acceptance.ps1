@@ -2,6 +2,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$ArtifactManifest,
+    [string]$CandidateManifest = "",
     [string]$InstallRoot = "",
     [string]$ReportDirectory = "",
     [string]$WorkspaceRoot = "",
@@ -37,9 +38,9 @@ $previous = @{
 }
 
 $requiredPhases = @(
-    "artifact_resolution", "clean_install", "first_launch", "legacy_project",
+    "artifact_resolution", "clean_install", "candidate_identity", "first_launch", "second_launch", "legacy_project",
     "interruption_recovery", "full_preflight", "play_from_start", "final_export",
-    "uninstall_reinstall", "version_rollback", "process_cleanup", "workspace_retention"
+    "uninstall_reinstall", "reinstall_launch", "version_rollback", "process_cleanup", "workspace_retention"
 )
 $evidence = [ordered]@{
     schema_version = "2.0"
@@ -47,6 +48,7 @@ $evidence = [ordered]@{
         run_id = $runId
         candidate_id = ""
         artifact_manifest = ""
+        candidate_manifest = ""
         installer_path = ""
         installer_sha256 = ""
         workspace_root = $WorkspaceRoot
@@ -203,6 +205,14 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "artifact_manifest_verification_failed" }
     $artifact = Get-Content -LiteralPath $ArtifactManifest -Raw | ConvertFrom-Json
     $candidateId = [string]$artifact.candidate_id
+    $candidateRecord = $null
+    if (-not [string]::IsNullOrWhiteSpace($CandidateManifest) -and (Test-Path -LiteralPath $CandidateManifest -PathType Leaf)) {
+        $candidateRecord = Get-Content -LiteralPath $CandidateManifest -Raw | ConvertFrom-Json
+        $evidence.release.candidate_manifest = "candidate:$CandidateManifest"
+    }
+    else {
+        Set-Phase -Name "candidate_identity" -Result "blocked" -ReasonCodes @("candidate_manifest_missing")
+    }
     $relativeInstaller = [string]$artifact.artifacts.installer.relative_path
     if ([string]::IsNullOrWhiteSpace($candidateId) -or [string]::IsNullOrWhiteSpace($relativeInstaller)) { throw "artifact_manifest_identity_missing" }
     $installerPath = [System.IO.Path]::GetFullPath((Join-Path $repositoryRoot $relativeInstaller))
@@ -214,6 +224,21 @@ try {
     $evidence.release.artifact_manifest = "artifact-manifest.json"
     $evidence.release.installer_path = "installer:$relativeInstaller"
     $evidence.release.installer_sha256 = $installerSha256
+    if ($null -ne $candidateRecord) {
+        $candidateSource = $candidateRecord.source
+        $candidatePolicy = $candidateRecord.feature_policy
+        $candidateIdentityErrors = @()
+        if ([string]$candidateRecord.candidate_id -ne $candidateId) { $candidateIdentityErrors += "candidate_id_mismatch" }
+        if ([string]$candidateRecord.status -ne "candidate_frozen") { $candidateIdentityErrors += "candidate_not_frozen" }
+        if ($candidateRecord.source.dirty -ne $false) { $candidateIdentityErrors += "source_dirty" }
+        if ([string]$candidatePolicy.policy_id -eq "") { $candidateIdentityErrors += "feature_policy_missing" }
+        if ($candidateIdentityErrors.Count -eq 0) {
+            Set-Phase -Name "candidate_identity" -Result "passed" -ReasonCodes @() -Metrics @{ candidate_id = $candidateId; policy_id = [string]$candidatePolicy.policy_id; source_commit = [string]$candidateSource.git_commit }
+        }
+        else {
+            Set-Phase -Name "candidate_identity" -Result "blocked" -ReasonCodes $candidateIdentityErrors
+        }
+    }
     Set-Phase -Name "artifact_resolution" -Result "passed" -ReasonCodes @() -Metrics @{ candidate_id = $candidateId; installer_sha256 = $installerSha256 }
 
     if (Test-Path -LiteralPath $InstallRoot) { throw "install_root_must_be_new:$InstallRoot" }
@@ -230,7 +255,30 @@ try {
         Start-Sleep -Milliseconds 500
     }
     if (-not (Test-Path -LiteralPath $launcherPath -PathType Leaf)) { throw "installed_launcher_missing" }
+    $installedReleaseRoot = Join-Path $InstallRoot "releases\0.1.0\release"
+    $installedPolicyPath = Join-Path $installedReleaseRoot "feature-policy.json"
+    $installedRuntimeManifestPath = Join-Path $installedReleaseRoot "runtime-manifest.json"
+    if ($null -ne $candidateRecord -and (Test-Path -LiteralPath $installedPolicyPath -PathType Leaf) -and (Test-Path -LiteralPath $installedRuntimeManifestPath -PathType Leaf)) {
+        $installedPolicy = Get-Content -LiteralPath $installedPolicyPath -Raw | ConvertFrom-Json
+        $installedRuntimeManifest = Get-Content -LiteralPath $installedRuntimeManifestPath -Raw | ConvertFrom-Json
+        $installedPolicyHash = (Get-FileHash -LiteralPath $installedPolicyPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        $identityErrors = @()
+        if ([string]$installedPolicy.candidate_id -ne $candidateId) { $identityErrors += "installed_candidate_id_mismatch" }
+        if ([string]$installedPolicy.policy_id -ne [string]$candidateRecord.feature_policy.policy_id) { $identityErrors += "installed_policy_id_mismatch" }
+        if ([string]$candidateRecord.feature_policy.sha256 -ne $installedPolicyHash) { $identityErrors += "installed_policy_hash_mismatch" }
+        if ([string]$installedRuntimeManifest.feature_policy_sha256 -ne $installedPolicyHash) { $identityErrors += "runtime_policy_hash_mismatch" }
+        if ($identityErrors.Count -gt 0) {
+            Set-Phase -Name "candidate_identity" -Result "failed" -ReasonCodes $identityErrors
+        }
+        else {
+            $evidence.phases["candidate_identity"].metrics.installed_policy_sha256 = $installedPolicyHash
+        }
+    }
+    else {
+        Set-Phase -Name "candidate_identity" -Result "blocked" -ReasonCodes @("installed_identity_files_missing")
+    }
     Invoke-Launch -Name "first_launch" -LauncherPath $launcherPath
+    Invoke-Launch -Name "second_launch" -LauncherPath $launcherPath
     Set-Phase -Name "legacy_project" -Result "blocked" -ReasonCodes @("operator_sample_required") -Detail "Legacy project path requires an explicit copied sample."
     Set-Phase -Name "interruption_recovery" -Result "blocked" -ReasonCodes @("physical_fault_injection_pending")
     Set-Phase -Name "full_preflight" -Result "blocked" -ReasonCodes @("project_sample_required")
@@ -241,7 +289,23 @@ try {
     if (Test-Path -LiteralPath $uninstaller -PathType Leaf) {
         $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @("/VERYSILENT", "/NORESTART") -Wait -PassThru -WindowStyle Hidden
         if ($uninstall.ExitCode -eq 0) {
-            Set-Phase -Name "uninstall_reinstall" -Result "passed" -ReasonCodes @() -Metrics @{ uninstall_exit_code = 0 }
+            $removed = -not (Test-Path -LiteralPath $InstallRoot)
+            if (-not $removed) {
+                Set-Phase -Name "uninstall_reinstall" -Result "failed" -ReasonCodes @("install_root_retained") -Metrics @{ uninstall_exit_code = 0 }
+            }
+            else {
+                $reinstall = Start-Process -FilePath $installerPath -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/DIR=$InstallRoot", "/LOG=$installerLog.reinstall") -Wait -PassThru -WindowStyle Hidden
+                $reinstalledLauncher = Join-Path $InstallRoot "launcher\workbench-launcher.exe"
+                $reinstallDeadline = (Get-Date).AddSeconds(180)
+                while (-not (Test-Path -LiteralPath $reinstalledLauncher -PathType Leaf) -and (Get-Date) -lt $reinstallDeadline) { Start-Sleep -Milliseconds 500 }
+                if ($reinstall.ExitCode -eq 0 -and (Test-Path -LiteralPath $reinstalledLauncher -PathType Leaf)) {
+                    Set-Phase -Name "uninstall_reinstall" -Result "passed" -ReasonCodes @() -Metrics @{ uninstall_exit_code = 0; reinstall_exit_code = $reinstall.ExitCode; install_root_removed = $removed }
+                    Invoke-Launch -Name "reinstall_launch" -LauncherPath $reinstalledLauncher
+                }
+                else {
+                    Set-Phase -Name "uninstall_reinstall" -Result "failed" -ReasonCodes @("reinstall_failed") -Metrics @{ uninstall_exit_code = 0; reinstall_exit_code = $reinstall.ExitCode }
+                }
+            }
         } else {
             Set-Phase -Name "uninstall_reinstall" -Result "failed" -ReasonCodes @("uninstaller_exit_code") -Metrics @{ uninstall_exit_code = $uninstall.ExitCode }
         }
