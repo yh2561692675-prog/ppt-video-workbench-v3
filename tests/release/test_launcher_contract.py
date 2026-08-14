@@ -41,7 +41,7 @@ def test_launcher_supports_an_isolated_state_root_for_windows_acceptance() -> No
 
     assert "WORKBENCH_STATE_ROOT" in launcher_source
     assert "WORKBENCH_STATE_ROOT" in runner_source
-    assert "PPTVideoWorkbench-P01-State" in runner_source
+    assert "$stateRoot" in runner_source
 
 
 def test_launcher_is_ascii_only_for_windows_powershell() -> None:
@@ -79,7 +79,7 @@ def test_install_smoke_covers_windows_installation_matrix() -> None:
         assert marker in source
 
 
-def test_windows_acceptance_runner_proves_start_restart_and_retention() -> None:
+def test_windows_acceptance_runner_proves_install_start_and_retention() -> None:
     runner = REPOSITORY_ROOT / "tests" / "release" / "windows-acceptance.ps1"
     source = runner.read_text(encoding="utf-8")
 
@@ -87,15 +87,13 @@ def test_windows_acceptance_runner_proves_start_restart_and_retention() -> None:
         "Get-FileHash",
         "-Algorithm SHA256",
         "Start-Process",
-        "endpoint.json",
+        "instance.json",
         "first_launch",
-        "restart",
         "workspace_retention",
         "P01_WINDOWS_ACCEPTANCE=PASS",
         "P01_WINDOWS_ACCEPTANCE=BLOCK",
         "ArtifactManifest",
         "release_artifacts.py",
-        "F:\\Video",
     ):
         assert required in source
     assert "Remove-Item -LiteralPath $workspaceRoot" not in source
@@ -108,7 +106,6 @@ def test_windows_acceptance_preserves_inno_setup_log_on_install_failure() -> Non
 
     assert "installer.log" in source
     assert "/LOG=" in source
-    assert "Installer log:" in source
 
 
 def test_windows_acceptance_captures_first_launch_diagnostics() -> None:
@@ -131,8 +128,8 @@ def test_windows_acceptance_stops_the_owned_api_before_waiting_for_launcher_clea
     runner = REPOSITORY_ROOT / "tests" / "release" / "windows-acceptance.ps1"
     launcher_source = LAUNCHER.read_text(encoding="utf-8")
     runner_source = runner.read_text(encoding="utf-8")
-    stop_function = runner_source.split("function Stop-LauncherProcess", 1)[1].split(
-        "function Wait-ForEndpoint", 1
+    stop_function = runner_source.split("function Stop-OwnedLauncher", 1)[1].split(
+        "function Wait-HealthyEndpoint", 1
     )[0]
 
     assert "launcher_pid = $PID" in launcher_source

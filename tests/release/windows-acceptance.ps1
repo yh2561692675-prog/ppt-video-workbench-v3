@@ -20,7 +20,7 @@ $reportPath = [System.IO.Path]::GetFullPath($ReportDirectory)
 $diagnosticRoot = Join-Path $reportPath "diagnostics"
 $evidenceRoot = Join-Path $reportPath "phase-evidence"
 $stateRoot = Join-Path $reportPath "state"
-$endpointPath = Join-Path $stateRoot "endpoint.json"
+$endpointPath = Join-Path $stateRoot "instance.json"
 $retentionMarker = Join-Path $WorkspaceRoot "personal-use-retention.json"
 $evidencePath = Join-Path $reportPath "acceptance-evidence.json"
 $installerLog = Join-Path $reportPath "installer.log"
@@ -61,7 +61,9 @@ function Write-JsonAtomic {
     $parent = Split-Path -Parent $Path
     New-Item -ItemType Directory -Path $parent -Force | Out-Null
     $temporary = "$Path.$([guid]::NewGuid().ToString('N')).partial"
-    $Value | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $temporary -Encoding UTF8
+    # Pass the object explicitly: piping an OrderedDictionary through
+    # ConvertTo-Json on Windows PowerShell 5.1 serializes only its type name.
+    ConvertTo-Json -InputObject ([pscustomobject]$Value) -Depth 12 | Set-Content -LiteralPath $temporary -Encoding UTF8
     Move-Item -LiteralPath $temporary -Destination $Path -Force
 }
 
@@ -76,15 +78,23 @@ function Set-Phase {
     $started = (Get-Date).ToUniversalTime()
     $finished = (Get-Date).ToUniversalTime()
     $detailPath = Join-Path $evidenceRoot "$Name.json"
-    $detail = [ordered]@{
+    $phaseEvidence = [ordered]@{
         phase = $Name
         result = $Result
         detail = $Detail
         reason_codes = @($ReasonCodes)
         metrics = $Metrics
     }
-    Write-JsonAtomic -Path $detailPath -Value $detail
-    $relative = [System.IO.Path]::GetRelativePath($reportPath, $detailPath).Replace("\", "/")
+    Write-JsonAtomic -Path $detailPath -Value $phaseEvidence
+    # Windows PowerShell 5.1/.NET Framework does not expose Path.GetRelativePath.
+    # All phase details are created below the report root, so a normalized
+    # substring is both portable and fail-closed for unexpected paths.
+    $normalizedReport = [System.IO.Path]::GetFullPath($reportPath).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+    $normalizedDetail = [System.IO.Path]::GetFullPath($detailPath)
+    if (-not $normalizedDetail.StartsWith($normalizedReport + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "phase_evidence_escapes_report_root"
+    }
+    $relative = $normalizedDetail.Substring($normalizedReport.Length + 1).Replace("\", "/")
     $evidence.phases[$Name] = [ordered]@{
         result = $Result
         started_at = $started.ToString("o")
@@ -114,9 +124,20 @@ function Stop-OwnedLauncher {
             $endpoint = Get-Content -LiteralPath $endpointPath -Raw | ConvertFrom-Json
             $ownedLauncherPid = [int]$endpoint.launcher_pid
             $apiPid = [int]$endpoint.api_pid
-            if ($ownedLauncherPid -ne $launcherProcess.Id -or $apiPid -le 0) { throw "owned_pid_mismatch" }
+            if ($ownedLauncherPid -le 0 -or $apiPid -le 0) { throw "owned_pid_mismatch" }
+            $ownedLauncher = Get-Process -Id $ownedLauncherPid -ErrorAction SilentlyContinue
+            if ($null -eq $ownedLauncher) { throw "owned_launcher_missing" }
+            $ownedCommand = (Get-CimInstance Win32_Process -Filter "ProcessId=$ownedLauncherPid" -ErrorAction SilentlyContinue).CommandLine
+            if ([string]::IsNullOrWhiteSpace($ownedCommand) -or $ownedCommand -notlike "*$InstallRoot*") { throw "owned_pid_mismatch" }
             if (Get-Process -Id $apiPid -ErrorAction SilentlyContinue) { Stop-Process -Id $apiPid -Force -ErrorAction Stop }
-            if (-not $launcherProcess.WaitForExit(10000)) { throw "owned_launcher_timeout" }
+            if (-not $ownedLauncher.WaitForExit(10000)) {
+                Stop-Process -Id $ownedLauncherPid -Force -ErrorAction Stop
+                if (-not $ownedLauncher.WaitForExit(5000)) { throw "owned_launcher_timeout" }
+            }
+            if ($launcherProcess.Id -ne $ownedLauncherPid -and -not $launcherProcess.HasExited) {
+                Stop-Process -Id $launcherProcess.Id -Force -ErrorAction SilentlyContinue
+                $launcherProcess.WaitForExit(5000) | Out-Null
+            }
         }
     }
     catch {
@@ -171,6 +192,13 @@ try {
     New-Item -ItemType Directory -Path $reportPath, $diagnosticRoot, $evidenceRoot, $stateRoot, $WorkspaceRoot -Force | Out-Null
     if (-not (Test-Path -LiteralPath $PythonExecutable -PathType Leaf)) { throw "python_executable_missing:$PythonExecutable" }
     if (-not (Test-Path -LiteralPath $ArtifactManifest -PathType Leaf)) { throw "artifact_manifest_missing" }
+    # The installer runs the release activation hook before the first launch.
+    # Set the isolated roots before invoking it so activation and startup share
+    # the same active-release state and diagnostics paths.
+    $env:WORKBENCH_WORKSPACE = $WorkspaceRoot
+    $env:WORKBENCH_STATE_ROOT = $stateRoot
+    $env:WORKBENCH_LOG_ROOT = $diagnosticRoot
+    $env:NO_PROXY = "127.0.0.1,localhost,::1"
     & $PythonExecutable (Join-Path $repositoryRoot "scripts\release_artifacts.py") --repository-root $repositoryRoot --verify $ArtifactManifest
     if ($LASTEXITCODE -ne 0) { throw "artifact_manifest_verification_failed" }
     $artifact = Get-Content -LiteralPath $ArtifactManifest -Raw | ConvertFrom-Json
@@ -193,7 +221,14 @@ try {
     Set-Phase -Name "clean_install" -Result "passed" -ReasonCodes @() -Metrics @{ install_root = "isolated" } -Detail "Install root was new and isolated."
     $install = Start-Process -FilePath $installerPath -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/DIR=$InstallRoot", "/LOG=$installerLog") -Wait -PassThru -WindowStyle Hidden
     if ($install.ExitCode -ne 0) { throw "installer_exit_code:$($install.ExitCode)" }
+    # Inno Setup can return its parent process before the temporary extractor
+    # finishes. Wait for the launcher with a bounded timeout before declaring
+    # installation success.
     $launcherPath = Join-Path $InstallRoot "launcher\workbench-launcher.exe"
+    $installDeadline = (Get-Date).AddSeconds(180)
+    while (-not (Test-Path -LiteralPath $launcherPath -PathType Leaf) -and (Get-Date) -lt $installDeadline) {
+        Start-Sleep -Milliseconds 500
+    }
     if (-not (Test-Path -LiteralPath $launcherPath -PathType Leaf)) { throw "installed_launcher_missing" }
     Invoke-Launch -Name "first_launch" -LauncherPath $launcherPath
     Set-Phase -Name "legacy_project" -Result "blocked" -ReasonCodes @("operator_sample_required") -Detail "Legacy project path requires an explicit copied sample."
@@ -231,8 +266,11 @@ try {
     }
 }
 catch {
+    $runnerError = $_.Exception.Message
+    Set-Content -LiteralPath (Join-Path $diagnosticRoot "runner-error.txt") -Value $runnerError -Encoding UTF8
     if (-not $evidence.phases.Contains("artifact_resolution")) { Set-Phase -Name "artifact_resolution" -Result "failed" -ReasonCodes @("runner_failed") -Detail $_.Exception.Message }
     if (-not $evidence.phases.Contains("clean_install")) { Set-Phase -Name "clean_install" -Result "failed" -ReasonCodes @("runner_failed") -Detail $_.Exception.Message }
+    if ($evidence.phases.Contains("clean_install") -and -not $evidence.phases.Contains("first_launch")) { Set-Phase -Name "first_launch" -Result "failed" -ReasonCodes @("runner_failed") -Detail $runnerError }
 }
 finally {
     Stop-OwnedLauncher -BestEffort
