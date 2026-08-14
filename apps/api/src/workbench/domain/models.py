@@ -141,6 +141,7 @@ class JobRecord(ContractModel):
     heartbeat_at: datetime | None = None
     started_at: datetime | None = None
     finished_at: datetime | None = None
+    resource_wait: str | None = Field(default=None, max_length=240)
 
     @model_validator(mode="before")
     @classmethod

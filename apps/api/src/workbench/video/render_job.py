@@ -165,13 +165,16 @@ class RenderJobService:
             preflight.model_copy(update={"props": props}) if preset_id is not None else preflight
         )
         fingerprint = render_input_fingerprint(effective_preflight)
+        payload = {"props": props.model_dump(mode="json")}
+        if preset_id is not None:
+            payload["preset_id"] = preset_id
         spec = JobSpec(
             project_id=project_id,
             job_type=JobType.EXPORT_PACKAGE,
             cache_key=f"export-package:{fingerprint}",
             input_fingerprint=fingerprint,
             idempotency_key=idempotency_key,
-            payload={"props": props.model_dump(mode="json"), "preset_id": preset_id},
+            payload=payload,
         )
         result = self.repository.enqueue_or_get(spec)
         if (

@@ -42,7 +42,7 @@ def _insert_v1_job(database: WorkspaceDatabase, *, project_id, cache_key: str, s
     return str(job_id)
 
 
-def test_initialize_migrates_v1_jobs_and_creates_v4_cache_tables(tmp_path) -> None:
+def test_initialize_migrates_v1_jobs_and_creates_v5_tables(tmp_path) -> None:
     database = _v1_database(tmp_path / "workspace.db")
     project_id = uuid4()
     first_id = _insert_v1_job(
@@ -59,7 +59,7 @@ def test_initialize_migrates_v1_jobs_and_creates_v4_cache_tables(tmp_path) -> No
         rows = connection.execute(select(jobs).order_by(jobs.c.id)).mappings().all()
         index_rows = connection.exec_driver_sql("PRAGMA index_list('jobs')").all()
 
-    assert version == 4
+    assert version == 5
     by_id = {row["id"]: row for row in rows}
     assert by_id[first_id]["status"] == JobStatus.QUEUED.value
     assert by_id[second_id]["status"] == JobStatus.SUCCEEDED.value
@@ -106,8 +106,8 @@ def test_job_record_accepts_legacy_project_manifest_statuses() -> None:
     assert record.status is JobStatus.SUCCEEDED
 
 
-@pytest.mark.parametrize("starting_version", [2, 3])
-def test_initialize_migrates_v2_and_v3_metadata_to_v4_idempotently(
+@pytest.mark.parametrize("starting_version", [2, 3, 4])
+def test_initialize_migrates_metadata_to_v5_idempotently(
     tmp_path, starting_version: int
 ) -> None:
     database = WorkspaceDatabase(tmp_path / "workspace.db")
@@ -130,5 +130,5 @@ def test_initialize_migrates_v2_and_v3_metadata_to_v4_idempotently(
             ).all()
         }
 
-    assert version == 4
-    assert {"cache_entries", "cache_dependencies"} <= cache_tables
+    assert version == 5
+    assert {"cache_entries", "cache_dependencies", "job_action_commands"} <= cache_tables

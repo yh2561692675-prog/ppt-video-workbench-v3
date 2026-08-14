@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/personal-use-preflight-v1.schema.json",
+  "title": "PersonalUsePreflightV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "report_id", "candidate_id", "source_commit", "input_fingerprint", "config_hash", "status", "gates"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "report_id": { "type": "string", "minLength": 1 },
+    "candidate_id": { "type": "string", "minLength": 1 },
+    "source_commit": { "type": "string", "minLength": 7 },
+    "input_fingerprint": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "config_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "status": { "enum": ["passed", "blocked", "stale"] },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "build", "runtime", "project"],
+      "properties": {
+        "source": { "$ref": "#/$defs/gate" },
+        "build": { "$ref": "#/$defs/gate" },
+        "runtime": { "$ref": "#/$defs/gate" },
+        "project": { "$ref": "#/$defs/gate" }
+      }
+    }
+  },
+  "$defs": {
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason_codes", "evidence_refs", "metrics"],
+      "properties": {
+        "status": { "enum": ["passed", "blocked", "warning"] },
+        "reason_codes": { "type": "array", "items": { "type": "string" } },
+        "evidence_refs": { "type": "array", "items": { "type": "string" } },
+        "metrics": { "type": "object" }
+      }
+    }
+  }
+}

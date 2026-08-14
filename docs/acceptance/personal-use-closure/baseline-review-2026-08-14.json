@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "status": "BASELINE_RECOGNIZED",
+  "reviewed_at": "2026-08-14",
+  "worktree": "F:/ppt-video-workbench-v3/.worktrees/program-integration-v1",
+  "branch": "codex/program-integration-v1",
+  "head": "90a4fa311e90531e940ba436453d0e4f36a12457",
+  "rc_frozen": false,
+  "root_recovery_snapshot_is_build_source": false,
+  "evidence": {
+    "dp45_two_hour": "HISTORICAL_PARTIAL_PASS",
+    "dp45_eight_hour": "INTERRUPTED",
+    "windows_full_chain": "BLOCKED_SCHEMA_CONTRACT",
+    "heygen_live": "WAIT_EXTERNAL",
+    "same_candidate_installed_ppt": "MISSING",
+    "manual_av": "MISSING"
+  },
+  "next_projects": [
+    "necessary_integration_and_rc_correctness",
+    "windows_runner_schema_2_0",
+    "four_preflight_gates"
+  ]
+}

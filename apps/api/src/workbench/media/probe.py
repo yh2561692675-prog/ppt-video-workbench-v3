@@ -123,7 +123,18 @@ def _parse_stream(value: dict[str, Any]) -> MediaStreamProbe:
 
 
 def _run(command: Sequence[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(command, capture_output=True, text=True, check=False, timeout=120)
+    # ffprobe emits UTF-8 JSON even when the Windows process locale is GBK.
+    # Explicit decoding prevents non-ASCII paths/metadata from turning a valid
+    # media file into an ``invalid_output`` failure on Windows.
+    return subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+        timeout=120,
+    )
 
 
 def _tool_version(ffprobe: str, runner: ProbeRunner) -> str:

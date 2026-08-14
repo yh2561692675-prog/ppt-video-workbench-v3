@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "status": "HEYGEN_WAIT_EXTERNAL",
+  "generated_at": "2026-08-14",
+  "real_canary_executed": false,
+  "reason": "No explicit real-flow credential, spend authorization, approved voice, and signed Windows candidate were available in this run.",
+  "local_security_and_fault_matrix": {
+    "result": "passed",
+    "test_command": "tests/integration/test_heygen_retry.py tests/unit/diagnostics/test_probes.py tests/security/test_secret_redaction.py tests/security/test_diagnostic_bundle_redaction.py",
+    "passed": 28,
+    "warnings": 2,
+    "coverage": [
+      "Windows-user secret store failure",
+      "profile replacement without duplicate",
+      "401/402/429/500 mapping",
+      "timeout retry and exponential backoff",
+      "failed-segment resume",
+      "local fallback boundary",
+      "diagnostic and log redaction"
+    ]
+  },
+  "real_canary_prerequisites": [
+    "explicit provider authorization",
+    "valid HeyGen credential saved under current Windows user DPAPI",
+    "approved voice ID",
+    "non-sensitive two-page sample",
+    "hard spend cap",
+    "same frozen Windows candidate"
+  ],
+  "local_use_impact": "none; local audio and no-audio paths remain eligible for PERSONAL_USE_LOCAL_READY"
+}

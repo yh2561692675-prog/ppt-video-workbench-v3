@@ -227,3 +227,28 @@ def migrate_v3_to_v4(connection: Connection) -> None:
         "ON cache_entries(project_id, state, last_accessed_at)"
     )
     connection.exec_driver_sql("UPDATE schema_meta SET version = 4 WHERE version = 3")
+
+
+def migrate_v4_to_v5(connection: Connection) -> None:
+    """Add task-center resource wait state and idempotent action receipts."""
+
+    columns = {str(row[1]) for row in connection.exec_driver_sql("PRAGMA table_info('jobs')").all()}
+    if "resource_wait" not in columns:
+        connection.exec_driver_sql('ALTER TABLE jobs ADD COLUMN "resource_wait" VARCHAR(240)')
+    connection.exec_driver_sql(
+        """
+        CREATE TABLE IF NOT EXISTS job_action_commands (
+            idempotency_key VARCHAR(128) PRIMARY KEY,
+            job_id VARCHAR(36) NOT NULL,
+            action VARCHAR(32) NOT NULL,
+            expected_revision INTEGER NOT NULL,
+            response_job_json TEXT NOT NULL,
+            created_at VARCHAR(40) NOT NULL,
+            CONSTRAINT uq_job_action_job_key UNIQUE (job_id, idempotency_key)
+        )
+        """
+    )
+    connection.exec_driver_sql(
+        "CREATE INDEX IF NOT EXISTS ix_job_action_commands_job ON job_action_commands(job_id)"
+    )
+    connection.exec_driver_sql("UPDATE schema_meta SET version = 5 WHERE version = 4")

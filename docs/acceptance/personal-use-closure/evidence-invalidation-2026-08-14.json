@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "policy": "Any source, dependency, runtime, template, resource, packaging, feature-flag, input-sample, or installer change invalidates affected candidate evidence.",
+  "historical_or_stale": [
+    "docs/acceptance/foundation/stop-points/2026-08-13-program-dp45-two-hour-soak.json",
+    "docs/acceptance/windows-full-flow-2026-08-11.md",
+    "tests/acceptance/results/RC1/evidence-manifest.json"
+  ],
+  "required_rebuild_after_change": [
+    "candidate-manifest",
+    "runtime-manifest",
+    "windows-acceptance",
+    "installed-ppt-e2e",
+    "manual-av"
+  ],
+  "never_promote": [
+    "old-installer",
+    "other-worktree-output",
+    "static-frame-or-fixture-as-live-acceptance",
+    "interrupted-soak",
+    "test-timeout-as-pass"
+  ]
+}

@@ -67,7 +67,20 @@ jobs = Table(
     Column("heartbeat_at", String(40), nullable=True),
     Column("started_at", String(40), nullable=True),
     Column("finished_at", String(40), nullable=True),
+    Column("resource_wait", String(240), nullable=True),
     UniqueConstraint("project_id", "cache_key", name="uq_jobs_project_cache_key"),
+)
+
+job_action_commands = Table(
+    "job_action_commands",
+    metadata,
+    Column("idempotency_key", String(128), primary_key=True),
+    Column("job_id", String(36), nullable=False),
+    Column("action", String(32), nullable=False),
+    Column("expected_revision", Integer, nullable=False),
+    Column("response_job_json", Text, nullable=False),
+    Column("created_at", String(40), nullable=False),
+    UniqueConstraint("job_id", "idempotency_key", name="uq_job_action_job_key"),
 )
 
 job_attempts = Table(
@@ -217,23 +230,30 @@ class WorkspaceDatabase:
         with self.engine.begin() as connection:
             version = connection.execute(select(schema_meta.c.version)).scalar_one_or_none()
             if version is None:
-                connection.execute(insert(schema_meta).values(version=4))
+                connection.execute(insert(schema_meta).values(version=5))
             elif version == 1:
-                from .migrations import migrate_v1_to_v2, migrate_v2_to_v3, migrate_v3_to_v4
+                from .migrations import migrate_v1_to_v2, migrate_v2_to_v3, migrate_v3_to_v4, migrate_v4_to_v5
 
                 migrate_v1_to_v2(connection)
                 migrate_v2_to_v3(connection)
                 migrate_v3_to_v4(connection)
+                migrate_v4_to_v5(connection)
             elif version == 2:
-                from .migrations import migrate_v2_to_v3, migrate_v3_to_v4
+                from .migrations import migrate_v2_to_v3, migrate_v3_to_v4, migrate_v4_to_v5
 
                 migrate_v2_to_v3(connection)
                 migrate_v3_to_v4(connection)
+                migrate_v4_to_v5(connection)
             elif version == 3:
-                from .migrations import migrate_v3_to_v4
+                from .migrations import migrate_v3_to_v4, migrate_v4_to_v5
 
                 migrate_v3_to_v4(connection)
-            elif version != 4:
+                migrate_v4_to_v5(connection)
+            elif version == 4:
+                from .migrations import migrate_v4_to_v5
+
+                migrate_v4_to_v5(connection)
+            elif version != 5:
                 from .migrations import WorkspaceMigrationError
 
                 raise WorkspaceMigrationError(f"unsupported workspace schema version: {version}")
