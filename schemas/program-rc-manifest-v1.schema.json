@@ -4,7 +4,17 @@
   "title": "ProgramRcManifestV1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "candidate_id", "status", "source", "ordered_tasks", "stop_points", "runtime_evidence", "blockers", "freeze_policy"],
+  "required": [
+    "schema_version",
+    "candidate_id",
+    "status",
+    "source",
+    "ordered_tasks",
+    "stop_points",
+    "runtime_evidence",
+    "blockers",
+    "freeze_policy"
+  ],
   "properties": {
     "schema_version": { "const": "1.0" },
     "candidate_id": { "type": "string", "minLength": 1 },
@@ -16,7 +26,10 @@
       "properties": {
         "git_commit": { "type": "string", "minLength": 7 },
         "dirty": { "type": "boolean" },
-        "lock_hashes": { "type": "object", "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
+        "lock_hashes": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        }
       }
     },
     "ordered_tasks": { "type": "array", "minItems": 14, "items": { "type": "string" } },

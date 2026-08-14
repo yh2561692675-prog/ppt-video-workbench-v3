@@ -19,11 +19,11 @@
     "evidence_path": "test-results/export-matrix/c-05064d8ecb37/r-matrix-20260813T032054Z-1a16dffb/output-matrix-acceptance-v1.json",
     "evidence_sha256": "3e224b95ec7fb3a97a91d547c7563ed466b91064634872aa73b095b4b5a28904",
     "executed_profiles": [
-      {"canvas": "1280x720", "aspect": "16:9", "fps": 24},
-      {"canvas": "1280x720", "aspect": "16:9", "fps": 25},
-      {"canvas": "1920x1080", "aspect": "16:9", "fps": 30},
-      {"canvas": "1080x1920", "aspect": "9:16", "fps": 60},
-      {"canvas": "1080x1080", "aspect": "1:1", "fps": 30}
+      { "canvas": "1280x720", "aspect": "16:9", "fps": 24 },
+      { "canvas": "1280x720", "aspect": "16:9", "fps": 25 },
+      { "canvas": "1920x1080", "aspect": "16:9", "fps": 30 },
+      { "canvas": "1080x1920", "aspect": "9:16", "fps": 60 },
+      { "canvas": "1080x1080", "aspect": "1:1", "fps": 30 }
     ],
     "verification": "Every row used VideoExportService, actual FFmpeg mux, final media probe, frozen render config and SRT package artifact."
   },

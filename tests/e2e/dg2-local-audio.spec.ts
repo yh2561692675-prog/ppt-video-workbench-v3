@@ -1,10 +1,4 @@
-import {
-  expect,
-  test,
-  type APIRequestContext,
-  type Page,
-  type TestInfo,
-} from '@playwright/test';
+import { expect, test, type APIRequestContext, type Page, type TestInfo } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -50,10 +44,12 @@ for (const profile of ['S1', 'S8'] as const) {
     const projectId = projectIdFrom(page.url());
 
     await page.getByRole('button', { name: '第2步 导入材料' }).click();
-    await page.getByLabel('选择材料文件').setInputFiles([
-      path.join(fixtureRoot, profile.toLowerCase(), 'outline.docx'),
-      path.join(fixtureRoot, profile.toLowerCase(), 'deck.pptx'),
-    ]);
+    await page
+      .getByLabel('选择材料文件')
+      .setInputFiles([
+        path.join(fixtureRoot, profile.toLowerCase(), 'outline.docx'),
+        path.join(fixtureRoot, profile.toLowerCase(), 'deck.pptx'),
+      ]);
     await page.getByRole('button', { name: '开始导入' }).click();
     await expect(page.getByRole('status')).toContainText('已导入 2 个文件');
 
@@ -79,9 +75,9 @@ for (const profile of ['S1', 'S8'] as const) {
     await expect(page.getByText(`已确认 ${pageCount} 页`)).toBeVisible();
 
     await page.getByRole('button', { name: '第5步 配音与音频对齐' }).click();
-    await page.getByLabel('选择本地录音').setInputFiles(
-      path.join(fixtureRoot, profile.toLowerCase(), 'local-narration.wav'),
-    );
+    await page
+      .getByLabel('选择本地录音')
+      .setInputFiles(path.join(fixtureRoot, profile.toLowerCase(), 'local-narration.wav'));
     await page.getByRole('button', { name: '导入并规范化' }).click();
     await expect(page.getByText('录音已导入并规范化', { exact: true })).toBeVisible({
       timeout: 30_000,
@@ -115,7 +111,10 @@ for (const profile of ['S1', 'S8'] as const) {
     await expect
       .poll(async () => currentProjectStep(request, projectId), { timeout: 30_000 })
       .toBe(7);
-    const initialJob = await waitForRenderStatus(request, projectId, ['running', 'pause_requested']);
+    const initialJob = await waitForRenderStatus(request, projectId, [
+      'running',
+      'pause_requested',
+    ]);
     if (profile === 'S1') {
       await assertDuplicateRenderSubmission(request, projectId, initialJob.id);
       await cancelAndRetryRender(page, request, projectId);
@@ -161,12 +160,16 @@ async function assertPublishedArtifacts(
     `${apiBaseUrl}/api/projects/${projectId}/video/assets/${artifacts.package_relative_path}/制作包清单.json`,
   );
   expect(manifest.ok()).toBeTruthy();
-  const parsed = JSON.parse(await manifest.text()) as { artifacts: Array<{ relative_path: string }> };
+  const parsed = JSON.parse(await manifest.text()) as {
+    artifacts: Array<{ relative_path: string }>;
+  };
   expect(parsed.artifacts).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ relative_path: '最终视频.mp4' }),
       expect.objectContaining({ relative_path: '字幕.srt' }),
-      expect.objectContaining({ relative_path: `分页音频/page-${String(pageCount).padStart(4, '0')}.wav` }),
+      expect.objectContaining({
+        relative_path: `分页音频/page-${String(pageCount).padStart(4, '0')}.wav`,
+      }),
     ]),
   );
 }
@@ -211,7 +214,10 @@ async function currentProjectStep(request: APIRequestContext, projectId: string)
   return (await currentProject(request, projectId)).current_step;
 }
 
-async function currentProject(request: APIRequestContext, projectId: string): Promise<CurrentProject> {
+async function currentProject(
+  request: APIRequestContext,
+  projectId: string,
+): Promise<CurrentProject> {
   const response = await request.get(`${apiBaseUrl}/api/projects/${projectId}`);
   expect(response.ok()).toBeTruthy();
   const payload = (await response.json()) as { data: CurrentProject | null };
@@ -228,44 +234,47 @@ async function initializeTimeline(
   expect(project.pages).toHaveLength(pageCount);
   const slideTrackId = randomUUID();
   const narrationTrackId = randomUUID();
-  const response = await request.post(`${apiBaseUrl}/api/projects/${projectId}/timeline/initialize`, {
-    data: {
-      project_id: projectId,
-      duration_us: pageCount * 750_000,
-      tracks: [
-        {
-          id: slideTrackId,
-          kind: 'slide',
-          name: 'DG2 Slides',
-          order: 0,
-          clips: project.pages.map((item, index) => ({
-            id: randomUUID(),
-            track_id: slideTrackId,
+  const response = await request.post(
+    `${apiBaseUrl}/api/projects/${projectId}/timeline/initialize`,
+    {
+      data: {
+        project_id: projectId,
+        duration_us: pageCount * 750_000,
+        tracks: [
+          {
+            id: slideTrackId,
             kind: 'slide',
-            start_us: index * 750_000,
-            duration_us: 650_000,
-            source_ref: `02_页面预览/page-${String(index + 1).padStart(4, '0')}.png`,
-            payload: { page_id: item.id },
-          })),
-        },
-        {
-          id: narrationTrackId,
-          kind: 'narration',
-          name: 'DG2 Narration',
-          order: 1,
-          clips: project.pages.map((item, index) => ({
-            id: randomUUID(),
-            track_id: narrationTrackId,
+            name: 'DG2 Slides',
+            order: 0,
+            clips: project.pages.map((item, index) => ({
+              id: randomUUID(),
+              track_id: slideTrackId,
+              kind: 'slide',
+              start_us: index * 750_000,
+              duration_us: 650_000,
+              source_ref: `02_页面预览/page-${String(index + 1).padStart(4, '0')}.png`,
+              payload: { page_id: item.id },
+            })),
+          },
+          {
+            id: narrationTrackId,
             kind: 'narration',
-            start_us: index * 750_000,
-            duration_us: 750_000,
-            source_ref: `05_音频/分页/page-${String(index + 1).padStart(3, '0')}.wav`,
-            payload: { page_id: item.id },
-          })),
-        },
-      ],
+            name: 'DG2 Narration',
+            order: 1,
+            clips: project.pages.map((item, index) => ({
+              id: randomUUID(),
+              track_id: narrationTrackId,
+              kind: 'narration',
+              start_us: index * 750_000,
+              duration_us: 750_000,
+              source_ref: `05_音频/分页/page-${String(index + 1).padStart(3, '0')}.wav`,
+              payload: { page_id: item.id },
+            })),
+          },
+        ],
+      },
     },
-  });
+  );
   expect(response.ok()).toBeTruthy();
 }
 
@@ -360,13 +369,14 @@ async function assertAuthoritativePreviewToEnd(
 
   const expectedEndSeconds = (pageCount * 750_000) / 1_000_000;
   await expect(panel.getByLabel('权威预览开始时间')).toHaveValue('0');
-  await expect(panel.getByLabel('权威预览结束时间')).toHaveValue(
-    String(expectedEndSeconds),
-  );
+  await expect(panel.getByLabel('权威预览结束时间')).toHaveValue(String(expectedEndSeconds));
   await panel.getByRole('button', { name: '生成权威预览' }).click();
   await expect(panel.getByText(/任务 succeeded/)).toBeVisible({ timeout: 120_000 });
   const video = panel.getByLabel('权威预览成片');
-  await expect(video).toHaveAttribute('src', new RegExp(`/api/projects/${projectId}/video/assets/`));
+  await expect(video).toHaveAttribute(
+    'src',
+    new RegExp(`/api/projects/${projectId}/video/assets/`),
+  );
   await expect(panel.getByText(`${expectedEndSeconds}s`)).toBeVisible();
 }
 
@@ -395,7 +405,9 @@ async function assertDuplicateRenderSubmission(
   expect(first.ok()).toBeTruthy();
   expect(second.ok()).toBeTruthy();
   const firstPayload = (await first.json()) as { data: { job: { id: string }; created: boolean } };
-  const secondPayload = (await second.json()) as { data: { job: { id: string }; created: boolean } };
+  const secondPayload = (await second.json()) as {
+    data: { job: { id: string }; created: boolean };
+  };
   expect(firstPayload.data.job.id).toBe(jobId);
   expect(secondPayload.data.job.id).toBe(jobId);
   expect([firstPayload.data.created, secondPayload.data.created]).toEqual([false, false]);
@@ -412,7 +424,11 @@ async function cancelAndRetryRender(
   await page.reload();
   await expect(page.getByRole('button', { name: '重试' })).toBeVisible();
   await page.getByRole('button', { name: '重试' }).click();
-  const retried = await waitForRenderStatus(request, projectId, ['queued', 'running', 'pause_requested']);
+  const retried = await waitForRenderStatus(request, projectId, [
+    'queued',
+    'running',
+    'pause_requested',
+  ]);
   expect(retried.id).not.toBe(cancelled.id);
 }
 
@@ -515,7 +531,11 @@ function installFailureEvidence(page: Page, testInfo: TestInfo, profile: Fixture
       const evidencePath = testInfo.outputPath('dg2-browser-context.json');
       await writeFile(
         evidencePath,
-        JSON.stringify({ ...context, consoleErrors, networkFailures, unexpectedNetworkFailures }, null, 2),
+        JSON.stringify(
+          { ...context, consoleErrors, networkFailures, unexpectedNetworkFailures },
+          null,
+          2,
+        ),
         'utf8',
       );
       await testInfo.attach('dg2-browser-context.json', {

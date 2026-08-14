@@ -129,12 +129,7 @@
     "temporarySpace": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "max_used_bytes",
-        "max_file_bytes",
-        "max_file_count",
-        "min_free_bytes"
-      ],
+      "required": ["max_used_bytes", "max_file_bytes", "max_file_count", "min_free_bytes"],
       "properties": {
         "max_used_bytes": { "type": ["integer", "null"], "minimum": 0 },
         "max_file_bytes": { "type": ["integer", "null"], "minimum": 0 },

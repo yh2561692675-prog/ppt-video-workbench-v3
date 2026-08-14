@@ -1242,7 +1242,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(input),
     }),
-  latestQualityJob: (id: string) => request<QualityJobRecord | null>(`/api/projects/${id}/quality/latest`),
+  latestQualityJob: (id: string) =>
+    request<QualityJobRecord | null>(`/api/projects/${id}/quality/latest`),
   retryQualityJob: (id: string, jobId: string) =>
     request<QualityJobRecord>(`/api/projects/${id}/quality/jobs/${jobId}/retry`, {
       method: 'POST',

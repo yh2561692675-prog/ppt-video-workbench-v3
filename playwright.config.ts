@@ -37,43 +37,45 @@ export default defineConfig({
   // Windows may retain a child process handle after a media-rendering run.
   // DG2 can therefore exercise the identical browser suite against explicitly
   // managed services, while CI keeps the normal owned-server lifecycle.
-  webServer: useExternalServers ? undefined : [
-    {
-      command:
-        process.platform === 'win32'
-          // Invoke Python directly: the `uvicorn.exe` console wrapper creates
-          // a child process that Playwright cannot reliably close on Windows.
-          ? '.\\.venv\\Scripts\\python.exe -m uvicorn workbench.main:app --host 127.0.0.1 --port 8765 --log-level warning'
-          : 'uv run uvicorn workbench.main:app --host 127.0.0.1 --port 8765',
-      cwd: '.',
-      env: {
-        ...process.env,
-        // The acceptance API must import the checked-out source, rather than
-        // any editable package previously installed into the shared venv.
-        PYTHONPATH: path.resolve('apps/api/src'),
-        // Keep the Windows Uvicorn launcher and its child-process readers on
-        // UTF-8, including when the browser flow emits Chinese fixture data.
-        PYTHONUTF8: '1',
-        PYTHONIOENCODING: 'utf-8',
-        // Exercise the same self-contained renderer layout required by the
-        // Windows launcher; never fall back to a global pnpm/Remotion tool.
-        WORKBENCH_RUNTIME_ROOT: path.resolve('runtime-assets'),
-        WORKBENCH_WORKSPACE: path.resolve('tests/.e2e-workspace'),
-        WORKBENCH_E2E_SYNTHETIC_MODE: 'true',
-        WORKBENCH_DG2_RENDER_DELAY_SECONDS: process.env.DG2_RENDER_DELAY_SECONDS ?? '1',
-        UV_CACHE_DIR: process.env.UV_CACHE_DIR ?? '/tmp/ppt-video-workbench-uv-cache',
-      },
-      url: 'http://127.0.0.1:8765/api/health',
-      reuseExistingServer: !process.env.CI,
-    },
-    {
-      command:
-        process.platform === 'win32'
-          ? 'node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4173'
-          : 'pnpm --filter @workbench/web exec vite --host 127.0.0.1 --port 4173',
-      cwd: 'apps/web',
-      url: 'http://127.0.0.1:4173',
-      reuseExistingServer: !process.env.CI,
-    },
-  ],
+  webServer: useExternalServers
+    ? undefined
+    : [
+        {
+          command:
+            process.platform === 'win32'
+              ? // Invoke Python directly: the `uvicorn.exe` console wrapper creates
+                // a child process that Playwright cannot reliably close on Windows.
+                '.\\.venv\\Scripts\\python.exe -m uvicorn workbench.main:app --host 127.0.0.1 --port 8765 --log-level warning'
+              : 'uv run uvicorn workbench.main:app --host 127.0.0.1 --port 8765',
+          cwd: '.',
+          env: {
+            ...process.env,
+            // The acceptance API must import the checked-out source, rather than
+            // any editable package previously installed into the shared venv.
+            PYTHONPATH: path.resolve('apps/api/src'),
+            // Keep the Windows Uvicorn launcher and its child-process readers on
+            // UTF-8, including when the browser flow emits Chinese fixture data.
+            PYTHONUTF8: '1',
+            PYTHONIOENCODING: 'utf-8',
+            // Exercise the same self-contained renderer layout required by the
+            // Windows launcher; never fall back to a global pnpm/Remotion tool.
+            WORKBENCH_RUNTIME_ROOT: path.resolve('runtime-assets'),
+            WORKBENCH_WORKSPACE: path.resolve('tests/.e2e-workspace'),
+            WORKBENCH_E2E_SYNTHETIC_MODE: 'true',
+            WORKBENCH_DG2_RENDER_DELAY_SECONDS: process.env.DG2_RENDER_DELAY_SECONDS ?? '1',
+            UV_CACHE_DIR: process.env.UV_CACHE_DIR ?? '/tmp/ppt-video-workbench-uv-cache',
+          },
+          url: 'http://127.0.0.1:8765/api/health',
+          reuseExistingServer: !process.env.CI,
+        },
+        {
+          command:
+            process.platform === 'win32'
+              ? 'node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4173'
+              : 'pnpm --filter @workbench/web exec vite --host 127.0.0.1 --port 4173',
+          cwd: 'apps/web',
+          url: 'http://127.0.0.1:4173',
+          reuseExistingServer: !process.env.CI,
+        },
+      ],
 });

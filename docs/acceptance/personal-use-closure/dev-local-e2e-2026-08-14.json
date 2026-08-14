@@ -19,7 +19,16 @@
       "duration_seconds": 46.5,
       "run_id": "551aced4da5c47cd93b3860cc55ff215",
       "evidence_root": "C:/Users/HanYu/AppData/Local/Temp/ppt-personal-e2e-551aced4da5c47cd93b3860cc55ff215",
-      "coverage": ["project_creation", "pptx_docx_import", "local_audio", "preflight", "authoritative_preview", "cancel_retry", "refresh_recovery", "production_package"]
+      "coverage": [
+        "project_creation",
+        "pptx_docx_import",
+        "local_audio",
+        "preflight",
+        "authoritative_preview",
+        "cancel_retry",
+        "refresh_recovery",
+        "production_package"
+      ]
     },
     {
       "scenario": "S8",
@@ -28,7 +37,13 @@
       "duration_seconds": 48.0,
       "run_id": "7abd7db36f794c76bba5ce7c648c3b56",
       "evidence_root": "C:/Users/HanYu/AppData/Local/Temp/ppt-personal-e2e-7abd7db36f794c76bba5ce7c648c3b56",
-      "coverage": ["standard_page_count", "local_audio", "preflight", "pause_resume", "production_package"]
+      "coverage": [
+        "standard_page_count",
+        "local_audio",
+        "preflight",
+        "pause_resume",
+        "production_package"
+      ]
     }
   ],
   "defects_fixed_during_project": [

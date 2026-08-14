@@ -4,7 +4,16 @@
   "title": "PersonalUsePreflightV1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "report_id", "candidate_id", "source_commit", "input_fingerprint", "config_hash", "status", "gates"],
+  "required": [
+    "schema_version",
+    "report_id",
+    "candidate_id",
+    "source_commit",
+    "input_fingerprint",
+    "config_hash",
+    "status",
+    "gates"
+  ],
   "properties": {
     "schema_version": { "const": "1.0" },
     "report_id": { "type": "string", "minLength": 1 },

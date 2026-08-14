@@ -19,6 +19,9 @@ test('local audio acceptance entrypoint preserves the audio gate', async ({ requ
 });
 
 test('real local audio full chain produces the signed RC1 package', async () => {
-  test.skip(!realFlowEnabled('local-audio-windows-rc'), realFlowSkipReason('local-audio-windows-rc'));
+  test.skip(
+    !realFlowEnabled('local-audio-windows-rc'),
+    realFlowSkipReason('local-audio-windows-rc'),
+  );
   // The real-project steps are performed only by the named, authorized RC gate.
 });
