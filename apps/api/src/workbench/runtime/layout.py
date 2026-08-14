@@ -73,7 +73,39 @@ def _browser_executable() -> Path | None:
     if configured:
         path = Path(configured).expanduser().resolve()
         return path if path.is_file() else None
+    # Prefer a Chromium build that is known to support Remotion's
+    # "chrome-for-testing" launch contract. Some managed Edge installs
+    # accept the normal GUI launch but exit immediately when started with the
+    # isolated headless flags used by Remotion. Playwright keeps its browser
+    # under the per-user LocalAppData directory, so this fallback remains
+    # machine-local and does not require a network download at export time.
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        playwright_root = Path(local_app_data) / "ms-playwright"
+        chromium_candidates = sorted(
+            (
+                version / "chrome-win" / "chrome.exe"
+                for version in playwright_root.glob("chromium-*")
+                if (version / "chrome-win" / "chrome.exe").is_file()
+            ),
+            reverse=True,
+        )
+        if chromium_candidates:
+            return chromium_candidates[0].resolve()
+    # Fall back to the installed browsers used by ordinary Windows hosts.
+    # The explicit Chromium candidates above are intentionally checked first
+    # because they are compatible with the pinned Remotion launch mode.
     candidates = (
+        Path(os.environ.get("PROGRAMFILES", r"C:\\Program Files"))
+        / "Google"
+        / "Chrome"
+        / "Application"
+        / "chrome.exe",
+        Path(os.environ.get("PROGRAMFILES(X86)", r"C:\\Program Files (x86)"))
+        / "Google"
+        / "Chrome"
+        / "Application"
+        / "chrome.exe",
         Path(os.environ.get("PROGRAMFILES", r"C:\\Program Files"))
         / "Microsoft"
         / "Edge"
