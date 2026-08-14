@@ -9,7 +9,7 @@ from workbench.domain.enums import JobStatus, JobType
 
 from .checkpoint import Checkpoint, CheckpointStore, JobContext
 from .recovery import CheckpointRecovery
-from .repository import JobRepository
+from .repository import JobRepository, JobTransitionConflict
 
 
 class RenderPauseRequested(RuntimeError):
@@ -134,13 +134,33 @@ class PersistentRenderExecutionContext:
         if payload:
             data.update(payload)
         checkpoint = self._job_context.checkpoint(effective_progress, data, artifacts)
-        checkpoint_hash = self.store.checksum(checkpoint)
-        self.repository.record_checkpoint(
-            self.job_id,
-            checkpoint.model_dump(mode="json"),
-            sequence=checkpoint.sequence,
-            checkpoint_hash=checkpoint_hash,
-        )
+        # The durable repository is the authority for sequence monotonicity.
+        # A recovery or cleanup race can leave the file store one step behind;
+        # re-number the freshly written checkpoint and retry instead of
+        # failing an otherwise valid export.
+        for attempt in range(4):
+            latest = self.repository.latest_checkpoint(self.job_id)
+            if latest is not None and checkpoint.sequence <= latest.sequence:
+                checkpoint = checkpoint.model_copy(update={"sequence": latest.sequence + 1})
+                checkpoint = self.store.write(checkpoint)
+            checkpoint_hash = self.store.checksum(checkpoint)
+            try:
+                self.repository.record_checkpoint(
+                    self.job_id,
+                    checkpoint.model_dump(mode="json"),
+                    sequence=checkpoint.sequence,
+                    checkpoint_hash=checkpoint_hash,
+                )
+            except JobTransitionConflict as error:
+                if "checkpoint sequence" not in str(error) or attempt == 3:
+                    raise
+                latest = self.repository.latest_checkpoint(self.job_id)
+                if latest is None:
+                    raise
+                checkpoint = checkpoint.model_copy(update={"sequence": latest.sequence + 1})
+                checkpoint = self.store.write(checkpoint)
+                continue
+            break
         self.repository.update_progress(
             self.job_id,
             effective_progress,
