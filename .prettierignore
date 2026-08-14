@@ -15,6 +15,7 @@ backup/**
 cache/**
 workspace-data/**
 docs/acceptance/v1-closure/**
+docs/acceptance/personal-use-closure/*.json
 docs/superpowers/plans/2026-08-03-integrate-volunteer-ai-mvp.md
 packages/contracts/*.json
 packages/contracts/p2-platform/cloud-client.generated.ts
