@@ -30,6 +30,19 @@ def test_entrypoint_uses_isolated_roots_and_helper() -> None:
     assert "InstallRoot" in source
     assert "WorkspaceRoot" in source
     assert "RunTests" in source
+    for marker in (
+        "CandidateManifest",
+        "ArtifactManifest",
+        "SampleManifest",
+        "FeaturePolicy",
+        "DynamicEvidence",
+        "DynamicOutputRoot",
+        "DynamicReport",
+        "effects_dynamic_acceptance.py",
+        "RequireEffectsV2",
+        "RequireEffectsFallback",
+    ):
+        assert marker in source
     assert all(byte < 128 for byte in ENTRY.read_bytes())
 
 

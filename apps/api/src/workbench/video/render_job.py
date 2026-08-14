@@ -165,7 +165,7 @@ class RenderJobService:
             preflight.model_copy(update={"props": props}) if preset_id is not None else preflight
         )
         fingerprint = render_input_fingerprint(effective_preflight)
-        payload = {"props": props.model_dump(mode="json")}
+        payload: dict[str, object] = {"props": props.model_dump(mode="json")}
         if preset_id is not None:
             payload["preset_id"] = preset_id
         spec = JobSpec(

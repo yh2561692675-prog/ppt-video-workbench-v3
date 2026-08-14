@@ -1,12 +1,21 @@
 param(
   [string]$Root = (Get-Location).Path,
+  [string]$CandidateManifest = "",
+  [string]$ArtifactManifest = "",
+  [string]$SampleManifest = "",
+  [string]$FeaturePolicy = "",
+  [string]$DynamicEvidence = "",
+  [string]$DynamicOutputRoot = "",
+  [string]$DynamicReport = "",
   [string]$InstallRoot = "",
   [string]$WorkspaceRoot = "",
   [string]$DatabasePath = "",
   [string]$ProductionDatabasePath = "",
   [int]$PortStart = 49152,
   [int]$PortEnd = 49252,
-  [switch]$RunTests
+  [switch]$RunTests,
+  [switch]$RequireEffectsV2,
+  [switch]$RequireEffectsFallback
 )
 
 $ErrorActionPreference = "Stop"
@@ -44,6 +53,23 @@ if ([string]::IsNullOrWhiteSpace($ProductionDatabasePath)) {
   } else {
     $ProductionDatabasePath = "F:\Video\workspace.db"
   }
+}
+
+$dynamicInputs = @($CandidateManifest, $ArtifactManifest, $SampleManifest, $FeaturePolicy, $DynamicEvidence, $DynamicReport)
+$hasDynamicInputs = @($dynamicInputs | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+if ($hasDynamicInputs.Count -gt 0 -and $hasDynamicInputs.Count -ne $dynamicInputs.Count) {
+  throw "E_DYNAMIC_INPUTS: candidate, artifact, sample, evidence and report paths are all required"
+}
+if ($hasDynamicInputs.Count -eq $dynamicInputs.Count) {
+  foreach ($path in @($CandidateManifest, $ArtifactManifest, $SampleManifest, $FeaturePolicy, $DynamicEvidence)) {
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+      throw "E_DYNAMIC_INPUTS: required file is missing: $path"
+    }
+  }
+  if ([string]::IsNullOrWhiteSpace($DynamicOutputRoot)) {
+    $DynamicOutputRoot = Join-Path $WorkspaceRoot "dynamic-output"
+  }
+  New-Item -ItemType Directory -Path $DynamicOutputRoot -Force | Out-Null
 }
 
 $isolation = Assert-AcceptanceIsolation `
@@ -85,6 +111,29 @@ if ($RunTests) {
     if ($LASTEXITCODE -ne 0) { throw "E_TESTS: remotion tests failed" }
   } finally {
     Pop-Location
+  }
+}
+
+if ($hasDynamicInputs.Count -eq $dynamicInputs.Count) {
+  $dynamicArguments = @(
+    (Join-Path $Root "scripts\effects_dynamic_acceptance.py"),
+    "--candidate-manifest", $CandidateManifest,
+    "--feature-policy", $FeaturePolicy,
+    "--evidence", $DynamicEvidence,
+    "--output-root", $DynamicOutputRoot,
+    "--output", $DynamicReport
+  )
+  if ($RequireEffectsV2) { $dynamicArguments += "--require-v2" }
+  if ($RequireEffectsFallback) { $dynamicArguments += "--require-fallback" }
+  Invoke-SourcePython -Arguments $dynamicArguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "E_DYNAMIC_ACCEPTANCE: Effects dynamic evidence failed"
+  }
+  Write-EvidenceRecord -EvidencePath $evidencePath -Step "effects_dynamic_acceptance" -Result "passed" -Details @{
+    candidate_manifest = $CandidateManifest
+    artifact_manifest = $ArtifactManifest
+    sample_manifest = $SampleManifest
+    report = $DynamicReport
   }
 }
 

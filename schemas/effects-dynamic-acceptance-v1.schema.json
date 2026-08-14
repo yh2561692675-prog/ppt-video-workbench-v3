@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ppt-video-workbench.local/schemas/effects-dynamic-acceptance-v1.schema.json",
+  "title": "Effects Dynamic Acceptance V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "decision",
+    "candidate_id",
+    "source_commit",
+    "feature_policy",
+    "pages",
+    "summary",
+    "blocking_failures"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "status": {
+      "enum": ["passed", "failed", "blocked", "stale"]
+    },
+    "decision": { "enum": ["pass", "block"] },
+    "candidate_id": { "type": "string", "pattern": "^rc-[A-Za-z0-9][A-Za-z0-9._-]*$" },
+    "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "feature_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy_id", "relative_path", "sha256"],
+      "properties": {
+        "policy_id": { "type": "string", "minLength": 1 },
+        "relative_path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "pages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "page_id",
+          "effect_plan_sha256",
+          "render_graph_sha256",
+          "template_version",
+          "runtime_sha256",
+          "preview",
+          "final"
+        ],
+        "properties": {
+          "page_id": { "type": "string", "minLength": 1 },
+          "effect_plan_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "render_graph_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "template_version": { "type": "string", "minLength": 1 },
+          "runtime_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "l3_enabled": { "type": "boolean" },
+          "l3_allowed": { "type": "boolean" },
+          "preview": { "$ref": "#/$defs/artifact" },
+          "final": { "$ref": "#/$defs/artifact" }
+        }
+      }
+    },
+    "fallback": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["status", "candidate_id", "page_count", "policy_id"],
+      "properties": {
+        "status": { "enum": ["passed", "blocked", "failed"] },
+        "candidate_id": { "type": "string" },
+        "page_count": { "type": "integer", "minimum": 0 },
+        "policy_id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total_pages",
+        "preview_passed",
+        "final_passed",
+        "drift_count",
+        "missing_count",
+        "fallback_status"
+      ],
+      "properties": {
+        "total_pages": { "type": "integer", "minimum": 0 },
+        "preview_passed": { "type": "integer", "minimum": 0 },
+        "final_passed": { "type": "integer", "minimum": 0 },
+        "drift_count": { "type": "integer", "minimum": 0 },
+        "missing_count": { "type": "integer", "minimum": 0 },
+        "fallback_status": { "enum": ["passed", "blocked", "failed", "not_required"] }
+      }
+    },
+    "blocking_failures": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relative_path", "size", "sha256", "frame_count", "duration_ms"],
+      "properties": {
+        "relative_path": { "type": "string", "minLength": 1 },
+        "size": { "type": "integer", "minimum": 0 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "frame_count": { "type": "integer", "minimum": 1 },
+        "duration_ms": { "type": "number", "exclusiveMinimum": 0 },
+        "keyframe_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  }
+}
