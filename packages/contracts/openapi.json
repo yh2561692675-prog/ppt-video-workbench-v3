@@ -3254,6 +3254,28 @@
         "title": "EffectWorkspaceResponse",
         "type": "object"
       },
+      "EffectsV2Policy": {
+        "additionalProperties": false,
+        "properties": {
+          "persistence": {
+            "default": false,
+            "title": "Persistence",
+            "type": "boolean"
+          },
+          "preview": {
+            "default": false,
+            "title": "Preview",
+            "type": "boolean"
+          },
+          "render": {
+            "default": false,
+            "title": "Render",
+            "type": "boolean"
+          }
+        },
+        "title": "EffectsV2Policy",
+        "type": "object"
+      },
       "Envelope_AssetRecord_": {
         "additionalProperties": false,
         "properties": {
@@ -3832,6 +3854,35 @@
           "request_id"
         ],
         "title": "Envelope[ExportPlan]",
+        "type": "object"
+      },
+      "Envelope_FeaturePolicy_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FeaturePolicy"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[FeaturePolicy]",
         "type": "object"
       },
       "Envelope_FidelityJobRecord_": {
@@ -4441,6 +4492,35 @@
           "request_id"
         ],
         "title": "Envelope[QualityJobRecord]",
+        "type": "object"
+      },
+      "Envelope_ReleaseStatus_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ReleaseStatus"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[ReleaseStatus]",
         "type": "object"
       },
       "Envelope_RenderGraphPreviewPlan_": {
@@ -6091,6 +6171,72 @@
           }
         },
         "title": "FallbackPlan",
+        "type": "object"
+      },
+      "FeaturePolicy": {
+        "additionalProperties": false,
+        "properties": {
+          "allow_fallback": {
+            "default": true,
+            "title": "Allow Fallback",
+            "type": "boolean"
+          },
+          "candidate_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Id"
+          },
+          "effects_v2": {
+            "$ref": "#/components/schemas/EffectsV2Policy"
+          },
+          "legacy_project_default": {
+            "const": "v1",
+            "default": "v1",
+            "title": "Legacy Project Default",
+            "type": "string"
+          },
+          "new_project_default": {
+            "default": "v1",
+            "enum": [
+              "v1",
+              "v2"
+            ],
+            "title": "New Project Default",
+            "type": "string"
+          },
+          "policy_id": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Policy Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "status": {
+            "default": "candidate",
+            "enum": [
+              "candidate",
+              "acceptance",
+              "promotable"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "policy_id"
+        ],
+        "title": "FeaturePolicy",
         "type": "object"
       },
       "FidelityIssue": {
@@ -11604,6 +11750,43 @@
         ],
         "title": "QualitySeverity",
         "type": "string"
+      },
+      "ReleaseStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Id"
+          },
+          "feature_policy": {
+            "$ref": "#/components/schemas/FeaturePolicy"
+          },
+          "source_commit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Commit"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "source_commit",
+          "feature_policy"
+        ],
+        "title": "ReleaseStatus",
+        "type": "object"
       },
       "RenderGraph": {
         "additionalProperties": false,
@@ -21961,6 +22144,42 @@
           }
         },
         "summary": "Audio Gate"
+      }
+    },
+    "/api/release/feature-policy": {
+      "get": {
+        "operationId": "feature_policy_api_release_feature_policy_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_FeaturePolicy_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Feature Policy"
+      }
+    },
+    "/api/release/status": {
+      "get": {
+        "operationId": "release_status_api_release_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ReleaseStatus_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Release Status"
       }
     },
     "/api/settings/heygen-profiles": {
