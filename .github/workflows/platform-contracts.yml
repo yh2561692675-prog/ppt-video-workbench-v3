@@ -3,7 +3,9 @@ name: platform-contracts
 on:
   pull_request:
   push:
-    branches: [codex/program-integration-v1]
+    branches:
+      - codex/program-integration-v1
+      - codex/program-ai-provider-platform
 
 permissions:
   contents: read

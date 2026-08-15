@@ -1055,6 +1055,71 @@ export interface P2CredentialMetadata {
   updated_at: string;
 }
 
+export type AiModelKind = 'asr' | 'tts' | 'voice_clone' | 'embedding';
+
+export interface AiModelRecord {
+  schema_version: 1;
+  descriptor: {
+    model_id: string;
+    display_name: string;
+    kind: AiModelKind;
+    engine: string;
+    engine_version: string;
+    revision: string;
+    source_ref: string;
+    supported_languages: string[];
+    capabilities: string[];
+    license_ref: string;
+    supported_devices: string[];
+    runtime_contract_version: string;
+    remote_download_required: boolean;
+  };
+  install: {
+    status: string;
+    bytes_total: number;
+    bytes_completed: number;
+    installed_at: string | null;
+    last_probe_at: string | null;
+    last_error_code: string | null;
+    active_lease_count: number;
+  };
+  last_probe: {
+    status: 'available' | 'missing' | 'incompatible' | 'degraded' | 'failed';
+    device: string;
+    startup_ms: number | null;
+    warnings: string[];
+  } | null;
+}
+
+export interface AiVoiceIdentity {
+  voice_id: string;
+  display_name: string;
+  kind: 'local_tts' | 'local_clone';
+  model_id: string;
+  model_revision: string;
+  authorization_id: string;
+  status: 'active' | 'revoked';
+  local_only: boolean;
+  remote_export_allowed: boolean;
+  output_format: 'wav';
+}
+
+export interface AiContentAssistCandidate {
+  candidate_id: string;
+  request_id: string;
+  kind: 'polish' | 'segment' | 'translate';
+  status: 'candidate' | 'accepted' | 'rejected' | 'needs_provider';
+  source_text: string;
+  candidate_text: string;
+  source_language: string;
+  target_language: string | null;
+  segments: string[];
+  provider_id: string | null;
+  warnings: string[];
+  created_at: string;
+  accepted_at: string | null;
+}
+
 interface Envelope<T> {
   data: T;
   error: null | { code: string; message: string; action?: string };
@@ -1135,6 +1200,20 @@ export const api = {
     rawRequest<P2CredentialMetadata>(
       `/api/providers/credentials/${encodeURIComponent(credentialRef)}`,
       { method: 'DELETE' },
+    ),
+  listAiModels: (kind?: AiModelKind) =>
+    request<AiModelRecord[]>(`/api/ai/models${kind ? `?kind=${encodeURIComponent(kind)}` : ''}`),
+  listAiVoices: () => request<AiVoiceIdentity[]>('/api/ai/voices'),
+  revokeAiVoice: (voiceId: string) =>
+    request<AiVoiceIdentity>(`/api/ai/voices/${encodeURIComponent(voiceId)}/revoke`, {
+      method: 'POST',
+    }),
+  listContentAssistCandidates: () =>
+    request<AiContentAssistCandidate[]>('/api/ai/content-assist'),
+  acceptContentAssistCandidate: (candidateId: string) =>
+    request<AiContentAssistCandidate>(
+      `/api/ai/content-assist/${encodeURIComponent(candidateId)}/accept`,
+      { method: 'POST' },
     ),
   listProjects: () => request<Project[]>('/api/projects'),
   getProject: (id: string) => request<Project>(`/api/projects/${id}`),

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "model-runtime-probe-v1",
+  "title": "Local model runtime probe v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "model_id", "revision", "status", "device", "probed_at", "startup_ms", "peak_ram_bytes", "peak_vram_bytes", "error_code", "warnings"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "model_id": {"type": "string"},
+    "revision": {"type": "string"},
+    "status": {"enum": ["available", "missing", "incompatible", "degraded", "failed"]},
+    "device": {"enum": ["cpu", "cuda", "directml", "metal", "unknown"]},
+    "probed_at": {"type": "string", "format": "date-time"},
+    "startup_ms": {"type": ["integer", "null"], "minimum": 0},
+    "peak_ram_bytes": {"type": ["integer", "null"], "minimum": 0},
+    "peak_vram_bytes": {"type": ["integer", "null"], "minimum": 0},
+    "error_code": {"type": ["string", "null"], "maxLength": 100},
+    "warnings": {"type": "array", "maxItems": 32, "items": {"type": "string"}}
+  }
+}

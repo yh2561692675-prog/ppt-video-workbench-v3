@@ -9,6 +9,7 @@ import { UpdatePanel } from '../features/settings/update/UpdatePanel';
 import { ProviderSettingsPanel } from '../features/providers/ProviderSettingsPanel';
 import { PlatformSettingsPanel } from '../features/settings/platform/PlatformSettingsPanel';
 import { CloudSyncStatusPanel } from '../features/cloud/CloudSyncStatusPanel';
+import { AiProviderControlCenter } from '../features/ai/AiProviderControlCenter';
 
 export function AppRouter() {
   return (
@@ -49,6 +50,15 @@ export function AppRouter() {
           <main className="page">
             <h1>Provider 平台</h1>
             <ProviderSettingsPanel />
+          </main>
+        }
+      />
+      <Route
+        path="/settings/ai"
+        element={
+          <main className="page">
+            <h1>AI 与供应商控制中心</h1>
+            <AiProviderControlCenter />
           </main>
         }
       />

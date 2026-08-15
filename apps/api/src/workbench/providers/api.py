@@ -23,6 +23,7 @@ from .billing import ProviderRateLimiter
 from .broker import ProviderBroker, ProviderBrokerError, RouteRequest
 from .cache import ProviderCache
 from .credentials import CredentialMetadataV1, CredentialStore, CredentialStoreError
+from .governance import ProviderGovernance
 from .models import ProviderAuditEventV1, ProviderCostEstimateV1
 from .policy import ProviderPolicyV1
 from .probe import CapabilityProbeService, ProbeMode, ProbeSnapshotV1
@@ -93,10 +94,16 @@ class ProviderApiState:
     broker: ProviderBroker | None = None
     credential_store: CredentialStore | None = None
     rate_limiter: ProviderRateLimiter = field(default_factory=ProviderRateLimiter)
+    governance: ProviderGovernance | None = None
 
     def __post_init__(self) -> None:
         if self.broker is None:
-            self.broker = ProviderBroker(self.registry, self.adapters, cache=ProviderCache())
+            self.broker = ProviderBroker(
+                self.registry,
+                self.adapters,
+                cache=ProviderCache(),
+                governance=self.governance,
+            )
         if self.credential_store is None:
             from .credentials import InMemoryCredentialStore
 
@@ -203,9 +210,7 @@ def create_provider_router(state: ProviderApiState) -> APIRouter:
             raise HTTPException(status_code=404, detail="credential_not_found") from error
 
     @router.post("/{provider_id}/invoke")
-    async def invoke_provider(
-        provider_id: str, request: ProviderInvokeRequest
-    ) -> object:
+    async def invoke_provider(provider_id: str, request: ProviderInvokeRequest) -> object:
         adapter = state.adapters.get(provider_id)
         descriptor = state.registry.get(provider_id)
         if adapter is None or descriptor is None:

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "voice-authorization-v1",
+  "title": "Voice authorization v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["authorization_id", "subject", "granted_by", "granted_at", "scopes", "source_audio_sha256", "status"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "authorization_id": {"type": "string", "format": "uuid"},
+    "subject": {"enum": ["self", "licensed_subject"]},
+    "granted_by": {"type": "string", "minLength": 1, "maxLength": 200},
+    "granted_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"anyOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]},
+    "scopes": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"enum": ["local_tts", "local_clone", "preview", "export"]}},
+    "source_audio_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "consent_note": {"anyOf": [{"type": "string", "maxLength": 1000}, {"type": "null"}]},
+    "status": {"enum": ["active", "revoked", "expired"]}
+  }
+}

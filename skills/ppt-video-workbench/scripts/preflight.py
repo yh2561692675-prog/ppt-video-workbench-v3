@@ -33,7 +33,7 @@ REQUIRED_FILES = (
 TOOLS = ("git", "python", "uv", "node", "pnpm", "ffmpeg", "ffprobe", "soffice")
 
 
-def tool_version(name: str) -> Check:
+def tool_version(name: str, repo: Path) -> Check:
     executable = shutil.which(name)
     if executable is None:
         required = name not in {"ffmpeg", "ffprobe", "soffice"}
@@ -54,6 +54,13 @@ def tool_version(name: str) -> Check:
             timeout=10,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
+        # Windows can leave a PATH shim for uv that is present but not
+        # executable under a restricted desktop sandbox.  The repository's
+        # already-provisioned .venv is still a valid frozen-runtime fallback
+        # for read-only preflight; release/build scripts continue to require
+        # a real uv executable.
+        if name == "uv" and (repo / ".venv" / "pyvenv.cfg").is_file():
+            return Check(name, "fallback", f"uv unavailable ({exc}); repository .venv is present")
         return Check(name, "error", str(exc))
     output = (result.stdout or result.stderr).strip().splitlines()
     detail = output[0] if output else f"exit code {result.returncode}"
@@ -65,7 +72,7 @@ def inspect(repo: Path) -> list[Check]:
     for relative in REQUIRED_FILES:
         path = repo / relative
         checks.append(Check(relative, "ok" if path.is_file() else "missing", str(path)))
-    checks.extend(tool_version(name) for name in TOOLS)
+    checks.extend(tool_version(name, repo) for name in TOOLS)
     return checks
 
 

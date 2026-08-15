@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "provider-batch-job-v1",
+  "title": "Provider batch job v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["job_id", "provider_id", "operation_kind", "project_id", "revision_id", "item_ids", "status", "created_at", "updated_at", "unknown_billed_item_ids"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "job_id": {"type": "string", "format": "uuid"},
+    "provider_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "operation_kind": {"enum": ["tts", "asr", "avatar", "renderer"]},
+    "project_id": {"type": "string", "format": "uuid"},
+    "revision_id": {"type": "string", "format": "uuid"},
+    "item_ids": {"type": "array", "minItems": 1, "maxItems": 10000, "items": {"type": "string", "format": "uuid"}},
+    "status": {"enum": ["queued", "running", "paused", "succeeded", "failed", "unknown_billed"]},
+    "created_at": {"type": "string", "format": "date-time"},
+    "updated_at": {"type": "string", "format": "date-time"},
+    "last_error_code": {"anyOf": [{"type": "string", "maxLength": 100}, {"type": "null"}]},
+    "unknown_billed_item_ids": {"type": "array", "maxItems": 10000, "items": {"type": "string", "format": "uuid"}}
+  }
+}

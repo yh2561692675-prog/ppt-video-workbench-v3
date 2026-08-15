@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [codex/program-integration-v1]
+    branches:
+      - codex/program-integration-v1
+      - codex/program-ai-provider-platform
   pull_request:
 
 permissions:

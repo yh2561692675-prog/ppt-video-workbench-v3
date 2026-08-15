@@ -21,6 +21,7 @@ from workbench.platform.local import LocalPlatformServices
 from workbench.providers.adapter import ProviderAdapterError
 from workbench.providers.api import ProviderApiState, create_provider_router
 from workbench.providers.credentials import InMemoryCredentialStore
+from workbench.providers.governance import ProviderGovernance
 from workbench.providers.registry import ProviderRegistry
 from workbench.providers.upstream import (
     BuiltinArtifactStore,
@@ -111,6 +112,7 @@ class P2Composition:
         app_version: str = "0.1.1",
         flags: P2FeatureFlags | None = None,
         provider_handlers: dict[str, BuiltinHandler] | None = None,
+        provider_governance: ProviderGovernance | None = None,
     ) -> P2Composition:
         configured = flags or P2FeatureFlags.from_environment()
         platform = (
@@ -118,11 +120,7 @@ class P2Composition:
             if configured.platform_services_enabled
             else None
         )
-        artifact_store = (
-            BuiltinArtifactStore()
-            if configured.provider_platform_enabled
-            else None
-        )
+        artifact_store = BuiltinArtifactStore() if configured.provider_platform_enabled else None
         provider_state = (
             ProviderApiState(
                 registry=ProviderRegistry(builtin_descriptors()),
@@ -135,10 +133,9 @@ class P2Composition:
                     for descriptor in builtin_descriptors()
                 },
                 credential_store=(
-                    platform.credentials
-                    if platform is not None
-                    else InMemoryCredentialStore()
+                    platform.credentials if platform is not None else InMemoryCredentialStore()
                 ),
+                governance=provider_governance,
             )
             if configured.provider_platform_enabled
             else None
@@ -189,9 +186,7 @@ class P2Composition:
             "providers": providers,
             "sync": sync_state,
             "cloud": {
-                "status": "local_outbox_enabled"
-                if self.sync_client is not None
-                else "disabled",
+                "status": "local_outbox_enabled" if self.sync_client is not None else "disabled",
                 "production_auth": "not_configured",
             },
             "executor": {

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "local-model-descriptor-v1",
+  "title": "Local model descriptor v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "model_id", "display_name", "kind", "engine", "engine_version", "revision", "source_ref", "supported_languages", "capabilities", "license_ref", "files", "supported_devices", "runtime_contract_version", "compatible_app_versions", "remote_download_required", "redistribution_allowed"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "model_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,127}$"},
+    "display_name": {"type": "string", "minLength": 1, "maxLength": 200},
+    "kind": {"enum": ["asr", "tts", "voice_clone", "embedding"]},
+    "engine": {"type": "string", "minLength": 1, "maxLength": 100},
+    "engine_version": {"type": "string", "minLength": 1, "maxLength": 100},
+    "revision": {"type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[^\\/:]+$"},
+    "source_ref": {"type": "string", "minLength": 1, "maxLength": 1024},
+    "supported_languages": {"type": "array", "maxItems": 128, "items": {"type": "string", "minLength": 1}},
+    "capabilities": {"type": "array", "maxItems": 128, "items": {"type": "string", "minLength": 1}},
+    "license_ref": {"type": "string", "minLength": 1, "maxLength": 512},
+    "files": {
+      "type": "array", "minItems": 1, "maxItems": 256,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["schema_version", "relative_path", "size_bytes", "sha256"],
+        "properties": {
+          "schema_version": {"const": 1},
+          "relative_path": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)(?!.*:).+"},
+          "size_bytes": {"type": "integer", "exclusiveMinimum": 0, "maximum": 1099511627776},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "minimum_ram_bytes": {"type": ["integer", "null"], "minimum": 0},
+    "recommended_ram_bytes": {"type": ["integer", "null"], "minimum": 0},
+    "minimum_vram_bytes": {"type": ["integer", "null"], "minimum": 0},
+    "supported_devices": {"type": "array", "maxItems": 8, "items": {"enum": ["cpu", "cuda", "directml", "metal", "unknown"]}},
+    "runtime_contract_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+$"},
+    "compatible_app_versions": {"type": "array", "maxItems": 64, "items": {"type": "string", "minLength": 1}},
+    "remote_download_required": {"type": "boolean"},
+    "redistribution_allowed": {"type": "boolean"}
+  }
+}

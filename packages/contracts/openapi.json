@@ -1200,49 +1200,6 @@
         "title": "BatchConfirmationItem",
         "type": "object"
       },
-      "BatchCreateRequest": {
-        "additionalProperties": false,
-        "properties": {
-          "night_queue": {
-            "default": false,
-            "title": "Night Queue",
-            "type": "boolean"
-          },
-          "page_ids": {
-            "items": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "maxItems": 1000,
-            "title": "Page Ids",
-            "type": "array"
-          },
-          "preset_ids": {
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 32,
-            "minItems": 1,
-            "title": "Preset Ids",
-            "type": "array"
-          },
-          "priority": {
-            "default": 50,
-            "maximum": 100.0,
-            "minimum": 0.0,
-            "title": "Priority",
-            "type": "integer"
-          },
-          "resource_limits": {
-            "$ref": "#/components/schemas/BatchResourceLimits"
-          }
-        },
-        "required": [
-          "preset_ids"
-        ],
-        "title": "BatchCreateRequest",
-        "type": "object"
-      },
       "BatchDispatchRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1564,6 +1521,21 @@
         ],
         "title": "BatchStatus",
         "type": "string"
+      },
+      "BillingReconcileRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "billed_cost_minor": {
+            "minimum": 0.0,
+            "title": "Billed Cost Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "billed_cost_minor"
+        ],
+        "title": "BillingReconcileRequest",
+        "type": "object"
       },
       "Body_import_audio_api_projects__project_id__audio_import_post": {
         "properties": {
@@ -2438,6 +2410,211 @@
           "model"
         ],
         "title": "ConnectionResult",
+        "type": "object"
+      },
+      "ContentAssistCandidateV1": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted At"
+          },
+          "candidate_id": {
+            "format": "uuid",
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "candidate_text": {
+            "minLength": 1,
+            "title": "Candidate Text",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "polish",
+              "segment",
+              "translate"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "provider_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Id"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "segments": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10000,
+            "title": "Segments",
+            "type": "array"
+          },
+          "source_language": {
+            "title": "Source Language",
+            "type": "string"
+          },
+          "source_text": {
+            "minLength": 1,
+            "title": "Source Text",
+            "type": "string"
+          },
+          "status": {
+            "default": "candidate",
+            "enum": [
+              "candidate",
+              "accepted",
+              "rejected",
+              "needs_provider"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target_language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Language"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 64,
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "request_id",
+          "kind",
+          "source_text",
+          "candidate_text",
+          "source_language"
+        ],
+        "title": "ContentAssistCandidateV1",
+        "type": "object"
+      },
+      "ContentAssistRequestV1": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "polish",
+              "segment",
+              "translate"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "max_segment_chars": {
+            "default": 60,
+            "maximum": 500.0,
+            "minimum": 10.0,
+            "title": "Max Segment Chars",
+            "type": "integer"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source_language": {
+            "default": "zh-CN",
+            "maxLength": 32,
+            "minLength": 2,
+            "title": "Source Language",
+            "type": "string"
+          },
+          "source_revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Revision Id"
+          },
+          "source_text": {
+            "maxLength": 200000,
+            "minLength": 1,
+            "title": "Source Text",
+            "type": "string"
+          },
+          "style": {
+            "default": "neutral",
+            "enum": [
+              "neutral",
+              "spoken",
+              "concise"
+            ],
+            "title": "Style",
+            "type": "string"
+          },
+          "target_language": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Language"
+          }
+        },
+        "required": [
+          "kind",
+          "source_text"
+        ],
+        "title": "ContentAssistRequestV1",
         "type": "object"
       },
       "ContinuityPlan": {
@@ -3624,6 +3801,35 @@
         "title": "Envelope[ConnectionResult]",
         "type": "object"
       },
+      "Envelope_ContentAssistCandidateV1_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ContentAssistCandidateV1"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[ContentAssistCandidateV1]",
+        "type": "object"
+      },
       "Envelope_ContinuityPlan_": {
         "additionalProperties": false,
         "properties": {
@@ -4088,6 +4294,35 @@
         "title": "Envelope[LlmProfilePublic]",
         "type": "object"
       },
+      "Envelope_LocalModelRecordV1_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/LocalModelRecordV1"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[LocalModelRecordV1]",
+        "type": "object"
+      },
       "Envelope_MaterialCollection_": {
         "additionalProperties": false,
         "properties": {
@@ -4173,6 +4408,35 @@
           "request_id"
         ],
         "title": "Envelope[MaterialSyncPreview]",
+        "type": "object"
+      },
+      "Envelope_ModelRuntimeProbeV1_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ModelRuntimeProbeV1"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[ModelRuntimeProbeV1]",
         "type": "object"
       },
       "Envelope_NarrationImportPreview_": {
@@ -4463,6 +4727,35 @@
           "request_id"
         ],
         "title": "Envelope[ProjectRenderSource]",
+        "type": "object"
+      },
+      "Envelope_ProviderBatchJobV1_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ProviderBatchJobV1"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[ProviderBatchJobV1]",
         "type": "object"
       },
       "Envelope_QualityJobRecord_": {
@@ -5024,6 +5317,64 @@
         "title": "Envelope[VideoPreflight]",
         "type": "object"
       },
+      "Envelope_VoiceAuthorizationV1_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/VoiceAuthorizationV1"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[VoiceAuthorizationV1]",
+        "type": "object"
+      },
+      "Envelope_VoiceIdentityV1_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/VoiceIdentityV1"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[VoiceIdentityV1]",
+        "type": "object"
+      },
       "Envelope_dict_str__object__": {
         "additionalProperties": false,
         "properties": {
@@ -5251,6 +5602,39 @@
           "request_id"
         ],
         "title": "Envelope[list[Confirmation]]",
+        "type": "object"
+      },
+      "Envelope_list_ContentAssistCandidateV1__": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ContentAssistCandidateV1"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[list[ContentAssistCandidateV1]]",
         "type": "object"
       },
       "Envelope_list_ContinuityPlan__": {
@@ -5484,6 +5868,39 @@
         "title": "Envelope[list[LlmProfilePublic]]",
         "type": "object"
       },
+      "Envelope_list_LocalModelRecordV1__": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/LocalModelRecordV1"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[list[LocalModelRecordV1]]",
+        "type": "object"
+      },
       "Envelope_list_MaterialCollection__": {
         "additionalProperties": false,
         "properties": {
@@ -5682,6 +6099,73 @@
         "title": "Envelope[list[SubtitleWorkbenchDocument]]",
         "type": "object"
       },
+      "Envelope_list_UUID__": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[list[UUID]]",
+        "type": "object"
+      },
+      "Envelope_list_VoiceIdentityV1__": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/VoiceIdentityV1"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[list[VoiceIdentityV1]]",
+        "type": "object"
+      },
       "Envelope_list_int__": {
         "additionalProperties": false,
         "properties": {
@@ -5746,6 +6230,35 @@
           "request_id"
         ],
         "title": "Envelope[list[str]]",
+        "type": "object"
+      },
+      "Envelope_object_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProblemDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[object]",
         "type": "object"
       },
       "EnvironmentCheck": {
@@ -7972,6 +8485,215 @@
         "title": "LlmUsageRecord",
         "type": "object"
       },
+      "LocalModelDescriptorV1": {
+        "additionalProperties": false,
+        "properties": {
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 128,
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "compatible_app_versions": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 64,
+            "title": "Compatible App Versions",
+            "type": "array"
+          },
+          "display_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "engine": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Engine",
+            "type": "string"
+          },
+          "engine_version": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/ModelFileV1"
+            },
+            "maxItems": 256,
+            "minItems": 1,
+            "title": "Files",
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "asr",
+              "tts",
+              "voice_clone",
+              "embedding"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "license_ref": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "License Ref",
+            "type": "string"
+          },
+          "minimum_ram_bytes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimum Ram Bytes"
+          },
+          "minimum_vram_bytes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimum Vram Bytes"
+          },
+          "model_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Model Id",
+            "type": "string"
+          },
+          "recommended_ram_bytes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Ram Bytes"
+          },
+          "redistribution_allowed": {
+            "default": false,
+            "title": "Redistribution Allowed",
+            "type": "boolean"
+          },
+          "remote_download_required": {
+            "default": false,
+            "title": "Remote Download Required",
+            "type": "boolean"
+          },
+          "revision": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Revision",
+            "type": "string"
+          },
+          "runtime_contract_version": {
+            "pattern": "^[0-9]+\\.[0-9]+$",
+            "title": "Runtime Contract Version",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source_ref": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Source Ref",
+            "type": "string"
+          },
+          "supported_devices": {
+            "items": {
+              "enum": [
+                "cpu",
+                "cuda",
+                "directml",
+                "metal",
+                "unknown"
+              ],
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Supported Devices",
+            "type": "array"
+          },
+          "supported_languages": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 128,
+            "title": "Supported Languages",
+            "type": "array"
+          }
+        },
+        "required": [
+          "model_id",
+          "display_name",
+          "kind",
+          "engine",
+          "engine_version",
+          "revision",
+          "source_ref",
+          "license_ref",
+          "files",
+          "runtime_contract_version"
+        ],
+        "title": "LocalModelDescriptorV1",
+        "type": "object"
+      },
+      "LocalModelRecordV1": {
+        "additionalProperties": false,
+        "properties": {
+          "descriptor": {
+            "$ref": "#/components/schemas/LocalModelDescriptorV1"
+          },
+          "install": {
+            "$ref": "#/components/schemas/ModelInstallRecordV1"
+          },
+          "last_probe": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelRuntimeProbeV1"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "descriptor",
+          "install"
+        ],
+        "title": "LocalModelRecordV1",
+        "type": "object"
+      },
       "ManualMatchChange": {
         "additionalProperties": false,
         "properties": {
@@ -8714,6 +9436,298 @@
           "plan_hash"
         ],
         "title": "MigrationRollbackRequest",
+        "type": "object"
+      },
+      "ModelFileV1": {
+        "additionalProperties": false,
+        "properties": {
+          "relative_path": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Relative Path",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size_bytes": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 1099511627776.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "relative_path",
+          "size_bytes",
+          "sha256"
+        ],
+        "title": "ModelFileV1",
+        "type": "object"
+      },
+      "ModelInstallRecordV1": {
+        "additionalProperties": false,
+        "properties": {
+          "active_lease_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Active Lease Count",
+            "type": "integer"
+          },
+          "attempt_id": {
+            "format": "uuid",
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "bytes_completed": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Bytes Completed",
+            "type": "integer"
+          },
+          "bytes_total": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Bytes Total",
+            "type": "integer"
+          },
+          "installed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installed At"
+          },
+          "last_error_code": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error Code"
+          },
+          "last_probe_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Probe At"
+          },
+          "manifest_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Sha256"
+          },
+          "model_id": {
+            "title": "Model Id",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "not_installed",
+              "queued",
+              "downloading",
+              "verifying",
+              "ready",
+              "loading",
+              "active",
+              "degraded",
+              "incompatible",
+              "failed",
+              "uninstall_pending"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_id",
+          "revision",
+          "status"
+        ],
+        "title": "ModelInstallRecordV1",
+        "type": "object"
+      },
+      "ModelInstallRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "descriptor": {
+            "$ref": "#/components/schemas/LocalModelDescriptorV1"
+          },
+          "source_relative_path": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Source Relative Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "descriptor",
+          "source_relative_path"
+        ],
+        "title": "ModelInstallRequest",
+        "type": "object"
+      },
+      "ModelProbeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "default": "cpu",
+            "pattern": "^(cpu|cuda|directml|metal)$",
+            "title": "Device",
+            "type": "string"
+          }
+        },
+        "title": "ModelProbeRequest",
+        "type": "object"
+      },
+      "ModelRuntimeProbeV1": {
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "enum": [
+              "cpu",
+              "cuda",
+              "directml",
+              "metal",
+              "unknown"
+            ],
+            "title": "Device",
+            "type": "string"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "model_id": {
+            "title": "Model Id",
+            "type": "string"
+          },
+          "peak_ram_bytes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak Ram Bytes"
+          },
+          "peak_vram_bytes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak Vram Bytes"
+          },
+          "probed_at": {
+            "format": "date-time",
+            "title": "Probed At",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "startup_ms": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startup Ms"
+          },
+          "status": {
+            "enum": [
+              "available",
+              "missing",
+              "incompatible",
+              "degraded",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "model_id",
+          "revision",
+          "status",
+          "device"
+        ],
+        "title": "ModelRuntimeProbeV1",
         "type": "object"
       },
       "MotionCue": {
@@ -11182,6 +12196,111 @@
           "pages"
         ],
         "title": "ProjectVideoProps",
+        "type": "object"
+      },
+      "ProviderBatchJobV1": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "item_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 10000,
+            "minItems": 1,
+            "title": "Item Ids",
+            "type": "array"
+          },
+          "job_id": {
+            "format": "uuid",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "last_error_code": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error Code"
+          },
+          "operation_kind": {
+            "enum": [
+              "tts",
+              "asr",
+              "avatar",
+              "renderer"
+            ],
+            "title": "Operation Kind",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "provider_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Provider Id",
+            "type": "string"
+          },
+          "revision_id": {
+            "format": "uuid",
+            "title": "Revision Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "default": "queued",
+            "enum": [
+              "queued",
+              "running",
+              "paused",
+              "succeeded",
+              "failed",
+              "unknown_billed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "unknown_billed_item_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 10000,
+            "title": "Unknown Billed Item Ids",
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider_id",
+          "operation_kind",
+          "project_id",
+          "revision_id",
+          "item_ids"
+        ],
+        "title": "ProviderBatchJobV1",
         "type": "object"
       },
       "QualityIssue": {
@@ -15487,6 +16606,199 @@
         "title": "VideoPreflightRecord",
         "type": "object"
       },
+      "VoiceAuthorizationV1": {
+        "additionalProperties": false,
+        "properties": {
+          "authorization_id": {
+            "format": "uuid",
+            "title": "Authorization Id",
+            "type": "string"
+          },
+          "consent_note": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Note"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "granted_at": {
+            "format": "date-time",
+            "title": "Granted At",
+            "type": "string"
+          },
+          "granted_by": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Granted By",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "scopes": {
+            "items": {
+              "enum": [
+                "local_tts",
+                "local_clone",
+                "preview",
+                "export"
+              ],
+              "type": "string"
+            },
+            "maxItems": 16,
+            "minItems": 1,
+            "title": "Scopes",
+            "type": "array"
+          },
+          "source_audio_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Source Audio Sha256",
+            "type": "string"
+          },
+          "status": {
+            "default": "active",
+            "enum": [
+              "active",
+              "revoked",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "subject": {
+            "enum": [
+              "self",
+              "licensed_subject"
+            ],
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject",
+          "granted_by",
+          "scopes",
+          "source_audio_sha256"
+        ],
+        "title": "VoiceAuthorizationV1",
+        "type": "object"
+      },
+      "VoiceIdentityV1": {
+        "additionalProperties": false,
+        "properties": {
+          "authorization_id": {
+            "format": "uuid",
+            "title": "Authorization Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "local_tts",
+              "local_clone"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "local_only": {
+            "default": true,
+            "title": "Local Only",
+            "type": "boolean"
+          },
+          "model_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Model Id",
+            "type": "string"
+          },
+          "model_revision": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Model Revision",
+            "type": "string"
+          },
+          "output_format": {
+            "const": "wav",
+            "default": "wav",
+            "title": "Output Format",
+            "type": "string"
+          },
+          "remote_export_allowed": {
+            "default": false,
+            "title": "Remote Export Allowed",
+            "type": "boolean"
+          },
+          "sample_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 128,
+            "title": "Sample Refs",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "default": "active",
+            "enum": [
+              "active",
+              "revoked"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "voice_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Voice Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "voice_id",
+          "display_name",
+          "kind",
+          "model_id",
+          "model_revision",
+          "authorization_id"
+        ],
+        "title": "VoiceIdentityV1",
+        "type": "object"
+      },
       "VoicePreviewRequest": {
         "additionalProperties": false,
         "properties": {
@@ -15565,6 +16877,51 @@
           "request_id"
         ],
         "title": "Envelope[DiagnosticPackage]",
+        "type": "object"
+      },
+      "workbench__api__provider_batches__BatchCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "operation_kind": {
+            "pattern": "^(tts|asr|avatar|renderer)$",
+            "title": "Operation Kind",
+            "type": "string"
+          },
+          "page_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 10000,
+            "minItems": 1,
+            "title": "Page Ids",
+            "type": "array"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "provider_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Provider Id",
+            "type": "string"
+          },
+          "revision_id": {
+            "format": "uuid",
+            "title": "Revision Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider_id",
+          "operation_kind",
+          "project_id",
+          "revision_id",
+          "page_ids"
+        ],
+        "title": "BatchCreateRequest",
         "type": "object"
       },
       "workbench__diagnostics__models__DiagnosticPackage": {
@@ -15833,6 +17190,49 @@
         "title": "SubtitleCue",
         "type": "object"
       },
+      "workbench__scheduler__models__BatchCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "night_queue": {
+            "default": false,
+            "title": "Night Queue",
+            "type": "boolean"
+          },
+          "page_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "title": "Page Ids",
+            "type": "array"
+          },
+          "preset_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "minItems": 1,
+            "title": "Preset Ids",
+            "type": "array"
+          },
+          "priority": {
+            "default": 50,
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Priority",
+            "type": "integer"
+          },
+          "resource_limits": {
+            "$ref": "#/components/schemas/BatchResourceLimits"
+          }
+        },
+        "required": [
+          "preset_ids"
+        ],
+        "title": "BatchCreateRequest",
+        "type": "object"
+      },
       "workbench__subtitles__models__SubtitleCue": {
         "additionalProperties": false,
         "properties": {
@@ -15936,6 +17336,493 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/ai/content-assist": {
+      "get": {
+        "operationId": "list_candidates_api_ai_content_assist_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_ContentAssistCandidateV1__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Candidates"
+      },
+      "post": {
+        "operationId": "create_candidate_api_ai_content_assist_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentAssistRequestV1"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ContentAssistCandidateV1_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Candidate"
+      }
+    },
+    "/api/ai/content-assist/{candidate_id}/accept": {
+      "post": {
+        "operationId": "accept_candidate_api_ai_content_assist__candidate_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ContentAssistCandidateV1_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Accept Candidate"
+      }
+    },
+    "/api/ai/models": {
+      "get": {
+        "operationId": "list_models_api_ai_models_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(asr|tts|voice_clone|embedding)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_LocalModelRecordV1__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Models"
+      }
+    },
+    "/api/ai/models/install": {
+      "post": {
+        "operationId": "install_model_api_ai_models_install_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelInstallRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_LocalModelRecordV1_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Install Model"
+      }
+    },
+    "/api/ai/models/{model_id}": {
+      "get": {
+        "operationId": "get_model_api_ai_models__model_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "title": "Model Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_LocalModelRecordV1_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Model"
+      }
+    },
+    "/api/ai/models/{model_id}/activate": {
+      "post": {
+        "operationId": "activate_model_api_ai_models__model_id__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "title": "Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "revision",
+            "required": true,
+            "schema": {
+              "title": "Revision",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_LocalModelRecordV1_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Activate Model"
+      }
+    },
+    "/api/ai/models/{model_id}/probe": {
+      "post": {
+        "operationId": "probe_model_api_ai_models__model_id__probe_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "title": "Model Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelProbeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ModelRuntimeProbeV1_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Probe Model"
+      }
+    },
+    "/api/ai/models/{model_id}/{revision}": {
+      "delete": {
+        "operationId": "remove_model_api_ai_models__model_id___revision__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "title": "Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "revision",
+            "required": true,
+            "schema": {
+              "title": "Revision",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Model"
+      }
+    },
+    "/api/ai/voices": {
+      "get": {
+        "operationId": "list_voices_api_ai_voices_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_VoiceIdentityV1__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Voices"
+      },
+      "post": {
+        "operationId": "register_voice_api_ai_voices_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceIdentityV1"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_VoiceIdentityV1_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register Voice"
+      }
+    },
+    "/api/ai/voices/authorizations": {
+      "post": {
+        "operationId": "grant_authorization_api_ai_voices_authorizations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceAuthorizationV1"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_VoiceAuthorizationV1_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Grant Authorization"
+      }
+    },
+    "/api/ai/voices/{voice_id}/revoke": {
+      "post": {
+        "operationId": "revoke_voice_api_ai_voices__voice_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "voice_id",
+            "required": true,
+            "schema": {
+              "title": "Voice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_VoiceIdentityV1_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Voice"
+      }
+    },
     "/api/diagnostics/latest": {
       "get": {
         "operationId": "latest_diagnostics_api_diagnostics_latest_get",
@@ -17272,7 +19159,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BatchCreateRequest"
+                "$ref": "#/components/schemas/workbench__scheduler__models__BatchCreateRequest"
               }
             }
           },
@@ -22151,6 +24038,174 @@
           }
         },
         "summary": "Audio Gate"
+      }
+    },
+    "/api/providers/batches": {
+      "post": {
+        "operationId": "create_batch_api_providers_batches_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/workbench__api__provider_batches__BatchCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ProviderBatchJobV1_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Batch"
+      }
+    },
+    "/api/providers/batches/{job_id}": {
+      "get": {
+        "operationId": "get_batch_api_providers_batches__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ProviderBatchJobV1_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Batch"
+      }
+    },
+    "/api/providers/batches/{job_id}/resume": {
+      "post": {
+        "operationId": "resume_batch_api_providers_batches__job_id__resume_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_UUID__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resume Batch"
+      }
+    },
+    "/api/providers/governance/{reservation_id}/reconcile": {
+      "post": {
+        "operationId": "reconcile_api_providers_governance__reservation_id__reconcile_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reservation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reservation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReconcileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_object_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reconcile"
       }
     },
     "/api/release/feature-policy": {

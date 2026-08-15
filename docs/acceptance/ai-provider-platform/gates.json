@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-08-15T00:00:00Z",
+  "source_branch": "codex/program-ai-provider-platform",
+  "source_worktree": "F:/ppt-video-workbench-v3/.worktrees/program-integration-v1",
+  "gates": {
+    "AI_BASELINE_FROZEN": {
+      "status": "PASS_WITH_WAIT_EXTERNAL_BOUNDARY",
+      "evidence": ["baseline.json", "source-inventory.md", "tests/integration/test_ai_provider_local_only.py"]
+    },
+    "LOCAL_MODEL_CENTER_READY": {
+      "status": "PASS_LOCAL_FOUNDATION_WITH_WAIT_EXTERNAL_BOUNDARY",
+      "evidence": ["tests/unit/ai_models", "tests/unit/audio/test_local_tts.py", "tests/integration/test_ai_models_routes.py"],
+      "boundary": "fixture/offline model install verified; real model download and Windows Faster-Whisper/TTS hardware smoke remain external"
+    },
+    "PROVIDER_ADAPTERS_READY": {
+      "status": "PASS_CONTRACT_AND_FAKE_ADAPTERS",
+      "evidence": ["tests/contract/test_provider_v2_contracts.py", "apps/api/src/workbench/providers/conformance.py"],
+      "boundary": "real vendor conformance and credential migration require sandbox credentials"
+    },
+    "PROVIDER_GOVERNANCE_READY": {
+      "status": "PASS_LOCAL_LEDGER_AND_FAIL_CLOSED_FAILOVER",
+      "evidence": ["tests/unit/providers/test_governance.py", "tests/unit/providers/test_broker_governance.py", "tests/integration/test_provider_governance_routes.py"],
+      "boundary": "rate limiter is process-local; production multi-process quota reconciliation is still a deployment task"
+    },
+    "VOICE_IDENTITY_READY": {
+      "status": "PASS_LOCAL_AUTHORIZATION_FOUNDATION",
+      "evidence": ["tests/unit/voices", "tests/integration/test_voice_routes.py"],
+      "boundary": "no real cloning/training or cloud upload was performed"
+    },
+    "REMOTE_BATCH_READY": {
+      "status": "PASS_DURABLE_STATE_WITH_WAIT_EXTERNAL",
+      "evidence": ["tests/unit/providers/test_batch_service.py", "tests/integration/test_provider_batch_routes.py", "tests/integration/test_heygen_retry.py"],
+      "boundary": "real HeyGen async batch/polling and billed sandbox acceptance require credentials and explicit spend limit"
+    },
+    "AI_CONTENT_ASSIST_READY": {
+      "status": "PASS_LOCAL_CANDIDATE_FLOW_WITH_WAIT_EXTERNAL",
+      "evidence": ["tests/unit/content_assist", "tests/integration/test_content_assist_routes.py"],
+      "boundary": "translation without an injected provider remains needs_provider; no automatic active narration mutation"
+    },
+    "AI_PROVIDER_PLATFORM_READY": {
+      "status": "PASS_LOCAL_WITH_EXTERNAL_BOUNDARIES",
+      "evidence": ["tests/integration/test_ai_provider_local_only.py", "docs/acceptance/ai-provider-platform/local-regression.md"],
+      "boundary": "Windows final candidate, real vendor sandbox, hardware model smoke, paid calls and human voice/AV signoff remain external"
+    },
+    "AI_WORKTREE_ISOLATED": {
+      "status": "PASS",
+      "evidence": ["branch codex/program-ai-provider-platform", "HEAD 72cb7bbee6fb2fa21485f77d627a8f1443d61eb8", "AI00 status/hash preservation check"],
+      "boundary": "working tree remains dirty by design; user-owned non-AI files are excluded from AI staging"
+    },
+    "AI_WEB_UI_READY": {
+      "status": "PASS_LOCAL_ONLY",
+      "evidence": ["apps/web/src/features/ai/AiProviderControlCenter.tsx", "apps/web/src/features/ai/AiProviderControlCenter.test.tsx", "88 Web tests passed", "pnpm -C apps/web typecheck", "pnpm -C apps/web build"],
+      "boundary": "remote Provider query is disabled until the control-plane switch is explicitly enabled"
+    },
+    "AI_PACKAGE_PREFLIGHT_READY": {
+      "status": "PASS_LOCAL_PRECHECK",
+      "evidence": ["docs/acceptance/ai-provider-platform/package-preflight.md"],
+      "boundary": "Windows final candidate was not built, signed, published or replaced"
+    },
+    "AI_PROVIDER_LOCAL_REGRESSION": {
+      "status": "PASS",
+      "evidence": ["1085 Python tests passed", "72 affected AI/Provider and contract/preflight tests passed", "Ruff passed", "Mypy passed for 380 source files", "scripts/export_contracts.py --check"],
+      "boundary": "one existing httpx deprecation warning; external evidence remains separate"
+    },
+    "AI_PROVIDER_INTEGRATION_HANDOFF_READY": {
+      "status": "NOT_RUN",
+      "evidence": [],
+      "boundary": "requires exact staging, commit, push, target-branch CI and final handoff package in AI10"
+    }
+  }
+}

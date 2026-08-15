@@ -19,9 +19,17 @@ from workbench_peripheral_adapter import (
     create_peripheral_client,
 )
 
+from workbench.ai_models import (
+    LocalModelProvisioner,
+    LocalModelRegistry,
+    ModelRuntimeManager,
+    RegistryWhisperModelManager,
+)
+from workbench.api.ai_models import create_ai_models_router
 from workbench.api.assets import create_assets_router
 from workbench.api.audio import create_audio_router
 from workbench.api.confirmations import create_confirmations_router
+from workbench.api.content_assist import create_content_assist_router
 from workbench.api.continuity import create_continuity_router
 from workbench.api.diagnostics import create_diagnostics_router
 from workbench.api.effects import create_effects_router
@@ -40,6 +48,8 @@ from workbench.api.peripheral_s1 import create_peripheral_s1_router
 from workbench.api.preflight import create_preflight_router
 from workbench.api.presenter import create_presenter_router
 from workbench.api.projects import create_projects_router
+from workbench.api.provider_batches import create_provider_batches_router
+from workbench.api.provider_governance import create_provider_governance_router
 from workbench.api.quality import create_quality_router
 from workbench.api.release import create_release_router
 from workbench.api.scheduler import create_scheduler_router
@@ -52,16 +62,17 @@ from workbench.api.subtitles import create_subtitle_router
 from workbench.api.timeline_production import TimelineWorkspaceService, create_timeline_router
 from workbench.api.updates import create_updates_router
 from workbench.api.video import create_video_router
+from workbench.api.voices import create_voices_router
 from workbench.assets.service import AssetRegistryService
 from workbench.audio.difference_service import DifferenceService
 from workbench.audio.heygen_service import HeyGenService
 from workbench.audio.importer import AudioImportService
-from workbench.audio.models import WhisperModelManager
 from workbench.audio.service import AudioService
 from workbench.audio.timeline_service import TimelineService
 from workbench.audio.transcriber import Transcriber, TranscriptionBackend
 from workbench.audio.transcription_service import TranscriptionService
 from workbench.cache.cleanup import CleanupService
+from workbench.content_assist import ContentAssistRepository, ContentAssistService
 from workbench.continuity.service import ContinuityService
 from workbench.diagnostics.center import (
     DiagnosticCenter,
@@ -97,6 +108,8 @@ from workbench.peripheral_s1.coordinator import S1Coordinator
 from workbench.peripheral_s1.inbox import ProjectionInbox
 from workbench.peripheral_s1.projector import ProjectorRegistry
 from workbench.preflight.engine import PreflightEngine, RuntimeProbe
+from workbench.providers.batch import ProviderBatchRepository, ProviderBatchService
+from workbench.providers.governance import PersistentCostLedger, ProviderGovernance
 from workbench.providers.upstream import (
     BrokerCompletionClient,
     BrokerOcrEngine,
@@ -142,6 +155,7 @@ from workbench.video.preview_service import VideoPreviewService
 from workbench.video.props_service import VideoPropsService
 from workbench.video.render_job import RenderJobService
 from workbench.video.render_service import PageRenderer
+from workbench.voices import VoiceAuthorizationService, VoiceRepository
 from workbench.workflow.audio_gate import AudioGateService
 from workbench.workflow.gates import NarrationGateService
 
@@ -199,6 +213,10 @@ def create_app(
         configured_root / "settings" / "heygen-profiles.json",
         secret_protector or WindowsDpapiProtector(),
     )
+    provider_cost_ledger = PersistentCostLedger(
+        configured_root / "settings" / "provider-cost-ledger.json"
+    )
+    provider_governance = ProviderGovernance(provider_cost_ledger)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -227,6 +245,7 @@ def create_app(
         configured_root,
         flags=p2_flags,
         provider_handlers=configured_provider_handlers,
+        provider_governance=provider_governance,
     )
     p2_composition.install(app)
     completion_factory: Callable[[UUID], BrokerCompletionClient] | None = None
@@ -536,6 +555,29 @@ def create_app(
     app.state.cleanup_service = cleanup_service
     configured_environment_detector = environment_detector or EnvironmentDetector(configured_root)
     app.state.environment_detector = configured_environment_detector
+    model_center_root = configured_root / "settings" / "ai-models"
+    model_registry = LocalModelRegistry(model_center_root)
+    model_provisioner = LocalModelProvisioner(model_center_root, model_registry)
+    model_runtime = ModelRuntimeManager(model_center_root, model_registry)
+    app.state.local_model_registry = model_registry
+    app.state.local_model_provisioner = model_provisioner
+    app.state.local_model_runtime = model_runtime
+    voice_repository = VoiceRepository(configured_root / "settings" / "ai-voices")
+    voice_service = VoiceAuthorizationService(voice_repository)
+    app.state.voice_repository = voice_repository
+    app.state.voice_service = voice_service
+    batch_repository = ProviderBatchRepository(configured_root / "settings" / "provider-batches")
+    batch_service = ProviderBatchService(batch_repository)
+    app.state.provider_batch_repository = batch_repository
+    app.state.provider_batch_service = batch_service
+    app.state.provider_cost_ledger = provider_cost_ledger
+    app.state.provider_governance = provider_governance
+    content_assist_repository = ContentAssistRepository(
+        configured_root / "settings" / "ai-content-assist"
+    )
+    content_assist_service = ContentAssistService(content_assist_repository)
+    app.state.content_assist_repository = content_assist_repository
+    app.state.content_assist_service = content_assist_service
     configured_update_service = update_service or UpdateService(configured_root)
     app.state.update_service = configured_update_service
     secure_update_client = _build_secure_update_client(configured_root)
@@ -563,7 +605,11 @@ def create_app(
         )
     )
     app.include_router(create_effects_router(app.state.effect_service))
-    presenter_models = WhisperModelManager(configured_root / "settings" / "asr-models")
+    presenter_models = RegistryWhisperModelManager(
+        configured_root / "settings" / "asr-models",
+        model_registry,
+        model_runtime,
+    )
     app.include_router(
         create_presenter_router(
             PresenterImportService(service, presenter_probe),
@@ -609,6 +655,18 @@ def create_app(
     app.include_router(create_release_router(feature_policy))
     app.include_router(create_jobs_router(service))
     app.include_router(create_migrations_router(service))
+    app.include_router(
+        create_ai_models_router(
+            configured_root,
+            model_registry,
+            model_provisioner,
+            model_runtime,
+        )
+    )
+    app.include_router(create_voices_router(voice_service))
+    app.include_router(create_provider_batches_router(batch_service))
+    app.include_router(create_provider_governance_router(provider_governance))
+    app.include_router(create_content_assist_router(content_assist_service))
     app.include_router(create_assets_router(asset_registry_service))
     app.include_router(create_material_collections_router(material_collection_service))
     app.include_router(create_continuity_router(continuity_service))

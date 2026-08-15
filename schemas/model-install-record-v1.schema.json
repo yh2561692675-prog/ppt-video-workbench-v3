@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "model-install-record-v1",
+  "title": "Local model install record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "model_id", "revision", "status", "attempt_id", "bytes_total", "bytes_completed", "manifest_sha256", "installed_at", "last_probe_at", "last_error_code", "active_lease_count"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "model_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,127}$"},
+    "revision": {"type": "string", "minLength": 1},
+    "status": {"enum": ["not_installed", "queued", "downloading", "verifying", "ready", "loading", "active", "degraded", "incompatible", "failed", "uninstall_pending"]},
+    "attempt_id": {"type": "string", "format": "uuid"},
+    "bytes_total": {"type": "integer", "minimum": 0},
+    "bytes_completed": {"type": "integer", "minimum": 0},
+    "manifest_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "installed_at": {"type": ["string", "null"], "format": "date-time"},
+    "last_probe_at": {"type": ["string", "null"], "format": "date-time"},
+    "last_error_code": {"type": ["string", "null"], "maxLength": 100},
+    "active_lease_count": {"type": "integer", "minimum": 0}
+  }
+}

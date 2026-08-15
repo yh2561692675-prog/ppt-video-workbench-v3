@@ -11,6 +11,7 @@ from workbench.contracts.p2_platform import ErrorCategory, OperationContextV1, S
 
 from .adapter import ProviderAdapter, ProviderAdapterError
 from .cache import ProviderCache, cache_identity
+from .governance import ProviderGovernance
 from .models import ProviderDescriptorV1, ProviderInvocationResultV1, ProviderInvocationV1
 from .policy import DataClassification, ProviderPolicyEvaluator, ProviderPolicyV1
 from .registry import ProviderRegistry
@@ -38,6 +39,9 @@ class RouteRequest:
     cloud_revision_id: str | None = None
     policy: ProviderPolicyV1 | None = None
     data_classification: DataClassification = "sensitive"
+    credential_ref: str = "none"
+    budget_scopes: tuple[str, ...] = ("operation",)
+    price_book_version: str = "broker-estimate"
 
 
 @dataclass(frozen=True)
@@ -71,10 +75,12 @@ class ProviderBroker:
         adapters: dict[str, ProviderAdapter],
         *,
         cache: ProviderCache | None = None,
+        governance: ProviderGovernance | None = None,
     ) -> None:
         self.registry = registry
         self.adapters = dict(adapters)
         self.cache = cache
+        self.governance = governance
         self._idempotency: dict[tuple[UUID, str, UUID], BrokerResult] = {}
 
     async def invoke(self, request: RouteRequest) -> BrokerResult:
@@ -95,6 +101,7 @@ class ProviderBroker:
             raise ProviderBrokerError(str(error.message), error=error, attempts=())
 
         attempts: list[BrokerAttempt] = []
+        governance = self.governance
         last_error: StructuredErrorV1 | None = None
         for descriptor in candidates:
             adapter = self.adapters.get(descriptor.provider_id)
@@ -146,12 +153,68 @@ class ProviderBroker:
                 if request.fixed_provider_id:
                     break
                 continue
+            reservation_id = None
+            if governance is not None:
+                estimate = await adapter.estimate(invocation)
+                if estimate.confidence == "unknown":
+                    governance_error = self._error(
+                        request.context,
+                        "provider.cost_unknown",
+                        "Provider cost could not be estimated",
+                        retryable=False,
+                        failover_allowed=False,
+                    )
+                    attempts.append(
+                        BrokerAttempt(
+                            descriptor.provider_id,
+                            attempt_context.attempt_id,
+                            "rejected",
+                            governance_error,
+                        )
+                    )
+                    last_error = governance_error
+                    continue
+                decision = governance.authorize(
+                    operation_id=request.context.operation_id,
+                    provider_id=descriptor.provider_id,
+                    credential_ref=request.credential_ref,
+                    capability_id=request.capability_id,
+                    estimated_cost_minor=estimate.estimated_cost_minor,
+                    scopes=request.budget_scopes,
+                    price_book_version=estimate.price_book_version or request.price_book_version,
+                )
+                if not decision.allowed:
+                    governance_error = self._error(
+                        request.context,
+                        "provider.governance_rejected",
+                        decision.reason,
+                        retryable=decision.reason == "rate_limited",
+                        failover_allowed=decision.reason == "rate_limited",
+                    )
+                    attempts.append(
+                        BrokerAttempt(
+                            descriptor.provider_id,
+                            attempt_context.attempt_id,
+                            "rejected",
+                            governance_error,
+                        )
+                    )
+                    last_error = governance_error
+                    continue
+                reservation_id = decision.reservation_id
             try:
                 result = await asyncio.wait_for(
                     adapter.invoke(invocation),
                     timeout=attempt_context.budget.timeout_ms / 1000,
                 )
             except TimeoutError as error:
+                if reservation_id is not None and governance is not None:
+                    governance.complete(
+                        reservation_id,
+                        billing_state="unknown"
+                        if descriptor.execution_mode == "remote_https"
+                        else "none",
+                    )
                 normalized = adapter.normalize_error(
                     ProviderAdapterError(
                         "provider.timeout",
@@ -161,6 +224,8 @@ class ProviderBroker:
                     ),
                     invocation,
                 )
+                if descriptor.execution_mode == "remote_https" and reservation_id is not None:
+                    normalized = normalized.model_copy(update={"failover_allowed": False})
                 attempts.append(
                     BrokerAttempt(
                         descriptor.provider_id, attempt_context.attempt_id, "timeout", normalized
@@ -168,7 +233,16 @@ class ProviderBroker:
                 )
                 last_error = normalized
             except BaseException as error:
+                if reservation_id is not None and governance is not None:
+                    governance.complete(
+                        reservation_id,
+                        billing_state="unknown"
+                        if descriptor.execution_mode == "remote_https"
+                        else "none",
+                    )
                 normalized = adapter.normalize_error(error, invocation)
+                if descriptor.execution_mode == "remote_https" and reservation_id is not None:
+                    normalized = normalized.model_copy(update={"failover_allowed": False})
                 attempts.append(
                     BrokerAttempt(
                         descriptor.provider_id, attempt_context.attempt_id, "failed", normalized
@@ -176,6 +250,13 @@ class ProviderBroker:
                 )
                 last_error = normalized
             else:
+                if reservation_id is not None and governance is not None:
+                    billed_cost = int(result.billed_cost or 0)
+                    governance.complete(
+                        reservation_id,
+                        billing_state="known" if result.billed_cost is not None else "none",
+                        billed_cost_minor=billed_cost,
+                    )
                 identity = cache_identity(
                     provider_id=descriptor.provider_id,
                     capability_id=request.capability_id,

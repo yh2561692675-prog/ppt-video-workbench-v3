@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "gate": "AI_BASELINE_FROZEN",
+  "captured_at": "2026-08-15T00:00:00Z",
+  "source": {
+    "worktree": "F:/ppt-video-workbench-v3/.worktrees/program-integration-v1",
+    "branch": "codex/program-integration-v1",
+    "head": "72cb7bbee6fb2fa21485f77d627a8f1443d61eb8",
+    "root_recovery_snapshot_is_build_source": false,
+    "untracked_user_owned_preserved": true
+  },
+  "runtime": {
+    "python": "3.12.13",
+    "node": "v24.19.0",
+    "uv_lock_sha256": "a7ccf0360435eb67d4fb808c9170b044eba1154f5983e5aa7df28975298a010b",
+    "pnpm_lock_sha256": "c523aa65a2bf7d5873b47c6fab5fc3fd78ce51c28130b293a88ebd90cbbc212"
+  },
+  "policy": {
+    "default_audio_chain": "local",
+    "remote_provider_default": "disabled",
+    "startup_network_access": "forbidden",
+    "real_remote_calls_in_acceptance": "forbidden_without_explicit_authorization",
+    "unknown_billing_state": "fail_closed"
+  },
+  "baseline_evidence": {
+    "local_model_unit_tests": "PASS: tests/unit/ai_models",
+    "local_model_api_tests": "PASS: tests/integration/test_ai_models_routes.py",
+    "remote_service_evidence": "WAIT_EXTERNAL: no real provider credentials or billed calls used",
+    "real_model_download": "NOT_RUN: fixture-only installation; no network download"
+  },
+  "status": "PASS_WITH_WAIT_EXTERNAL_BOUNDARY"
+}

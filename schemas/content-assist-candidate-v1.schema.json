@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "content-assist-candidate-v1",
+  "title": "Content assist candidate v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["candidate_id", "request_id", "kind", "status", "source_text", "candidate_text", "source_language", "segments", "warnings", "created_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "candidate_id": {"type": "string", "format": "uuid"},
+    "request_id": {"type": "string", "format": "uuid"},
+    "kind": {"enum": ["polish", "segment", "translate"]},
+    "status": {"enum": ["candidate", "accepted", "rejected", "needs_provider"]},
+    "source_text": {"type": "string", "minLength": 1},
+    "candidate_text": {"type": "string", "minLength": 1},
+    "source_language": {"type": "string"},
+    "target_language": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+    "segments": {"type": "array", "maxItems": 10000, "items": {"type": "string"}},
+    "provider_id": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+    "warnings": {"type": "array", "maxItems": 64, "items": {"type": "string"}},
+    "created_at": {"type": "string", "format": "date-time"},
+    "accepted_at": {"anyOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]}
+  }
+}

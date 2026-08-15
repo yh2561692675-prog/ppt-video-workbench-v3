@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "content-assist-request-v1",
+  "title": "Content assist request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "source_text", "source_language", "max_segment_chars", "style"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "request_id": {"type": "string", "format": "uuid"},
+    "kind": {"enum": ["polish", "segment", "translate"]},
+    "source_text": {"type": "string", "minLength": 1, "maxLength": 200000},
+    "source_language": {"type": "string", "minLength": 2, "maxLength": 32},
+    "target_language": {"anyOf": [{"type": "string", "minLength": 2, "maxLength": 32}, {"type": "null"}]},
+    "max_segment_chars": {"type": "integer", "minimum": 10, "maximum": 500},
+    "style": {"enum": ["neutral", "spoken", "concise"]},
+    "source_revision_id": {"anyOf": [{"type": "string", "format": "uuid"}, {"type": "null"}]}
+  }
+}

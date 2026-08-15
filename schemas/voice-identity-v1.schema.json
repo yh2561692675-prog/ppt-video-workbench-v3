@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "voice-identity-v1",
+  "title": "Voice identity v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["voice_id", "display_name", "kind", "model_id", "model_revision", "authorization_id", "created_at", "status", "local_only", "remote_export_allowed", "sample_refs", "output_format"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "voice_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "display_name": {"type": "string", "minLength": 1, "maxLength": 200},
+    "kind": {"enum": ["local_tts", "local_clone"]},
+    "model_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "model_revision": {"type": "string", "minLength": 1, "pattern": "^[^\\/:]+$"},
+    "authorization_id": {"type": "string", "format": "uuid"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "status": {"enum": ["active", "revoked"]},
+    "local_only": {"type": "boolean"},
+    "remote_export_allowed": {"type": "boolean"},
+    "sample_refs": {"type": "array", "maxItems": 128, "items": {"type": "string"}},
+    "output_format": {"const": "wav"}
+  }
+}
