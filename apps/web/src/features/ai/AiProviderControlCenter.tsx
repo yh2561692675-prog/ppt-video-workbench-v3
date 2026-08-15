@@ -79,11 +79,16 @@ export function AiProviderControlCenter() {
             <span className="status-pill success">本地</span>
           </div>
           {models.isLoading ? <p className="muted">正在读取模型库存…</p> : null}
-          {models.isError ? <p className="error">模型中心暂时不可用，本地音频导入仍可继续。</p> : null}
+          {models.isError ? (
+            <p className="error">模型中心暂时不可用，本地音频导入仍可继续。</p>
+          ) : null}
           {models.data?.length ? (
             <div className="p2-card-list">
               {models.data.map((model) => (
-                <div className="p2-card" key={`${model.descriptor.model_id}-${model.descriptor.revision}`}>
+                <div
+                  className="p2-card"
+                  key={`${model.descriptor.model_id}-${model.descriptor.revision}`}
+                >
                   <strong>{model.descriptor.display_name}</strong>
                   <span className="muted">
                     {model.descriptor.kind} · {model.descriptor.engine} ·{' '}
@@ -118,7 +123,8 @@ export function AiProviderControlCenter() {
                 <div className="p2-card" key={voice.voice_id}>
                   <strong>{voice.display_name}</strong>
                   <span className="muted">
-                    {voice.kind} · {voice.local_only ? 'local-only' : 'remote-capable'} · {voice.status}
+                    {voice.kind} · {voice.local_only ? 'local-only' : 'remote-capable'} ·{' '}
+                    {voice.status}
                   </span>
                   {voice.status === 'active' ? (
                     <button

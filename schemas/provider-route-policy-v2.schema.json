@@ -6,20 +6,25 @@
   "additionalProperties": false,
   "required": ["policy_id", "policy_fingerprint", "capability_id"],
   "properties": {
-    "schema_version": {"const": 2},
-    "policy_id": {"type": "string", "minLength": 1, "maxLength": 128},
-    "policy_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-    "capability_id": {"type": "string", "minLength": 1, "maxLength": 100},
-    "allowed_provider_ids": {"anyOf": [{"type": "array", "maxItems": 100, "items": {"type": "string"}}, {"type": "null"}]},
-    "fixed_provider_id": {"anyOf": [{"type": "string", "maxLength": 128}, {"type": "null"}]},
-    "credential_ref": {"anyOf": [{"type": "string", "maxLength": 200}, {"type": "null"}]},
-    "price_book_version": {"anyOf": [{"type": "string", "maxLength": 100}, {"type": "null"}]},
-    "data_classification": {"enum": ["public", "internal", "sensitive", "restricted"]},
-    "allowed_regions": {"type": "array", "maxItems": 100, "items": {"type": "string"}},
-    "allow_remote_https": {"type": "boolean"},
-    "allow_failover": {"type": "boolean"},
-    "max_cost_minor": {"anyOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]},
-    "retention_class": {"enum": ["none", "ephemeral", "provider_defined", "persistent"]},
-    "require_idempotency": {"type": "boolean"}
+    "schema_version": { "const": 2 },
+    "policy_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "policy_fingerprint": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "capability_id": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "allowed_provider_ids": {
+      "anyOf": [
+        { "type": "array", "maxItems": 100, "items": { "type": "string" } },
+        { "type": "null" }
+      ]
+    },
+    "fixed_provider_id": { "anyOf": [{ "type": "string", "maxLength": 128 }, { "type": "null" }] },
+    "credential_ref": { "anyOf": [{ "type": "string", "maxLength": 200 }, { "type": "null" }] },
+    "price_book_version": { "anyOf": [{ "type": "string", "maxLength": 100 }, { "type": "null" }] },
+    "data_classification": { "enum": ["public", "internal", "sensitive", "restricted"] },
+    "allowed_regions": { "type": "array", "maxItems": 100, "items": { "type": "string" } },
+    "allow_remote_https": { "type": "boolean" },
+    "allow_failover": { "type": "boolean" },
+    "max_cost_minor": { "anyOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] },
+    "retention_class": { "enum": ["none", "ephemeral", "provider_defined", "persistent"] },
+    "require_idempotency": { "type": "boolean" }
   }
 }

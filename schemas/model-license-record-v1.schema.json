@@ -4,17 +4,28 @@
   "title": "Local model license record v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "model_id", "revision", "license_ref", "redistribution_allowed", "commercial_use_allowed", "attribution_required", "source_url", "accepted_at", "accepted_by"],
+  "required": [
+    "schema_version",
+    "model_id",
+    "revision",
+    "license_ref",
+    "redistribution_allowed",
+    "commercial_use_allowed",
+    "attribution_required",
+    "source_url",
+    "accepted_at",
+    "accepted_by"
+  ],
   "properties": {
-    "schema_version": {"const": 1},
-    "model_id": {"type": "string"},
-    "revision": {"type": "string"},
-    "license_ref": {"type": "string", "minLength": 1},
-    "redistribution_allowed": {"type": "boolean"},
-    "commercial_use_allowed": {"type": "boolean"},
-    "attribution_required": {"type": "boolean"},
-    "source_url": {"type": ["string", "null"], "format": "uri"},
-    "accepted_at": {"type": "string", "format": "date-time"},
-    "accepted_by": {"type": "string", "minLength": 1, "maxLength": 200}
+    "schema_version": { "const": 1 },
+    "model_id": { "type": "string" },
+    "revision": { "type": "string" },
+    "license_ref": { "type": "string", "minLength": 1 },
+    "redistribution_allowed": { "type": "boolean" },
+    "commercial_use_allowed": { "type": "boolean" },
+    "attribution_required": { "type": "boolean" },
+    "source_url": { "type": ["string", "null"], "format": "uri" },
+    "accepted_at": { "type": "string", "format": "date-time" },
+    "accepted_by": { "type": "string", "minLength": 1, "maxLength": 200 }
   }
 }

@@ -20,16 +20,16 @@
 
 ## 2. 项目顺序和 Gate
 
-| 顺序 | 项目 | 依赖 | Gate |
-| --- | --- | --- | --- |
-| AI00 | 基线冻结与本地独立性红线 | 当前主集成线 | AI_BASELINE_FROZEN |
-| AI01 | 本地 ASR/TTS 模型管理中心 | AI00 | LOCAL_MODEL_CENTER_READY |
-| AI02 | 多供应商统一适配 | AI01 | PROVIDER_ADAPTERS_READY |
-| AI03 | 失败切换、预算和限流 | AI02 | PROVIDER_GOVERNANCE_READY |
-| AI04 | 本人声音克隆与授权管理 | AI03 | VOICE_IDENTITY_READY |
-| AI05 | HeyGen 等外部服务可靠批处理 | AI04 | REMOTE_BATCH_READY |
-| AI06 | 旁白润色、智能断句和字幕翻译 | AI05 | AI_CONTENT_ASSIST_READY |
-| AI07 | 总接线、Windows 验收和二次收口 | AI01–AI06 | AI_PROVIDER_PLATFORM_READY |
+| 顺序 | 项目                           | 依赖         | Gate                       |
+| ---- | ------------------------------ | ------------ | -------------------------- |
+| AI00 | 基线冻结与本地独立性红线       | 当前主集成线 | AI_BASELINE_FROZEN         |
+| AI01 | 本地 ASR/TTS 模型管理中心      | AI00         | LOCAL_MODEL_CENTER_READY   |
+| AI02 | 多供应商统一适配               | AI01         | PROVIDER_ADAPTERS_READY    |
+| AI03 | 失败切换、预算和限流           | AI02         | PROVIDER_GOVERNANCE_READY  |
+| AI04 | 本人声音克隆与授权管理         | AI03         | VOICE_IDENTITY_READY       |
+| AI05 | HeyGen 等外部服务可靠批处理    | AI04         | REMOTE_BATCH_READY         |
+| AI06 | 旁白润色、智能断句和字幕翻译   | AI05         | AI_CONTENT_ASSIST_READY    |
+| AI07 | 总接线、Windows 验收和二次收口 | AI01–AI06    | AI_PROVIDER_PLATFORM_READY |
 
 AI00 和 AI07 是程序级阶段，不增加用户定义的六个功能项目。
 
@@ -681,12 +681,12 @@ AI00 和 AI07 是程序级阶段，不增加用户定义的六个功能项目。
 - apps/api/src/workbench/audio/transcriber.py
 - scripts/provision_asr_model.py
 - apps/web/src/features/settings/ai
-- schemas/local-model-*
+- schemas/local-model-\*
 
 ### AI02–AI03
 
 - apps/api/src/workbench/providers
-- schemas/provider-*
+- schemas/provider-\*
 - apps/web/src/features/providers
 - apps/web/src/features/settings/ai
 
@@ -695,15 +695,15 @@ AI00 和 AI07 是程序级阶段，不增加用户定义的六个功能项目。
 - apps/api/src/workbench/voices
 - apps/api/src/workbench/api/voices.py
 - apps/web/src/features/settings/ai/VoiceIdentityCenter.tsx
-- schemas/voice-*
+- schemas/voice-\*
 
 ### AI05
 
 - apps/api/src/workbench/providers/batch
 - apps/api/src/workbench/integrations/heygen
-- apps/api/src/workbench/audio/heygen_*
+- apps/api/src/workbench/audio/heygen\_\*
 - apps/web/src/features/audio/heygen
-- schemas/remote-batch-*
+- schemas/remote-batch-\*
 
 ### AI06
 
@@ -712,7 +712,7 @@ AI00 和 AI07 是程序级阶段，不增加用户定义的六个功能项目。
 - apps/api/src/workbench/subtitles
 - apps/web/src/features/narration
 - apps/web/src/features/subtitles
-- schemas/content-assist-*
+- schemas/content-assist-\*
 
 共享文件 main.py、OpenAPI、数据库 migration 和设置导航由每个项目结束时的单一集成人串行修改。
 

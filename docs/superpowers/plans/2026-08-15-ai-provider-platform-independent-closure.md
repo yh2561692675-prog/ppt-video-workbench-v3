@@ -23,18 +23,18 @@
 
 ## 2. Gate 顺序
 
-| 阶段 | 目标 Gate | 完成后动作 |
-|---|---|---|
-| AI00 | `AI_WORKTREE_ISOLATED` | 直接进入 AI01 |
-| AI01 | `LOCAL_MODEL_CENTER_READY` | 直接进入 AI02 |
-| AI02 | `PROVIDER_ADAPTERS_READY` | 直接进入 AI03 |
-| AI03 | `PROVIDER_GOVERNANCE_READY` | 直接进入 AI04 |
-| AI04 | `VOICE_IDENTITY_READY` | 直接进入 AI05 |
-| AI05 | `REMOTE_BATCH_READY` | 直接进入 AI06 |
-| AI06 | `AI_CONTENT_ASSIST_READY` | 直接进入 AI07 |
-| AI07 | `AI_WEB_UI_READY` | 直接进入 AI08 |
-| AI08 | `AI_PACKAGE_PREFLIGHT_READY` | 直接进入 AI09 |
-| AI09 | `AI_PROVIDER_LOCAL_REGRESSION` | 直接进入 AI10 |
+| 阶段 | 目标 Gate                               | 完成后动作       |
+| ---- | --------------------------------------- | ---------------- |
+| AI00 | `AI_WORKTREE_ISOLATED`                  | 直接进入 AI01    |
+| AI01 | `LOCAL_MODEL_CENTER_READY`              | 直接进入 AI02    |
+| AI02 | `PROVIDER_ADAPTERS_READY`               | 直接进入 AI03    |
+| AI03 | `PROVIDER_GOVERNANCE_READY`             | 直接进入 AI04    |
+| AI04 | `VOICE_IDENTITY_READY`                  | 直接进入 AI05    |
+| AI05 | `REMOTE_BATCH_READY`                    | 直接进入 AI06    |
+| AI06 | `AI_CONTENT_ASSIST_READY`               | 直接进入 AI07    |
+| AI07 | `AI_WEB_UI_READY`                       | 直接进入 AI08    |
+| AI08 | `AI_PACKAGE_PREFLIGHT_READY`            | 直接进入 AI09    |
+| AI09 | `AI_PROVIDER_LOCAL_REGRESSION`          | 直接进入 AI10    |
 | AI10 | `AI_PROVIDER_INTEGRATION_HANDOFF_READY` | 停在交接，不合并 |
 
 若阶段存在仅外部可完成的项目，不阻断可独立验证的本地 Gate，但必须用 `BLOCKED_EXTERNAL` 单列；若本地工程缺陷未解决，则该阶段不能进入 PASS。

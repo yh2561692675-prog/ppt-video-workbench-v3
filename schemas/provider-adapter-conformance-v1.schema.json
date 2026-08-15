@@ -6,14 +6,19 @@
   "additionalProperties": false,
   "required": ["adapter_id", "descriptor_fingerprint", "status", "checks"],
   "properties": {
-    "schema_version": {"const": 1},
-    "adapter_id": {"type": "string", "minLength": 1, "maxLength": 128},
-    "descriptor_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-    "tested_at": {"type": "string", "format": "date-time"},
-    "status": {"enum": ["pass", "fail", "degraded"]},
-    "checks": {"type": "object", "minProperties": 1, "maxProperties": 64, "additionalProperties": {"enum": ["pass", "fail", "skip"]}},
-    "error_codes": {"type": "array", "maxItems": 64, "items": {"type": "string"}},
-    "sanitized": {"type": "boolean"},
-    "fake_provider": {"type": "boolean"}
+    "schema_version": { "const": 1 },
+    "adapter_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "descriptor_fingerprint": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "tested_at": { "type": "string", "format": "date-time" },
+    "status": { "enum": ["pass", "fail", "degraded"] },
+    "checks": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 64,
+      "additionalProperties": { "enum": ["pass", "fail", "skip"] }
+    },
+    "error_codes": { "type": "array", "maxItems": 64, "items": { "type": "string" } },
+    "sanitized": { "type": "boolean" },
+    "fake_provider": { "type": "boolean" }
   }
 }

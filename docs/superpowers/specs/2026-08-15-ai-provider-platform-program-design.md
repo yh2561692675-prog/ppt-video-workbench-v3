@@ -12,14 +12,14 @@
 
 本期由六个严格有序的项目组成：
 
-| 编号 | 项目 | 最终 Gate |
-| --- | --- | --- |
-| AI01 | 本地 ASR/TTS 模型管理中心 | LOCAL_MODEL_CENTER_READY |
-| AI02 | 多 LLM、ASR、TTS、渲染供应商统一适配 | PROVIDER_ADAPTERS_READY |
-| AI03 | 自动失败切换、费用预算和限流 | PROVIDER_GOVERNANCE_READY |
-| AI04 | 本人声音克隆及模型授权管理 | VOICE_IDENTITY_READY |
-| AI05 | HeyGen 等外部服务可靠批处理 | REMOTE_BATCH_READY |
-| AI06 | AI 旁白润色、智能断句和字幕翻译 | AI_CONTENT_ASSIST_READY |
+| 编号 | 项目                                 | 最终 Gate                 |
+| ---- | ------------------------------------ | ------------------------- |
+| AI01 | 本地 ASR/TTS 模型管理中心            | LOCAL_MODEL_CENTER_READY  |
+| AI02 | 多 LLM、ASR、TTS、渲染供应商统一适配 | PROVIDER_ADAPTERS_READY   |
+| AI03 | 自动失败切换、费用预算和限流         | PROVIDER_GOVERNANCE_READY |
+| AI04 | 本人声音克隆及模型授权管理           | VOICE_IDENTITY_READY      |
+| AI05 | HeyGen 等外部服务可靠批处理          | REMOTE_BATCH_READY        |
+| AI06 | AI 旁白润色、智能断句和字幕翻译      | AI_CONTENT_ASSIST_READY   |
 
 六个项目全部通过后，才允许写入 AI_PROVIDER_PLATFORM_READY=PASS。
 
@@ -134,18 +134,18 @@ AI 生成内容一律先生成候选：
 
 ## 5. 总体组件
 
-| 组件 | 职责 | 建议位置 |
-| --- | --- | --- |
-| LocalModelRegistry | 模型描述、revision、文件 manifest、兼容性和状态 | apps/api/src/workbench/ai_models |
-| ModelProvisioner | 下载、断点续传、校验、原子安装、磁盘预算 | apps/api/src/workbench/ai_models |
-| ModelRuntimeManager | 加载、卸载、设备选择、健康探测和资源租约 | apps/api/src/workbench/ai_models |
-| ProviderRegistry | 统一供应商与能力库存 | 复用 providers/registry.py |
-| ProviderBroker | 路由、幂等、缓存、预算、限流和切换 | 扩展 providers/broker.py |
-| CostLedger | 预算保留、核销、释放和对账 | 扩展 providers/billing.py |
-| VoiceIdentityRegistry | 声音身份、授权、参考录音和模型 revision | apps/api/src/workbench/voices |
-| RemoteBatchCoordinator | 批次、页面、分段、尝试、远端状态和恢复 | apps/api/src/workbench/providers/batch |
-| AIContentAssist | 润色、断句、翻译候选与差异 | apps/api/src/workbench/content_assist |
-| AI Settings UI | 模型、供应商、预算、声音、任务和诊断 | apps/web/src/features/settings/ai |
+| 组件                   | 职责                                            | 建议位置                               |
+| ---------------------- | ----------------------------------------------- | -------------------------------------- |
+| LocalModelRegistry     | 模型描述、revision、文件 manifest、兼容性和状态 | apps/api/src/workbench/ai_models       |
+| ModelProvisioner       | 下载、断点续传、校验、原子安装、磁盘预算        | apps/api/src/workbench/ai_models       |
+| ModelRuntimeManager    | 加载、卸载、设备选择、健康探测和资源租约        | apps/api/src/workbench/ai_models       |
+| ProviderRegistry       | 统一供应商与能力库存                            | 复用 providers/registry.py             |
+| ProviderBroker         | 路由、幂等、缓存、预算、限流和切换              | 扩展 providers/broker.py               |
+| CostLedger             | 预算保留、核销、释放和对账                      | 扩展 providers/billing.py              |
+| VoiceIdentityRegistry  | 声音身份、授权、参考录音和模型 revision         | apps/api/src/workbench/voices          |
+| RemoteBatchCoordinator | 批次、页面、分段、尝试、远端状态和恢复          | apps/api/src/workbench/providers/batch |
+| AIContentAssist        | 润色、断句、翻译候选与差异                      | apps/api/src/workbench/content_assist  |
+| AI Settings UI         | 模型、供应商、预算、声音、任务和诊断            | apps/web/src/features/settings/ai      |
 
 ## 6. 共享契约
 
@@ -719,15 +719,15 @@ Provider 缓存至少绑定：
 
 在不包含真实供应商商务协调的情况下，建议工程量：
 
-| 项目 | 估算 |
-| --- | --- |
-| AI01 本地模型中心 | 8–12 个工程日 |
-| AI02 统一适配生产化 | 8–12 个工程日 |
-| AI03 预算、限流和切换 | 7–10 个工程日 |
-| AI04 声音克隆与授权 | 10–15 个工程日 |
-| AI05 远端可靠批处理 | 7–10 个工程日 |
-| AI06 内容辅助 | 8–12 个工程日 |
-| 集成、Windows 验收和二次收口 | 6–10 个工程日 |
+| 项目                         | 估算           |
+| ---------------------------- | -------------- |
+| AI01 本地模型中心            | 8–12 个工程日  |
+| AI02 统一适配生产化          | 8–12 个工程日  |
+| AI03 预算、限流和切换        | 7–10 个工程日  |
+| AI04 声音克隆与授权          | 10–15 个工程日 |
+| AI05 远端可靠批处理          | 7–10 个工程日  |
+| AI06 内容辅助                | 8–12 个工程日  |
+| 集成、Windows 验收和二次收口 | 6–10 个工程日  |
 
 推荐严格串行实施 AI01 → AI02 → AI03 → AI04 → AI05 → AI06。真实外部 canary 可在对应功能工程完成后等待授权，但不得阻塞后续本地工程开发。
 

@@ -1208,8 +1208,7 @@ export const api = {
     request<AiVoiceIdentity>(`/api/ai/voices/${encodeURIComponent(voiceId)}/revoke`, {
       method: 'POST',
     }),
-  listContentAssistCandidates: () =>
-    request<AiContentAssistCandidate[]>('/api/ai/content-assist'),
+  listContentAssistCandidates: () => request<AiContentAssistCandidate[]>('/api/ai/content-assist'),
   acceptContentAssistCandidate: (candidateId: string) =>
     request<AiContentAssistCandidate>(
       `/api/ai/content-assist/${encodeURIComponent(candidateId)}/accept`,

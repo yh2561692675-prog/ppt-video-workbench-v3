@@ -4,32 +4,51 @@
   "title": "Provider operation v2",
   "type": "object",
   "additionalProperties": false,
-  "required": ["operation_id", "attempt_id", "idempotency_key", "provider_id", "capability_id", "operation_kind", "policy_fingerprint", "expected_output_schema"],
+  "required": [
+    "operation_id",
+    "attempt_id",
+    "idempotency_key",
+    "provider_id",
+    "capability_id",
+    "operation_kind",
+    "policy_fingerprint",
+    "expected_output_schema"
+  ],
   "properties": {
-    "schema_version": {"const": 2},
-    "operation_id": {"type": "string", "format": "uuid"},
-    "attempt_id": {"type": "string", "format": "uuid"},
-    "idempotency_key": {"type": "string", "format": "uuid"},
-    "provider_id": {"type": "string"},
-    "capability_id": {"type": "string"},
-    "operation_kind": {"enum": ["llm", "asr", "tts", "ocr", "avatar", "renderer"]},
-    "policy_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-    "credential_ref": {"anyOf": [{"type": "string", "maxLength": 200}, {"type": "null"}]},
-    "model_requested": {"anyOf": [{"type": "string", "maxLength": 200}, {"type": "null"}]},
-    "model_resolved": {"anyOf": [{"type": "string", "maxLength": 200}, {"type": "null"}]},
-    "input_refs": {"type": "array", "maxItems": 10000, "items": {"type": "string"}},
-    "output_refs": {"type": "array", "maxItems": 10000, "items": {"type": "string"}},
-    "expected_output_schema": {"type": "string", "minLength": 1, "maxLength": 200},
-    "input_data_classification": {"enum": ["public", "internal", "sensitive", "restricted"]},
-    "status": {"enum": ["queued", "running", "succeeded", "failed", "cancelled", "unknown_billed"]},
-    "usage": {"type": "object", "maxProperties": 64, "additionalProperties": {"type": ["number", "string"]}},
-    "estimated_cost_minor": {"anyOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]},
-    "billed_cost_minor": {"anyOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]},
-    "billing_state": {"enum": ["none", "known", "unknown"]},
-    "provider_request_id": {"anyOf": [{"type": "string", "maxLength": 255}, {"type": "null"}]},
-    "cache_identity": {"anyOf": [{"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, {"type": "null"}]},
-    "started_at": {"type": "string", "format": "date-time"},
-    "finished_at": {"anyOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]},
-    "warnings": {"type": "array", "maxItems": 100, "items": {"type": "string"}}
+    "schema_version": { "const": 2 },
+    "operation_id": { "type": "string", "format": "uuid" },
+    "attempt_id": { "type": "string", "format": "uuid" },
+    "idempotency_key": { "type": "string", "format": "uuid" },
+    "provider_id": { "type": "string" },
+    "capability_id": { "type": "string" },
+    "operation_kind": { "enum": ["llm", "asr", "tts", "ocr", "avatar", "renderer"] },
+    "policy_fingerprint": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "credential_ref": { "anyOf": [{ "type": "string", "maxLength": 200 }, { "type": "null" }] },
+    "model_requested": { "anyOf": [{ "type": "string", "maxLength": 200 }, { "type": "null" }] },
+    "model_resolved": { "anyOf": [{ "type": "string", "maxLength": 200 }, { "type": "null" }] },
+    "input_refs": { "type": "array", "maxItems": 10000, "items": { "type": "string" } },
+    "output_refs": { "type": "array", "maxItems": 10000, "items": { "type": "string" } },
+    "expected_output_schema": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "input_data_classification": { "enum": ["public", "internal", "sensitive", "restricted"] },
+    "status": {
+      "enum": ["queued", "running", "succeeded", "failed", "cancelled", "unknown_billed"]
+    },
+    "usage": {
+      "type": "object",
+      "maxProperties": 64,
+      "additionalProperties": { "type": ["number", "string"] }
+    },
+    "estimated_cost_minor": { "anyOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] },
+    "billed_cost_minor": { "anyOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] },
+    "billing_state": { "enum": ["none", "known", "unknown"] },
+    "provider_request_id": {
+      "anyOf": [{ "type": "string", "maxLength": 255 }, { "type": "null" }]
+    },
+    "cache_identity": {
+      "anyOf": [{ "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }, { "type": "null" }]
+    },
+    "started_at": { "type": "string", "format": "date-time" },
+    "finished_at": { "anyOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] },
+    "warnings": { "type": "array", "maxItems": 100, "items": { "type": "string" } }
   }
 }

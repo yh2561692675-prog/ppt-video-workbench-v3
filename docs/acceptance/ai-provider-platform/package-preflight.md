@@ -15,15 +15,15 @@
 
 ## 已通过
 
-| 检查 | 结果 | 证据 |
-| --- | --- | --- |
-| API Python compile | PASS | `.venv/Scripts/python.exe -m compileall -q apps/api/src` |
-| AI/Provider schema JSON | PASS | 15 个 `schemas/*ai/model/provider/voice/content-assist*.schema.json` |
-| Web typecheck | PASS | `pnpm -C apps/web typecheck` |
-| Web production build | PASS | `pnpm -C apps/web build` |
-| local-only API chain | PASS | `tests/integration/test_ai_provider_local_only.py` |
-| AI UI default-off | PASS | `apps/web/src/features/ai/AiProviderControlCenter.test.tsx` |
-| candidate/core/DP45 write check | PASS | 本阶段状态清单无目标候选、DP45 或 core worktree 路径修改 |
+| 检查                            | 结果 | 证据                                                                 |
+| ------------------------------- | ---- | -------------------------------------------------------------------- |
+| API Python compile              | PASS | `.venv/Scripts/python.exe -m compileall -q apps/api/src`             |
+| AI/Provider schema JSON         | PASS | 15 个 `schemas/*ai/model/provider/voice/content-assist*.schema.json` |
+| Web typecheck                   | PASS | `pnpm -C apps/web typecheck`                                         |
+| Web production build            | PASS | `pnpm -C apps/web build`                                             |
+| local-only API chain            | PASS | `tests/integration/test_ai_provider_local_only.py`                   |
+| AI UI default-off               | PASS | `apps/web/src/features/ai/AiProviderControlCenter.test.tsx`          |
+| candidate/core/DP45 write check | PASS | 本阶段状态清单无目标候选、DP45 或 core worktree 路径修改             |
 
 ## 保留边界
 
