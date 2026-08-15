@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import time
 import wave
 from dataclasses import dataclass
@@ -337,7 +336,7 @@ def _require_windows_path_budget(run_root: Path) -> None:
         / "pages"
         / ".page-0001.tmp.mp4"
     )
-    if os.name == "nt" and len(str(projected)) >= _WINDOWS_ACCEPTANCE_PATH_LIMIT:
+    if len(str(projected)) >= _WINDOWS_ACCEPTANCE_PATH_LIMIT:
         raise ValueError(
             "DP44 output matrix root is too deep for Windows FFmpeg publication; "
             "choose a shorter path inside test-results"

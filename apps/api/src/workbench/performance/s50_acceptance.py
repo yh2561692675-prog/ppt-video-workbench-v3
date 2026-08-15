@@ -649,7 +649,10 @@ def _require_windows_path_budget(run_root: Path) -> None:
         / "Remotion工程"
         / "ProjectVideoProps.json"
     )
-    if os.name == "nt" and len(str(projected)) >= _WINDOWS_ACCEPTANCE_PATH_LIMIT:
+    # The evidence is published by the Windows package path, so validate the
+    # budget on every host instead of letting Linux/macOS tests hide a release
+    # layout that will fail at Windows publication time.
+    if len(str(projected)) >= _WINDOWS_ACCEPTANCE_PATH_LIMIT:
         raise ValueError(
             "S50 acceptance output root is too deep for Windows package publication; "
             "choose a shorter path inside test-results"

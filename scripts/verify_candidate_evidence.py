@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from collections.abc import Mapping
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 
@@ -49,6 +49,21 @@ def _relative_evidence_refs(value: object) -> list[str]:
     return refs
 
 
+def _unsafe_reference(reference: str) -> bool:
+    """Recognize POSIX and Windows absolute/traversal refs on every host."""
+
+    normalized = reference.replace("\\", "/")
+    posix = PurePosixPath(normalized)
+    windows = PureWindowsPath(reference)
+    return (
+        posix.is_absolute()
+        or windows.is_absolute()
+        or bool(windows.drive)
+        or ".." in posix.parts
+        or ".." in windows.parts
+    )
+
+
 def verify_candidate(candidate_path: Path, evidence_paths: tuple[Path, ...]) -> dict[str, Any]:
     candidate = _load(candidate_path, "candidate_manifest")
     candidate_id = candidate.get("candidate_id")
@@ -79,7 +94,7 @@ def verify_candidate(candidate_path: Path, evidence_paths: tuple[Path, ...]) -> 
         if isinstance(signoff, Mapping) and signoff.get("signed") is not True:
             blockers.append(f"signoff_missing:{path.name}")
         for reference in _relative_evidence_refs(evidence):
-            if Path(reference).is_absolute() or ".." in Path(reference).parts:
+            if _unsafe_reference(reference):
                 blockers.append(f"evidence_path_outside_root:{path.name}")
                 break
         reports.append({"path": path.as_posix(), "candidate_ids": sorted(set(ids))})

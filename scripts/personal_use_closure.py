@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from collections.abc import Mapping
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 
@@ -52,6 +52,21 @@ def _refs(value: object) -> list[str]:
     return found
 
 
+def _unsafe_reference(reference: str) -> bool:
+    """Recognize POSIX and Windows absolute/traversal refs on every host."""
+
+    normalized = reference.replace("\\", "/")
+    posix = PurePosixPath(normalized)
+    windows = PureWindowsPath(reference)
+    return (
+        posix.is_absolute()
+        or windows.is_absolute()
+        or bool(windows.drive)
+        or ".." in posix.parts
+        or ".." in windows.parts
+    )
+
+
 def aggregate_closure(
     candidate_path: Path,
     evidence_paths: tuple[Path, ...],
@@ -87,9 +102,7 @@ def aggregate_closure(
         failures = report.get("blocking_failures")
         if isinstance(failures, list) and failures:
             blockers.append(f"blocking_failures:{path.name}")
-        unsafe_refs = [
-            ref for ref in _refs(report) if Path(ref).is_absolute() or ".." in Path(ref).parts
-        ]
+        unsafe_refs = [ref for ref in _refs(report) if _unsafe_reference(ref)]
         if unsafe_refs:
             blockers.append(f"evidence_path_outside_root:{path.name}")
         evidence.append(

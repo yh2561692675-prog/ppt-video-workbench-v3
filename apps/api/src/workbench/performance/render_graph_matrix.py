@@ -11,7 +11,6 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-import os
 import subprocess
 import time
 import wave
@@ -497,7 +496,7 @@ def _candidate_run_root(output_root: Path, manifest_sha256: str, run_id: str) ->
 
 def _require_windows_path_budget(run_root: Path) -> None:
     projected = run_root / "w" / "media" / "scene-a.png"
-    if os.name == "nt" and len(str(projected)) >= _WINDOWS_ACCEPTANCE_PATH_LIMIT:
+    if len(str(projected)) >= _WINDOWS_ACCEPTANCE_PATH_LIMIT:
         raise ValueError(
             "DP44 RenderGraph root is too deep for Windows runtime assets; "
             "choose a shorter path inside test-results"
