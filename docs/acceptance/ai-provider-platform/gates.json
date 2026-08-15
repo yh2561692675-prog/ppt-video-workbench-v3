@@ -106,7 +106,7 @@
       "evidence": [
         "docs/acceptance/ai-provider-platform/integration-handoff/README.md",
         "docs/acceptance/ai-provider-platform/integration-handoff/handoff.json",
-        "commit 30d24a4721b22415585363b7a35cfb0749f6ba16",
+        "commit 82524bc1a5728747ecb6d0612c30c698d8ab5c52",
         "CI 31889995710",
         "platform-contracts 31889995761"
       ],
