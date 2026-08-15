@@ -72,6 +72,7 @@ from workbench.diagnostics.package import DiagnosticPackager
 from workbench.diagnostics.probes import build_default_probes, create_heygen_health_probe
 from workbench.domain.enums import JobType
 from workbench.e2e.synthetic import (
+    SyntheticAuthoritativePreviewExecutor,
     SyntheticTranscriptionBackend,
     SyntheticVideoRenderer,
     synthetic_e2e_enabled,
@@ -209,7 +210,7 @@ def create_app(
             worker.stop(timeout=10.0)
         service.close()
 
-    app = FastAPI(title="PPT Video Workbench", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="PPT Video Workbench", version="0.1.1", lifespan=lifespan)
     app.state.project_service = service
     app.state.llm_profile_store = profile_store
     app.state.heygen_profile_store = heygen_profile_store
@@ -387,6 +388,13 @@ def create_app(
     )
     authoritative_preview_service = AuthoritativePreviewService(
         service,
+        executor=(
+            SyntheticAuthoritativePreviewExecutor(
+                str(renderer_runtime.ffmpeg_executable) if renderer_runtime else None
+            )
+            if synthetic_e2e_enabled()
+            else None
+        ),
         ffmpeg=(str(renderer_runtime.ffmpeg_executable) if renderer_runtime else "ffmpeg"),
         ffprobe=(str(renderer_runtime.ffprobe_executable) if renderer_runtime else "ffprobe"),
     )

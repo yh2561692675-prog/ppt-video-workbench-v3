@@ -16,7 +16,23 @@ playwright-report/
 __pycache__/
 *.py[cod]
 *.egg-info/
+
+# Local secrets and credentials
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+.netrc
+.npmrc
+.pypirc
+credentials.json
+secrets.json
+service-account*.json
 workspace-data/
 tests/.e2e-workspace/
 tests/.e2e-fixtures/

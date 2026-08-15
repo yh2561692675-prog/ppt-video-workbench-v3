@@ -24,7 +24,7 @@ from peripheral_host.repositories import ArtifactRecord, ConcurrentTransitionErr
 from peripheral_host.scheduler import Scheduler
 from peripheral_host.service import InvalidJobAction, JobNotFound, JobService
 
-COMPONENT_VERSION = "0.1.0"
+COMPONENT_VERSION = "0.1.1"
 MAX_REQUEST_BODY_BYTES = 1024 * 1024
 
 _USER_MESSAGES = {

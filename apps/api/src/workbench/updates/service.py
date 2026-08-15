@@ -67,7 +67,7 @@ class UpdateService:
         self,
         workspace_root: Path,
         *,
-        current_version: str = "0.1.0",
+        current_version: str = "0.1.1",
         health_check: HealthCheck | None = None,
         migration_hook: MigrationHook | None = None,
         disk_free: DiskFreeProbe | None = None,

@@ -13,6 +13,12 @@ const useExternalServers =
 // leave a daemon render worker alive for a short time; sharing the fixed
 // workspace would let that worker claim jobs from the next run.
 const e2eWorkspace = path.resolve('test-results', `e2e-workspace-${process.pid}`);
+const servicePath =
+  process.platform === 'win32'
+    ? [`C:\\Program Files\\LibreOffice\\program`, process.env.PATH]
+        .filter((value): value is string => Boolean(value))
+        .join(path.delimiter)
+    : process.env.PATH;
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -61,6 +67,10 @@ export default defineConfig({
             // UTF-8, including when the browser flow emits Chinese fixture data.
             PYTHONUTF8: '1',
             PYTHONIOENCODING: 'utf-8',
+            // CI installs LibreOffice globally. Chocolatey's program directory
+            // is not propagated to later Windows steps, so pass it explicitly
+            // to the API process that renders PPTX previews.
+            PATH: servicePath,
             // Exercise the same self-contained renderer layout required by the
             // Windows launcher; never fall back to a global pnpm/Remotion tool.
             WORKBENCH_RUNTIME_ROOT: path.resolve('runtime-assets'),

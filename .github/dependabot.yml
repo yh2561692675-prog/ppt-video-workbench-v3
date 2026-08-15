@@ -1,0 +1,58 @@
+version: 2
+
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: monthly
+      time: '03:00'
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - python:uv
+      - maintenance
+    groups:
+      python-routine:
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+      time: '03:30'
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - maintenance
+    groups:
+      remotion-suite:
+        patterns:
+          - remotion
+          - '@remotion/*'
+      npm-routine:
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+      time: '04:00'
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - maintenance
+    groups:
+      workflow-actions:
+        patterns:
+          - '*'

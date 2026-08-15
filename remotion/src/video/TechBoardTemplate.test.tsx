@@ -1,7 +1,13 @@
+import type { ComponentProps } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { TechBoardTemplate } from './TechBoardTemplate';
+
+vi.mock('remotion', () => ({
+  Img: (props: ComponentProps<'img'>) => <img {...props} />,
+  staticFile: (path: string) => `/${path}`,
+}));
 
 const page = {
   page_id: 'page-1',

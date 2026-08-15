@@ -1,0 +1,4 @@
+interface:
+  display_name: "PPT Video Workbench"
+  short_description: "Run and maintain auditable PPT-to-video workflows"
+  default_prompt: "Use $ppt-video-workbench to prepare, validate, troubleshoot, or maintain this PPT-to-video workflow."

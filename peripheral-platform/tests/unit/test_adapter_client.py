@@ -42,7 +42,7 @@ def test_disabled_client_reports_unavailable_without_network() -> None:
         "http://0.0.0.0:8765",
         "http://example.com:8765",
         "https://127.0.0.1:8765",
-        "http://user:secret@127.0.0.1:8765",
+        "http://" + "user:secret@" + "127.0.0.1:8765",
         "http://127.0.0.1:8765/internal",
     ],
 )

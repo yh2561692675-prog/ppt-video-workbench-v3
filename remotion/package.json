@@ -1,6 +1,6 @@
 {
   "name": "@workbench/remotion",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,14 +9,14 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@remotion/cli": "4.0.340",
+    "@remotion/cli": "4.0.507",
     "react": "19.1.1",
     "react-dom": "19.1.1",
-    "remotion": "4.0.340"
+    "remotion": "4.0.507"
   },
   "devDependencies": {
     "@types/react": "19.1.9",
     "@types/react-dom": "19.1.7",
-    "vitest": "3.2.4"
+    "vitest": "3.2.6"
   }
 }

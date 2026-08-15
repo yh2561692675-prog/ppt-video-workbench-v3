@@ -11,7 +11,7 @@ from workbench.integrations.llm.client import LlmClient, LlmIntegrationError
 from workbench.main import create_app
 from workbench.settings.secret_store import SecretProtector
 
-TEST_KEY = "sk-test-super-secret-123456"
+TEST_KEY = "sk-" + "test-super-secret-123456"
 
 
 class ReversibleTestProtector(SecretProtector):

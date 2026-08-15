@@ -1,0 +1,87 @@
+name: Bug report
+description: Report a reproducible problem in PPT Video Workbench.
+title: '[Bug]: '
+labels:
+  - bug
+  - status:needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve PPT Video Workbench. Search existing Issues first.
+        Do not include API keys, tokens, private documents, project databases, or unredacted logs.
+        Report security vulnerabilities through the repository's private security reporting page.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Problem
+      description: What happened, and what did you expect instead?
+      placeholder: A clear, concise description of the observed and expected behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Use synthetic or redacted inputs whenever possible.
+      placeholder: |
+        1. Start the application with ...
+        2. Import a synthetic PPTX ...
+        3. Click ...
+        4. Observe ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Import and source parsing
+        - Narration, audio, or transcription
+        - Timeline, subtitles, or effects
+        - Preview or final rendering
+        - Web interface
+        - Packaging, installation, or updates
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Release tag or commit SHA where the problem occurs.
+      placeholder: v0.1.0 or 0123456
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python, Node.js, browser, and relevant media-tool versions.
+      placeholder: Windows 11; Python 3.12; Node.js 24; Edge 140; FFmpeg 7
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence
+      description: Add sanitized logs, screenshots, or a minimal synthetic fixture. Drag files here if needed.
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I searched for an existing Issue that reports the same problem.
+          required: true
+        - label: I removed credentials, private documents, personal data, and local filesystem secrets.
+          required: true
+        - label: This is not a security vulnerability requiring private disclosure.
+          required: true
