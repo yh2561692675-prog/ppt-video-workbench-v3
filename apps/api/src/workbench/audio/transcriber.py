@@ -33,7 +33,7 @@ def available_transcription_devices(
 ) -> list[str]:
     if cuda_device_count is None:
         try:
-            import ctranslate2  # type: ignore[import-not-found]
+            import ctranslate2  # type: ignore[import-untyped]
         except ImportError:
             return ["cpu"]
         cuda_device_count = ctranslate2.get_cuda_device_count
@@ -72,7 +72,7 @@ class FasterWhisperBackend:
 
     def transcribe(self, audio: Path, **kwargs: object) -> tuple[Iterable[RecognizedSegment], str]:
         try:
-            from faster_whisper import WhisperModel  # type: ignore[import-not-found]
+            from faster_whisper import WhisperModel  # type: ignore[import-untyped]
         except ImportError as error:
             raise ModelUnavailable("faster-whisper 运行时尚未安装") from error
         model = WhisperModel(

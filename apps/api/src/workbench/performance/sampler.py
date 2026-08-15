@@ -29,6 +29,15 @@ _MAX_INTERVAL_SECONDS: Final = 5.0
 _KIB: Final = 1024
 
 
+def _load_windows_dll(name: str, *, use_last_error: bool = False) -> Any:
+    """Load a Windows DLL without making non-Windows type checkers assume WinDLL exists."""
+
+    loader = getattr(ctypes, "WinDLL", None)
+    if loader is None:
+        raise OSError("Windows DLL loading is unavailable on this platform")
+    return loader(name, use_last_error=use_last_error)
+
+
 def _utc_now() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
@@ -618,7 +627,7 @@ def _count_directory(path: Path) -> int | None:
 def _windows_snapshot() -> list[ProcessObservation]:
     """Collect Windows metrics using stable documented kernel APIs only."""
 
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32 = _load_windows_dll("kernel32", use_last_error=True)
     process_entries = _windows_process_entries(kernel32)
     thread_counts = _windows_thread_counts(kernel32)
     observations: list[ProcessObservation] = []
@@ -765,7 +774,7 @@ def _windows_metrics(
         cpu_raw = kernel_raw + user_raw
         memory = _ProcessMemoryCounters()
         memory.cb = ctypes.sizeof(memory)
-        psapi = ctypes.WinDLL("psapi")
+        psapi = _load_windows_dll("psapi")
         has_memory = psapi.GetProcessMemoryInfo(handle, ctypes.byref(memory), memory.cb)
         rss = int(memory.WorkingSetSize) if has_memory else None
         handles = ctypes.c_ulong()
