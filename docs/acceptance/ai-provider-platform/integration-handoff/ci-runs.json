@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "head_commit": "30d24a4721b22415585363b7a35cfb0749f6ba16",
+  "runs": [
+    {
+      "workflow": "CI",
+      "run_id": 31889995710,
+      "status": "completed",
+      "conclusion": "success",
+      "checks": ["Ubuntu quality", "Windows quality"],
+      "url": "https://github.com/yh2561692675-prog/ppt-video-workbench-v3/actions/runs/31889995710"
+    },
+    {
+      "workflow": "platform-contracts",
+      "run_id": 31889995761,
+      "status": "completed",
+      "conclusion": "success",
+      "checks": ["Ubuntu contract-tests", "Windows contract-tests", "macOS contract-tests"],
+      "url": "https://github.com/yh2561692675-prog/ppt-video-workbench-v3/actions/runs/31889995761"
+    }
+  ],
+  "github_runner_note": "Node.js 20 deprecation annotations are non-blocking runner notices"
+}

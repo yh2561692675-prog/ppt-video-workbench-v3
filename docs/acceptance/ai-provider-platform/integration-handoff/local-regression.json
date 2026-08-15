@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "head_commit": "30d24a4721b22415585363b7a35cfb0749f6ba16",
+  "python": {
+    "full_suite": "1085 passed, 1 warning",
+    "ai_provider_targeted": "72 passed, 1 warning",
+    "ruff": "PASS",
+    "mypy": "PASS: no issues found in 380 source files",
+    "openapi_check": "PASS"
+  },
+  "web": {
+    "tests": "47 test files, 88 tests passed",
+    "typecheck": "PASS",
+    "production_build": "PASS"
+  },
+  "package_preflight": "PASS_LOCAL_PRECHECK",
+  "warnings": ["existing httpx deprecation warning", "existing Web bundle size warning"],
+  "not_proven": [
+    "Windows final candidate",
+    "real CUDA/DirectML/Faster-Whisper/TTS hardware",
+    "real provider sandbox or paid canary",
+    "human voice authorization and audio/video signoff"
+  ]
+}

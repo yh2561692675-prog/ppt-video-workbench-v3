@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "handoff_status": "PASS",
+  "branch": "codex/program-ai-provider-platform",
+  "worktree": "F:/ppt-video-workbench-v3/.worktrees/program-integration-v1",
+  "base_commit": "72cb7bbee6fb2fa21485f77d627a8f1443d61eb8",
+  "head_commit": "30d24a4721b22415585363b7a35cfb0749f6ba16",
+  "commits": [
+    "22510c37a359d9375581c1dd67f7207de8c23c9e",
+    "30d24a4721b22415585363b7a35cfb0749f6ba16"
+  ],
+  "ci": {
+    "quality": {
+      "run_id": 31889995710,
+      "conclusion": "success",
+      "url": "https://github.com/yh2561692675-prog/ppt-video-workbench-v3/actions/runs/31889995710"
+    },
+    "platform_contracts": {
+      "run_id": 31889995761,
+      "conclusion": "success",
+      "url": "https://github.com/yh2561692675-prog/ppt-video-workbench-v3/actions/runs/31889995761"
+    }
+  },
+  "merge_performed": false,
+  "final_candidate_built": false,
+  "remote_services_called": false,
+  "paid_operations_authorized": false,
+  "voice_samples_uploaded": false,
+  "excluded_user_files_preserved": true
+}

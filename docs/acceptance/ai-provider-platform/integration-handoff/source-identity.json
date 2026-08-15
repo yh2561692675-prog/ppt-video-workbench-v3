@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "repository": "ppt-video-workbench-v3",
+  "worktree": "F:/ppt-video-workbench-v3/.worktrees/program-integration-v1",
+  "branch": "codex/program-ai-provider-platform",
+  "base_commit": "72cb7bbee6fb2fa21485f77d627a8f1443d61eb8",
+  "head_commit": "30d24a4721b22415585363b7a35cfb0749f6ba16",
+  "remote": "origin",
+  "pushed": true,
+  "dirty_files_intentionally_preserved": [
+    "docs/superpowers/plans/2026-08-15-final-candidate-to-product-platform-roadmap.md",
+    "docs/superpowers/plans/2026-08-15-personal-windows-p02-p08-closure.md",
+    "docs/superpowers/specs/2026-08-15-final-candidate-to-product-platform-roadmap-design.md",
+    "docs/superpowers/specs/2026-08-15-personal-windows-p02-p08-closure-design.md"
+  ],
+  "protected_worktrees": ["program-core-workbench", "dp45-final-clean"]
+}

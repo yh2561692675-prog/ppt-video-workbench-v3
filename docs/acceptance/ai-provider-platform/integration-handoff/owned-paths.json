@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "scope": "AI/provider platform closure line",
+  "included_path_groups": [
+    "apps/api/src/workbench/ai_models",
+    "apps/api/src/workbench/providers",
+    "apps/api/src/workbench/voices",
+    "apps/api/src/workbench/content_assist",
+    "apps/api/src/workbench/routes",
+    "apps/web/src/features/ai",
+    "apps/web/src/api/client.ts",
+    "apps/web/src/app/router.tsx",
+    "apps/web/src/app/styles.css",
+    "packages/contracts/openapi.json",
+    "schemas",
+    "tests/unit/ai_models",
+    "tests/unit/providers",
+    "tests/unit/voices",
+    "tests/unit/content_assist",
+    "tests/integration/test_ai_provider_local_only.py",
+    "tests/integration/test_ai_models_routes.py",
+    "tests/integration/test_provider_governance_routes.py",
+    "tests/integration/test_provider_batch_routes.py",
+    "tests/integration/test_heygen_retry.py",
+    "tests/integration/test_voice_routes.py",
+    "tests/integration/test_content_assist_routes.py",
+    "tests/contract/test_provider_v2_contracts.py",
+    "docs/acceptance/ai-provider-platform",
+    "skills/ppt-video-workbench/scripts/preflight.py",
+    ".github/workflows/ci.yml",
+    ".github/workflows/platform-contracts.yml"
+  ],
+  "excluded_paths": [
+    "program-core-workbench",
+    "dp45-final-clean",
+    "DP45 runtime, run root and evidence",
+    "final personal-use candidate",
+    "four user-owned design/plan files listed in source-identity.json"
+  ],
+  "staging_rule": "integrator must stage files by explicit path; never use git add ."
+}

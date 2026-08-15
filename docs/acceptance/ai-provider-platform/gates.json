@@ -102,9 +102,15 @@
       "boundary": "one existing httpx deprecation warning; external evidence remains separate"
     },
     "AI_PROVIDER_INTEGRATION_HANDOFF_READY": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "boundary": "requires exact staging, commit, push, target-branch CI and final handoff package in AI10"
+      "status": "PASS",
+      "evidence": [
+        "docs/acceptance/ai-provider-platform/integration-handoff/README.md",
+        "docs/acceptance/ai-provider-platform/integration-handoff/handoff.json",
+        "commit 30d24a4721b22415585363b7a35cfb0749f6ba16",
+        "CI 31889995710",
+        "platform-contracts 31889995761"
+      ],
+      "boundary": "handoff is complete on the isolated branch; integrator must review and merge separately"
     }
   }
 }
