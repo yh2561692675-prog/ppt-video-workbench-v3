@@ -13,6 +13,12 @@ const useExternalServers =
 // leave a daemon render worker alive for a short time; sharing the fixed
 // workspace would let that worker claim jobs from the next run.
 const e2eWorkspace = path.resolve('test-results', `e2e-workspace-${process.pid}`);
+// Local Windows acceptance must exercise the bundled runtime layout. CI
+// installs its own Node/FFmpeg toolchain on each runner and does not check in
+// the machine-specific runtime-assets directory, so leave this unset there.
+const runtimeRoot =
+  process.env.WORKBENCH_RUNTIME_ROOT ??
+  (!process.env.CI && process.platform === 'win32' ? path.resolve('runtime-assets') : undefined);
 const servicePath =
   process.platform === 'win32'
     ? [`C:\\Program Files\\LibreOffice\\program`, process.env.PATH]
@@ -73,8 +79,8 @@ export default defineConfig({
             PATH: servicePath,
             // Exercise the same self-contained renderer layout required by the
             // Windows launcher; never fall back to a global pnpm/Remotion tool.
-            WORKBENCH_RUNTIME_ROOT: path.resolve('runtime-assets'),
             WORKBENCH_WORKSPACE: e2eWorkspace,
+            ...(runtimeRoot ? { WORKBENCH_RUNTIME_ROOT: runtimeRoot } : {}),
             WORKBENCH_E2E_SYNTHETIC_MODE: 'true',
             WORKBENCH_DG2_RENDER_DELAY_SECONDS: process.env.DG2_RENDER_DELAY_SECONDS ?? '1',
             UV_CACHE_DIR: process.env.UV_CACHE_DIR ?? '/tmp/ppt-video-workbench-uv-cache',
