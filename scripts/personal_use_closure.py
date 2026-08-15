@@ -13,6 +13,9 @@ class PersonalUseClosureError(ValueError):
     """Raised when a closure input is malformed."""
 
 
+FUNCTIONAL_STAGE_PREFIXES = ("P01", "P02", "P03", "P04", "P05", "P06", "P07", "P08")
+
+
 def _load(path: Path, label: str) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
@@ -49,7 +52,13 @@ def _refs(value: object) -> list[str]:
     return found
 
 
-def aggregate_closure(candidate_path: Path, evidence_paths: tuple[Path, ...]) -> dict[str, Any]:
+def aggregate_closure(
+    candidate_path: Path,
+    evidence_paths: tuple[Path, ...],
+    *,
+    require_functional: bool = False,
+    require_g04: bool = False,
+) -> dict[str, Any]:
     candidate = _load(candidate_path, "candidate_manifest")
     candidate_id = candidate.get("candidate_id")
     if not isinstance(candidate_id, str) or not candidate_id.startswith("rc-"):
@@ -65,6 +74,7 @@ def aggregate_closure(candidate_path: Path, evidence_paths: tuple[Path, ...]) ->
     if not evidence_paths:
         blockers.append("evidence_missing")
     evidence: list[dict[str, Any]] = []
+    stages: set[str] = set()
     for path in evidence_paths:
         report = _load(path, f"evidence:{path.name}")
         ids = sorted(set(_candidate_ids(report)))
@@ -90,11 +100,36 @@ def aggregate_closure(candidate_path: Path, evidence_paths: tuple[Path, ...]) ->
                 "candidate_ids": ids,
             }
         )
+        stage = report.get("stage")
+        if isinstance(stage, str):
+            stages.add(stage)
+    if require_functional:
+        for prefix in FUNCTIONAL_STAGE_PREFIXES:
+            if not any(stage.startswith(prefix) for stage in stages):
+                blockers.append(f"required_stage_missing:{prefix}")
+    has_g04 = any(
+        stage.startswith("G04") or stage.startswith("DP45") for stage in stages
+    )
+    if require_g04 and not has_g04:
+        blockers.append("required_stage_missing:G04")
     ready = not blockers
+    scope = "full" if require_g04 else "functional"
+    if not ready:
+        status = "personal_use_blocked"
+    elif require_g04:
+        status = "personal_use_ready"
+    elif require_functional:
+        status = "personal_use_functional_ready"
+    else:
+        # Preserve the programmatic API's historical status for callers that
+        # intentionally aggregate an arbitrary subset. The CLI requires the
+        # strict functional flag for release closure.
+        status = "personal_use_ready"
     return {
         "schema_version": "1.0",
         "candidate_id": candidate_id,
-        "status": "personal_use_ready" if ready else "personal_use_blocked",
+        "scope": scope,
+        "status": status,
         "decision": "pass" if ready else "blocked",
         "blocking_failures": sorted(set(blockers)),
         "evidence": evidence,
@@ -108,9 +143,16 @@ def main(argv: list[str] | None = None) -> int:
         "--evidence", "--stage", dest="evidence", type=Path, action="append", default=[]
     )
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--require-functional", action="store_true")
+    parser.add_argument("--require-g04", action="store_true")
     args = parser.parse_args(argv)
     try:
-        report = aggregate_closure(args.candidate, tuple(args.evidence))
+        report = aggregate_closure(
+            args.candidate,
+            tuple(args.evidence),
+            require_functional=args.require_functional or args.require_g04,
+            require_g04=args.require_g04,
+        )
     except PersonalUseClosureError as error:
         print(f"PERSONAL_USE_CLOSURE=BLOCK reason={error}")
         return 1

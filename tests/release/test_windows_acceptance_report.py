@@ -139,3 +139,31 @@ def test_report_blocks_when_referenced_evidence_is_missing(tmp_path: Path) -> No
     )
 
     assert write_report(evidence_path, tmp_path / "report") == 1
+
+
+def test_install_scope_does_not_require_full_flow_phases() -> None:
+    from scripts.windows_acceptance_report import INSTALL_PHASES, build_report
+
+    report = build_report(
+        {
+            "schema_version": "2.0",
+            "scope": "install",
+            "release": {"candidate_id": "rc-abc1234-20260811T000000Z"},
+            "phases": {
+                name: {
+                    "result": "passed",
+                    "started_at": "2026-08-11T00:00:00Z",
+                    "finished_at": "2026-08-11T00:00:01Z",
+                    "duration_ms": 1000,
+                    "attempt": 1,
+                    "reason_codes": [],
+                    "evidence_refs": [],
+                    "metrics": {},
+                }
+                for name in INSTALL_PHASES
+            },
+        }
+    )
+
+    assert report["decision"] == "pass"
+    assert report["blocking_failures"] == []

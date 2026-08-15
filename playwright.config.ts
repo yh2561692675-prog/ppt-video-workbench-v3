@@ -9,6 +9,10 @@ const collectCiEvidence = Boolean(process.env.CI || process.env.PLAYWRIGHT_CI_EV
 const useExternalServers =
   process.env.PLAYWRIGHT_EXTERNAL_SERVERS === '1' ||
   (process.platform === 'win32' && !process.env.CI);
+// Every browser run gets an isolated workspace.  A cancelled Windows run can
+// leave a daemon render worker alive for a short time; sharing the fixed
+// workspace would let that worker claim jobs from the next run.
+const e2eWorkspace = path.resolve('test-results', `e2e-workspace-${process.pid}`);
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -60,7 +64,7 @@ export default defineConfig({
             // Exercise the same self-contained renderer layout required by the
             // Windows launcher; never fall back to a global pnpm/Remotion tool.
             WORKBENCH_RUNTIME_ROOT: path.resolve('runtime-assets'),
-            WORKBENCH_WORKSPACE: path.resolve('tests/.e2e-workspace'),
+            WORKBENCH_WORKSPACE: e2eWorkspace,
             WORKBENCH_E2E_SYNTHETIC_MODE: 'true',
             WORKBENCH_DG2_RENDER_DELAY_SECONDS: process.env.DG2_RENDER_DELAY_SECONDS ?? '1',
             UV_CACHE_DIR: process.env.UV_CACHE_DIR ?? '/tmp/ppt-video-workbench-uv-cache',

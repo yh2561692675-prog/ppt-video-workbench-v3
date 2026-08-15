@@ -14,6 +14,7 @@ dependencies = [
 dev = [
   "httpx>=0.28,<1",
   "mypy>=1.17,<2",
+  "pyinstaller>=6.14,<7",
   "pytest>=8.4,<9",
   "pytest-asyncio>=1.1,<2",
   "ruff>=0.12,<1",
@@ -31,6 +32,20 @@ extend-exclude = ["backup", ".tmp"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+# Existing release/contract modules contain intentionally dense compatibility
+# expressions. Keep their line-length debt explicit while requiring the full
+# lint set for all new and modified P02 acceptance tooling.
+[tool.ruff.lint.per-file-ignores]
+"apps/api/src/workbench/release/manifest.py" = ["E501"]
+"scripts/build_program_rc_manifest.py" = ["E501"]
+"scripts/personal_use_preflight.py" = ["E501"]
+"scripts/verify_candidate_evidence.py" = ["E501"]
+"scripts/verify_rc_contracts.py" = ["E501"]
+"tests/unit/test_candidate_evidence.py" = ["E501"]
+"tests/unit/test_personal_use_preflight.py" = ["E501"]
+"tests/unit/test_program_rc_manifest.py" = ["E501"]
+"tests/unit/test_rc_contracts.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"

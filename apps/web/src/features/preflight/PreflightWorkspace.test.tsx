@@ -58,6 +58,7 @@ it('groups issues and only offers confirmation for non-blocking issues', () => {
       projectId="project-1"
       report={report}
       onRun={vi.fn()}
+      onRender={vi.fn()}
       onConfirm={onConfirm}
       onExport={vi.fn()}
     />,
@@ -82,6 +83,7 @@ it('disables render while the report is blocked and exports the report', () => {
       projectId="project-1"
       report={report}
       onRun={vi.fn()}
+      onRender={vi.fn()}
       onConfirm={vi.fn()}
       onExport={onExport}
     />,

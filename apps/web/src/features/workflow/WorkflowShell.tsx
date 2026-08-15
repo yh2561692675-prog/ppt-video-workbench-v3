@@ -154,6 +154,12 @@ export function WorkflowShell() {
     },
     onSuccess: (result) => accept(result.project),
   });
+  // Let the browser finish the click event before the successful step change
+  // unmounts the step-6 controls. This keeps physical Playwright clicks
+  // deterministic while preserving the same render submission semantics.
+  function submitRenderJob() {
+    window.setTimeout(() => createRenderJobMutation.mutate(), 0);
+  }
   const videoPreflightMutation = useMutation({
     mutationFn: (settings: { reduced_motion: boolean }) => api.videoPreflight(projectId, settings),
     onSuccess: (result) => {
@@ -449,13 +455,14 @@ export function WorkflowShell() {
                   }
                   void videoPreflightQuery.refetch();
                 }}
-                onRender={() => createRenderJobMutation.mutate()}
+                onRender={submitRenderJob}
                 renderGraph={renderGraphQuery.data ?? null}
               />
               <PreflightWorkspace
                 projectId={project.id}
                 report={preflightQuery.data ?? null}
                 onRun={() => preflightMutation.mutate()}
+                onRender={submitRenderJob}
                 onConfirm={(issueId, actor, note) =>
                   preflightConfirmMutation.mutate({ issueId, actor, note })
                 }
@@ -497,7 +504,7 @@ export function WorkflowShell() {
                 disabled={
                   createRenderJobMutation.isPending || preflightQuery.data?.allowed !== true
                 }
-                onClick={() => createRenderJobMutation.mutate()}
+                onClick={submitRenderJob}
               >
                 {createRenderJobMutation.isPending ? '正在提交任务…' : '开始渲染与导出'}
               </button>

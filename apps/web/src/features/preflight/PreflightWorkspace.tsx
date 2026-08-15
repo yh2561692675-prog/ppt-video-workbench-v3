@@ -6,6 +6,7 @@ interface PreflightWorkspaceProps {
   projectId: string;
   report: PreflightReport | null;
   onRun: () => void;
+  onRender: () => void;
   onConfirm: (issueId: string, actor: string, note: string) => void;
   onExport: () => void;
 }
@@ -21,6 +22,7 @@ export function PreflightWorkspace({
   projectId,
   report,
   onRun,
+  onRender,
   onConfirm,
   onExport,
 }: PreflightWorkspaceProps) {
@@ -55,7 +57,7 @@ export function PreflightWorkspace({
           <button className="secondary" onClick={onExport} disabled={!report}>
             导出预检报告
           </button>
-          <button className="primary" disabled={!report?.allowed}>
+          <button className="primary" disabled={!report?.allowed} onClick={onRender}>
             开始渲染与导出
           </button>
         </div>

@@ -27,6 +27,17 @@ REQUIRED_PHASES = (
     "process_cleanup",
     "workspace_retention",
 )
+INSTALL_PHASES = (
+    "artifact_resolution",
+    "clean_install",
+    "candidate_identity",
+    "first_launch",
+    "second_launch",
+    "uninstall_reinstall",
+    "reinstall_launch",
+    "process_cleanup",
+    "workspace_retention",
+)
 REQUIRED_PHASE_FIELDS = (
     "result",
     "started_at",
@@ -92,6 +103,17 @@ def _phase_errors(phases: object, phase_name: str) -> list[str]:
     return list(dict.fromkeys(errors))
 
 
+def required_phases(evidence: Mapping[str, object]) -> tuple[str, ...]:
+    """Return the phases required by the declared acceptance scope."""
+
+    scope = evidence.get("scope", "full")
+    if scope == "install":
+        return INSTALL_PHASES
+    if scope == "full":
+        return REQUIRED_PHASES
+    return ("__invalid_scope__",)
+
+
 def build_report(evidence: dict[str, object]) -> dict[str, object]:
     """Build the fixed schema 2.0 report and fail closed on incomplete evidence."""
     redacted = redact(evidence)
@@ -106,7 +128,10 @@ def build_report(evidence: dict[str, object]) -> dict[str, object]:
         validation_errors["release"] = ["candidate_id_missing"]
 
     phases = redacted.get("phases")
-    for phase_name in REQUIRED_PHASES:
+    required = required_phases(redacted)
+    if required == ("__invalid_scope__",):
+        validation_errors["report"] = ["scope_invalid"]
+    for phase_name in required:
         errors = _phase_errors(phases, phase_name)
         if errors:
             validation_errors[phase_name] = errors
@@ -129,7 +154,7 @@ def _validate_evidence_references(
         return {}
     root = root.resolve()
     failures: dict[str, list[str]] = {}
-    for phase_name in REQUIRED_PHASES:
+    for phase_name in required_phases(evidence):
         phase = phases.get(phase_name)
         if not isinstance(phase, Mapping):
             continue

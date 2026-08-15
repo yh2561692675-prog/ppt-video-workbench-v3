@@ -106,7 +106,10 @@ for (const profile of ['S1', 'S8'] as const) {
     await expect(page.locator('.effect-page-status .status-pill')).toHaveCount(pageCount);
     await page.getByRole('button', { name: '重新运行完整预检' }).click();
     await expect(page.getByText('完整预检已通过')).toBeVisible();
-    await page.getByRole('button', { name: '开始渲染与导出' }).first().click();
+    await page
+      .getByLabel('结构化预检与确认')
+      .getByRole('button', { name: '开始渲染与导出' })
+      .click();
     await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/step/7`));
     await expect
       .poll(async () => currentProjectStep(request, projectId), { timeout: 30_000 })
@@ -555,12 +558,24 @@ async function attachSuccessfulBrowserEvidence(
   jobId: string,
 ): Promise<void> {
   const screenshot = await page.screenshot({ fullPage: true });
+  const screenshotPath = testInfo.outputPath(`dg2-${profile.toLowerCase()}-completed.png`);
+  const contextPath = testInfo.outputPath(`dg2-${profile.toLowerCase()}-completed.json`);
+  // Persist the bytes before attaching them.  On Windows, attaching a large
+  // in-memory buffer at the end of a media test can wait on the same handle
+  // Playwright is closing during worker teardown.  A durable path keeps the
+  // evidence identical while making the hand-off deterministic.
+  await writeFile(screenshotPath, screenshot);
+  await writeFile(
+    contextPath,
+    JSON.stringify({ projectId, jobId, status: 'succeeded' }, null, 2),
+    'utf8',
+  );
   await testInfo.attach(`dg2-${profile.toLowerCase()}-completed.png`, {
-    body: screenshot,
+    path: screenshotPath,
     contentType: 'image/png',
   });
   await testInfo.attach(`dg2-${profile.toLowerCase()}-completed.json`, {
-    body: Buffer.from(JSON.stringify({ projectId, jobId, status: 'succeeded' }, null, 2)),
+    path: contextPath,
     contentType: 'application/json',
   });
 }

@@ -232,7 +232,12 @@ class WorkspaceDatabase:
             if version is None:
                 connection.execute(insert(schema_meta).values(version=5))
             elif version == 1:
-                from .migrations import migrate_v1_to_v2, migrate_v2_to_v3, migrate_v3_to_v4, migrate_v4_to_v5
+                from .migrations import (
+                    migrate_v1_to_v2,
+                    migrate_v2_to_v3,
+                    migrate_v3_to_v4,
+                    migrate_v4_to_v5,
+                )
 
                 migrate_v1_to_v2(connection)
                 migrate_v2_to_v3(connection)

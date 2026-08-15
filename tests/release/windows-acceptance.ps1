@@ -7,7 +7,17 @@ param(
     [string]$ReportDirectory = "",
     [string]$WorkspaceRoot = "",
     [string]$PythonExecutable = "",
-    [int]$StartupTimeoutSeconds = 40
+    [int]$StartupTimeoutSeconds = 40,
+    [switch]$InstallOnly,
+    [string]$PhaseEvidenceRoot = "",
+    [string]$LegacyProject = "",
+    [string]$PreflightInput = "",
+    [string]$RealAudio = "",
+    [string]$AsrModelManifest = "",
+    [string]$RecoveryEvidence = "",
+    [string]$PlaybackEvidence = "",
+    [string]$FinalExportManifest = "",
+    [string]$PreviousCandidateManifest = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -44,6 +54,7 @@ $requiredPhases = @(
 )
 $evidence = [ordered]@{
     schema_version = "2.0"
+    scope = if ($InstallOnly) { "install" } else { "full" }
     release = [ordered]@{
         run_id = $runId
         candidate_id = ""
@@ -57,6 +68,12 @@ $evidence = [ordered]@{
     }
     phases = [ordered]@{}
 }
+
+$installPhases = @(
+    "artifact_resolution", "clean_install", "candidate_identity", "first_launch",
+    "second_launch", "uninstall_reinstall", "reinstall_launch", "process_cleanup",
+    "workspace_retention"
+)
 
 function Write-JsonAtomic {
     param([Parameter(Mandatory = $true)][string]$Path, [Parameter(Mandatory = $true)]$Value)
@@ -90,7 +107,8 @@ function Set-Phase {
         [Parameter(Mandatory = $true)][ValidateSet("passed", "failed", "blocked", "cancelled")][string]$Result,
         [string[]]$ReasonCodes = @(),
         [hashtable]$Metrics = @{},
-        [string]$Detail = ""
+        [string]$Detail = "",
+        [string[]]$EvidenceRefs = @()
     )
     $started = (Get-Date).ToUniversalTime()
     $finished = (Get-Date).ToUniversalTime()
@@ -119,16 +137,50 @@ function Set-Phase {
         duration_ms = [int][Math]::Max(0, ($finished - $started).TotalMilliseconds)
         attempt = 1
         reason_codes = @($ReasonCodes)
-        evidence_refs = @($relative)
+        evidence_refs = if ($EvidenceRefs.Count -gt 0) { @($EvidenceRefs) } else { @($relative) }
         metrics = $Metrics
     }
 }
 
 function Ensure-PhaseDefaults {
-    foreach ($name in $requiredPhases) {
+    $phaseNames = if ($InstallOnly) { $installPhases } else { $requiredPhases }
+    foreach ($name in $phaseNames) {
         if (-not $evidence.phases.Contains($name)) {
             Set-Phase -Name $name -Result "blocked" -ReasonCodes @("phase_not_executed") -Detail "Phase was not reached by this runner."
         }
+    }
+}
+
+function Invoke-RecordedPhase {
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [string]$EvidencePath,
+        [string[]]$RequiredInputs = @()
+    )
+    $missing = @($RequiredInputs | Where-Object { [string]::IsNullOrWhiteSpace($_) -or -not (Test-Path -LiteralPath $_ -PathType Leaf) })
+    if ($missing.Count -gt 0) {
+        Set-Phase -Name $Name -Result "blocked" -ReasonCodes @("required_input_missing") -Metrics @{ missing = @($missing | ForEach-Object { [System.IO.Path]::GetFileName($_) }) }
+        return
+    }
+    if ([string]::IsNullOrWhiteSpace($EvidencePath) -or -not (Test-Path -LiteralPath $EvidencePath -PathType Leaf)) {
+        Set-Phase -Name $Name -Result "blocked" -ReasonCodes @("recorded_evidence_required") -Detail "The physical/manual phase must write an explicit candidate-bound evidence record before this runner can pass it."
+        return
+    }
+    try {
+        $record = Read-JsonFile -Path $EvidencePath
+        $recordCandidate = [string]$record.candidate_id
+        $result = [string]$record.result
+        if ($recordCandidate -ne $candidateId) { throw "candidate_id_mismatch" }
+        if ($result -ne "passed") { throw "recorded_result_not_passed" }
+        $relative = [System.IO.Path]::GetFullPath($EvidencePath)
+        $reportBase = [System.IO.Path]::GetFullPath($reportPath).TrimEnd("\") + "\"
+        if (-not $relative.StartsWith($reportBase, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "recorded_evidence_outside_report"
+        }
+        Set-Phase -Name $Name -Result "passed" -ReasonCodes @() -EvidenceRefs @($relative.Substring($reportBase.Length).Replace("\", "/")) -Metrics @{ recorded_evidence = $relative }
+    }
+    catch {
+        Set-Phase -Name $Name -Result "failed" -ReasonCodes @("recorded_evidence_invalid") -Detail $_.Exception.Message
     }
 }
 
@@ -309,11 +361,14 @@ try {
     }
     Invoke-Launch -Name "first_launch" -LauncherPath $launcherPath
     Invoke-Launch -Name "second_launch" -LauncherPath $launcherPath
-    Set-Phase -Name "legacy_project" -Result "blocked" -ReasonCodes @("operator_sample_required") -Detail "Legacy project path requires an explicit copied sample."
-    Set-Phase -Name "interruption_recovery" -Result "blocked" -ReasonCodes @("physical_fault_injection_pending")
-    Set-Phase -Name "full_preflight" -Result "blocked" -ReasonCodes @("project_sample_required")
-    Set-Phase -Name "play_from_start" -Result "blocked" -ReasonCodes @("project_sample_required")
-    Set-Phase -Name "final_export" -Result "blocked" -ReasonCodes @("project_sample_required")
+    if (-not $InstallOnly) {
+        $phaseRoot = if ([string]::IsNullOrWhiteSpace($PhaseEvidenceRoot)) { "" } else { (Resolve-Path -LiteralPath $PhaseEvidenceRoot).Path }
+        Invoke-RecordedPhase -Name "legacy_project" -EvidencePath $(if ($phaseRoot) { Join-Path $phaseRoot "legacy_project.json" } else { "" }) -RequiredInputs @($LegacyProject)
+        Invoke-RecordedPhase -Name "interruption_recovery" -EvidencePath $(if ($phaseRoot) { Join-Path $phaseRoot "interruption_recovery.json" } else { "" }) -RequiredInputs @($RecoveryEvidence)
+        Invoke-RecordedPhase -Name "full_preflight" -EvidencePath $(if ($phaseRoot) { Join-Path $phaseRoot "full_preflight.json" } else { "" }) -RequiredInputs @($PreflightInput, $RealAudio, $AsrModelManifest)
+        Invoke-RecordedPhase -Name "play_from_start" -EvidencePath $(if ($phaseRoot) { Join-Path $phaseRoot "play_from_start.json" } else { "" }) -RequiredInputs @($PlaybackEvidence)
+        Invoke-RecordedPhase -Name "final_export" -EvidencePath $(if ($phaseRoot) { Join-Path $phaseRoot "final_export.json" } else { "" }) -RequiredInputs @($FinalExportManifest)
+    }
 
     $uninstaller = Join-Path $InstallRoot "unins000.exe"
     if (Test-Path -LiteralPath $uninstaller -PathType Leaf) {
@@ -342,7 +397,10 @@ try {
     } else {
         Set-Phase -Name "uninstall_reinstall" -Result "blocked" -ReasonCodes @("uninstaller_missing")
     }
-    Set-Phase -Name "version_rollback" -Result "blocked" -ReasonCodes @("previous_candidate_required")
+    if (-not $InstallOnly) {
+        $rollbackEvidence = if ([string]::IsNullOrWhiteSpace($PhaseEvidenceRoot)) { "" } else { Join-Path (Resolve-Path -LiteralPath $PhaseEvidenceRoot).Path "version_rollback.json" }
+        Invoke-RecordedPhase -Name "version_rollback" -EvidencePath $rollbackEvidence -RequiredInputs @($PreviousCandidateManifest)
+    }
     Stop-OwnedLauncher -BestEffort
     $ownedProcesses = @(Get-CimInstance Win32_Process -Filter "name='workbench-launcher.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*$InstallRoot*" })
     if ($ownedProcesses.Count -eq 0) {

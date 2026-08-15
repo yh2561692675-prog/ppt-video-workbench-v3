@@ -106,13 +106,13 @@ from workbench.providers.upstream import (
     create_llm_handler,
 )
 from workbench.quality.jobs import QualityJobService
+from workbench.release.feature_policy import load_environment_feature_policy
 from workbench.rendering.export_pipeline import RenderGraphExportPipeline
 from workbench.rendering.feature_flags import RenderFeatureFlags
 from workbench.rendering.models import RenderGraphV2
 from workbench.rendering.preflight import GraphPreflight
 from workbench.rendering.preview_service import AuthoritativePreviewService
 from workbench.rendering.project_reader import ProjectRenderSourceReader
-from workbench.release.feature_policy import load_environment_feature_policy
 from workbench.runtime.layout import RuntimeComponentMissingError, RuntimeLayout
 from workbench.scheduler.service import BatchSchedulerService
 from workbench.services.import_service import ImportService

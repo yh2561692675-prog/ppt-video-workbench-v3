@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -107,10 +108,10 @@ def _download_large_file(curl: str, url: str, target: Path, total: int) -> None:
         raise RuntimeError(f"model file size mismatch for {target.name}")
 
 
-def _download_snapshot(repository: str, target: Path) -> None:
+def _download_snapshot(repository: str, target: Path, revision: str) -> None:
     """Download public model files without relying on Xet or a mutable cache."""
     for filename in MODEL_FILES:
-        url = f"https://huggingface.co/{repository}/resolve/main/{filename}?download=true"
+        url = f"https://huggingface.co/{repository}/resolve/{revision}/{filename}?download=true"
         temporary = target / f".{filename}.part"
         curl = _curl_path()
         if curl:
@@ -154,15 +155,24 @@ def provision_model(
     root: Path,
     model: str,
     *,
+    revision: str | None = None,
     downloader: Callable[..., Any] | None = None,
 ) -> Path:
     """Download a complete model snapshot into ``root/<model>`` atomically."""
     repository = MODEL_REPOSITORIES.get(model)
     if repository is None:
         raise ValueError(f"unsupported ASR model: {model}")
+    selected_revision = revision or "main"
     target = (root / model).resolve()
     target.parent.mkdir(parents=True, exist_ok=True)
     if (target / "model.bin").is_file():
+        manifest_path = target / "model-manifest.json"
+        if manifest_path.is_file():
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if manifest.get("revision") != selected_revision:
+                raise RuntimeError("ASR model revision does not match the requested revision")
+        else:
+            _write_manifest(target, model=model, repository=repository, revision=selected_revision)
         return target
     temporary = target.with_name(f".{target.name}.download")
     if temporary.exists():
@@ -170,10 +180,11 @@ def provision_model(
     temporary.mkdir(parents=True, exist_ok=False)
     try:
         if downloader is None:
-            _download_snapshot(repository, temporary)
+            _download_snapshot(repository, temporary, selected_revision)
         else:
             downloader(
                 repo_id=repository,
+                revision=selected_revision,
                 local_dir=str(temporary),
                 local_dir_use_symlinks=False,
                 allow_patterns=["config.json", "model.bin", "tokenizer.json", "vocabulary.*"],
@@ -182,6 +193,7 @@ def provision_model(
         missing = [path.name for path in required if not path.is_file()]
         if missing:
             raise RuntimeError(f"ASR model snapshot is incomplete: {', '.join(missing)}")
+        _write_manifest(temporary, model=model, repository=repository, revision=selected_revision)
         temporary.replace(target)
         return target
     except BaseException:
@@ -189,15 +201,53 @@ def provision_model(
         raise
 
 
+def _write_manifest(target: Path, *, model: str, repository: str, revision: str) -> None:
+    files = []
+    for path in sorted(target.iterdir()):
+        if not path.is_file() or path.name == "model-manifest.json":
+            continue
+        files.append(
+            {
+                "name": path.name,
+                "size": path.stat().st_size,
+                "sha256": _sha256(path),
+            }
+        )
+    manifest = {
+        "schema_version": "1.0",
+        "model": model,
+        "repository": repository,
+        "revision": revision,
+        "files": files,
+    }
+    temporary = target / ".model-manifest.json.part"
+    temporary.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    temporary.replace(target / "model-manifest.json")
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace-root", type=Path, required=True)
     parser.add_argument("--model", default="small", choices=sorted(MODEL_REPOSITORIES))
+    parser.add_argument("--revision", required=True)
     args = parser.parse_args()
-    target = provision_model(args.workspace_root / "settings" / "asr-models", args.model)
+    target = provision_model(
+        args.workspace_root / "settings" / "asr-models", args.model, revision=args.revision
+    )
+    manifest = json.loads((target / "model-manifest.json").read_text(encoding="utf-8"))
     print(
         json.dumps(
-            {"model": args.model, "path": str(target), "status": "ready"},
+            {"model": args.model, "path": str(target), "status": "ready", "manifest": manifest},
             ensure_ascii=False,
         )
     )
