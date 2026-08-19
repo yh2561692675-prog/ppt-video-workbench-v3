@@ -46,14 +46,17 @@ The repository includes an independently installable Agent Skill at
 run the source workflow, diagnose production failures, and maintain Issues, pull requests,
 dependencies, and releases without loading the entire project documentation into context.
 
-Install it from its GitHub directory with Codex's skill installer:
+Install it with Codex's skill installer by explicitly naming the repository, ref, and Skill path:
 
 ```text
-$skill-installer install https://github.com/yh2561692675-prog/ppt-video-workbench-v3/tree/codex/program-integration-v1/skills/ppt-video-workbench
+$skill-installer install the skill from GitHub repository yh2561692675-prog/ppt-video-workbench-v3, using ref codex/program-integration-v1 and path skills/ppt-video-workbench
 ```
 
-Restart Codex after installation, then invoke it explicitly with `$ppt-video-workbench`, or let
-Codex select it for matching PPT Video Workbench requests.
+Do not use a `/tree/<ref>/<path>` URL for this ref: its slash would make the installer interpret
+`codex` as the ref. The current published `v0.1.1` release predates this Skill; until v0.1.2 is
+formally released, use the source ref above. Restart Codex after installation, then invoke it
+explicitly with `$ppt-video-workbench`, or let Codex select it for matching PPT Video Workbench
+requests.
 
 ## Quick start from source / 从源码启动
 

@@ -30,14 +30,19 @@ REQUIRED_FILES = (
     "remotion/package.json",
 )
 
-TOOLS = ("git", "python", "uv", "node", "pnpm", "ffmpeg", "ffprobe", "soffice")
+SOURCE_TOOLS = ("git", "python", "uv", "node", "pnpm")
+CAPABILITY_TOOLS = {
+    "source": SOURCE_TOOLS,
+    "office-import": (*SOURCE_TOOLS, "soffice"),
+    "render": (*SOURCE_TOOLS, "ffmpeg", "ffprobe"),
+}
+TOOLS = tuple(dict.fromkeys(tool for tools in CAPABILITY_TOOLS.values() for tool in tools))
 
 
 def tool_version(name: str) -> Check:
     executable = shutil.which(name)
     if executable is None:
-        required = name not in {"ffmpeg", "ffprobe", "soffice"}
-        return Check(name, "missing" if required else "optional-missing", "not found on PATH")
+        return Check(name, "missing", "not found on PATH")
     commands = {
         "ffmpeg": [executable, "-version"],
         "ffprobe": [executable, "-version"],
@@ -69,9 +74,24 @@ def inspect(repo: Path) -> list[Check]:
     return checks
 
 
+def blocking_checks(checks: list[Check], capability: str) -> list[Check]:
+    required = {*REQUIRED_FILES, *CAPABILITY_TOOLS[capability]}
+    return [
+        check
+        for check in checks
+        if check.name in required and check.status in {"missing", "error"}
+    ]
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, default=Path.cwd(), help="repository root")
+    parser.add_argument(
+        "--capability",
+        choices=tuple(CAPABILITY_TOOLS),
+        default="source",
+        help="workbench capability to validate (default: source)",
+    )
     parser.add_argument("--json", action="store_true", help="emit machine-readable JSON")
     return parser.parse_args()
 
@@ -80,14 +100,16 @@ def main() -> int:
     args = parse_args()
     repo = args.repo.expanduser().resolve()
     checks = inspect(repo)
-    blocking = [check for check in checks if check.status in {"missing", "error"}]
+    blocking = blocking_checks(checks, args.capability)
 
     if args.json:
         print(
             json.dumps(
                 {
                     "repository": str(repo),
+                    "capability": args.capability,
                     "ready": not blocking,
+                    "blockers": [check.name for check in blocking],
                     "checks": [asdict(check) for check in checks],
                 },
                 indent=2,
@@ -95,8 +117,11 @@ def main() -> int:
         )
     else:
         print(f"Repository: {repo}")
+        print(f"Capability: {args.capability}")
         for check in checks:
             print(f"[{check.status.upper():16}] {check.name}: {check.detail}")
+        if blocking:
+            print(f"BLOCKERS: {', '.join(check.name for check in blocking)}")
         print("READY" if not blocking else "BLOCKED")
 
     return 0 if not blocking else 1

@@ -2,8 +2,11 @@
 
 ## Prepare the environment
 
-Require Python 3.12, `uv`, Node.js, Corepack, pnpm 11.7.0, FFmpeg/FFprobe, and LibreOffice.
-Run the bundled preflight first. From the repository root, install only from lockfiles:
+For source setup, require Python 3.12, `uv`, Node.js, Corepack, and pnpm 11.7.0. Before installing,
+run `python "<skill-dir>/scripts/preflight.py" --repo "<repo-root>" --capability source`. Before
+importing Office-backed source files, run it again with `--capability office-import`; before preview
+or render work, run it with `--capability render`, which requires FFmpeg/FFprobe. From the repository
+root, install only from lockfiles:
 
 ```powershell
 uv sync --frozen
@@ -33,12 +36,14 @@ Verify `GET http://127.0.0.1:8765/api/health` before opening
 
 ## Follow the seven production stages
 
-1. Create a project and import PPTX, DOCX, PDF, or images. Record safe names, sizes, and SHA-256.
+1. Run the `office-import` capability check, then create a project and import PPTX, DOCX, PDF, or
+   images. Record safe names, sizes, and SHA-256.
 2. Parse materials, confirm page order, and manually resolve low-confidence matches.
 3. Create or edit narration. Treat every edit as a revision and confirm the selected revision.
 4. Choose one audio route for the entire project: local recording or explicitly configured HeyGen.
 5. Complete transcription, difference resolution, page boundaries, and subtitle timing.
-6. Preview effects, run the full preflight, and resolve blockers or explicitly confirm warnings.
+6. Run the `render` capability check, preview effects, and resolve blockers or explicitly confirm
+   non-blocking warnings.
 7. Submit the durable render job and verify MP4, SRT, narration, audio, configuration, preflight,
    logs, and SHA-256 manifest in the production package.
 

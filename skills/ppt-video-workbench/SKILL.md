@@ -10,11 +10,16 @@ manifests, revisions, preflight evidence, and previously successful outputs.
 
 ## Start here
 
-1. Locate the repository root by finding both `pyproject.toml` and `pnpm-workspace.yaml`.
-2. Run `python skills/ppt-video-workbench/scripts/preflight.py --repo <root>` before installing,
-   starting, troubleshooting, or releasing the project.
-3. Report missing tools and unexpected repository shape before changing files.
-4. Select exactly one workflow below and read its reference.
+1. Locate the application repository root by finding both `pyproject.toml` and
+   `pnpm-workspace.yaml`; call it `<repo-root>`.
+2. Locate this installed Skill directory (the directory containing this `SKILL.md`); call it
+   `<skill-dir>`. Never assume it is nested under `<repo-root>`.
+3. Before setup, start, troubleshooting, or maintenance, run
+   `python "<skill-dir>/scripts/preflight.py" --repo "<repo-root>" --capability source`.
+4. Before importing PPTX, DOCX, PDF, or images through LibreOffice, run the same command with
+   `--capability office-import`; before previewing or rendering media, use `--capability render`.
+5. Report missing blockers and unexpected repository shape before changing files.
+6. Select exactly one workflow below and read its reference.
 
 ## Select a workflow
 
@@ -36,8 +41,8 @@ Do not read every reference by default.
   audio, project data, or diagnostic archives to external services without explicit authorization.
 - Do not mix local-recording and HeyGen audio routes in one project. Confirm replacement before a
   paid or irreversible external request.
-- Run preflight after any input, narration, audio, subtitle, effect, or template change; do not reuse
-  stale evidence.
+- Run the appropriate preflight capability after any input, narration, audio, subtitle, effect, or
+  template change; do not reuse stale evidence.
 - Do not delete project manifests, source inputs, settings, or final production packages to fix a
   cache or worker problem.
 - Do not claim a Windows installer, signature, manual acceptance, security fix, or release passed
